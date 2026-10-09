@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="az"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PromptPlay – Teacher</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<div class="top"><b>🎮 PromptPlay</b><span class="grow"></span><button class="ghost" id="lang"></button><button class="ghost" id="out" data-t="logout"></button></div>
+<div id="root"></div>
+<div id="modal" class="modal" hidden><div><div class="row"><b class="grow" id="mt"></b><button class="ghost" id="mc" data-t="close"></button></div><div id="mb" class="pane grow"></div></div></div>
+<script type="module">
+import { api, t, applyI18n, toggleLang, esc, $, onEvents, gameFrame } from '/common.js';
+applyI18n(); $('#lang').textContent = t('lang'); $('#lang').onclick = toggleLang;
+$('#out').onclick = async () => { await api('/api/logout', 'POST'); location = '/'; };
+$('#mc').onclick = () => { $('#modal').hidden = true; $('#mb').replaceChildren(); };
+const root = $('#root');
+try { await api('/api/me'); } catch { location = '/'; }
+const classId = new URLSearchParams(location.search).get('class');
+classId ? classPage(+classId) : listPage();
+
+function openGame(g) {
+  $('#mt').textContent = `${g.title} – ${g.nickname}`;
+  $('#mb').replaceChildren(Object.assign(gameFrame(g.html), { className: 'game' })); $('#modal').hidden = false;
+}
+
+async function listPage() {
+  const cs = await api('/api/classes');
+  root.innerHTML = `<div class="layout"><div class="card"><h2>${t('newClass')}</h2>
+    <label>${t('className')}</label><input id="cn" maxlength="60">
+    <label>${t('dailyLimit')}</label><input id="dl" type="number" min="1" value="30">
+    <label style="display:flex;gap:.5rem;align-items:flex-start;color:inherit"><input type="checkbox" id="cc" style="width:auto;margin-top:.3rem">${t('consent')}</label>
+    <p class="err" id="err"></p><button id="mk">${t('create')}</button></div>
+    <div class="card"><h2>${t('classes')}</h2>${cs.map((c) => `<p><a href="?class=${c.id}"><b>${esc(c.name)}</b></a> <span class="muted">${t('code_label')}: ${esc(c.code)}</span></p>`).join('') || `<p class="muted">${t('empty')}</p>`}</div></div>`;
+  $('#mk').onclick = async () => {
+    if (!$('#cc').checked) return ($('#err').textContent = t('consentNeeded'));
+    try { const r = await api('/api/classes', 'POST', { name: $('#cn').value, consent: true, daily_limit: +$('#dl').value }); location = '?class=' + r.id; }
+    catch (x) { $('#err').textContent = x.code; }
+  };
+}
+
+async function classPage(id) {
+  let cls, sel = '', date = '', games = [], alerts = [];
+  const feed = () => $('#feed');
+  const label = (m) => `<b>${esc(m.nickname)}${m.role === 'blocked' ? ` · ${t('blockedMsg')}: ${t('sc_' + m.flag)}` : ''} · ${new Date(m.created).toLocaleTimeString()}${m.lesson ? ' · ' + esc(m.lesson) : ''}</b>`;
+  const body = (c) => { // fold code blocks so the feed stays readable
+    const parts = String(c).split(/```(?:html)?\n?([\s\S]*?)```/);
+    return parts.map((p, i) => (i % 2 ? `<details><summary>code</summary><pre>${esc(p)}</pre></details>` : esc(p))).join('');
+  };
+  const msgHtml = (m) => `<div class="fm ${m.role}">${label(m)}${m.role === 'blocked' ? esc(m.content) : body(m.content)}</div>`;
+  const bottom = () => { const f = feed(); f.scrollTop = f.scrollHeight; };
+
+  async function load() {
+    cls = await api('/api/classes/' + id);
+    const active = cls.lessons.find((l) => l.id === cls.active_lesson);
+    root.innerHTML = `<div class="top" style="flex-wrap:wrap"><a href="/teacher.html">${t('back')}</a><h2 style="margin:0">${esc(cls.name)}</h2>
+        <span class="muted">${t('code2')}:</span><span class="code">${esc(cls.code)}</span><span class="grow"></span>
+        <label style="margin:0">${t('dailyLimit')}</label><input id="dl" type="number" min="1" value="${cls.daily_limit}" style="width:5rem"><button class="ghost" id="dls">${t('save2')}</button>
+        <button id="pa" class="${cls.paused ? 'ok' : 'bad'}">${cls.paused ? t('resumeAll') : t('pauseAll')}</button></div>
+      <div class="layout"><div>
+        <div class="card"><h3>${t('students')} (${cls.students.length})</h3>
+          <div class="stu ${sel ? '' : 'sel'}" data-s="">${t('everyone')}</div>
+          ${cls.students.map((s) => `<div class="stu ${sel == s.id ? 'sel' : ''}" data-s="${s.id}"><span class="grow">${s.paused ? '⏸️ ' : ''}${esc(s.nickname)} <span class="muted">${s.used}/${cls.daily_limit}${s.games ? ' · 🎮' + s.games : ''}</span></span>
+            <button class="ghost" data-p="${s.id}" data-v="${s.paused ? 0 : 1}">${s.paused ? t('resume') : t('pause')}</button><button class="ghost" data-k="${s.id}">✕</button></div>`).join('')}
+        </div>
+        <div class="card" style="margin-top:12px"><h3>${t('lessons')}</h3>
+          ${cls.lessons.map((l) => `<div class="row"><span class="grow"><b>${esc(l.title)}</b>${l.id === cls.active_lesson ? ` <span class="muted">(${t('active')})</span>` : ''}<br><span class="muted">${esc(l.goal)}</span></span>${l.id === cls.active_lesson ? '' : `<button class="ghost" data-a="${l.id}">${t('makeActive')}</button>`}</div>`).join('')}
+          <h3>${t('newLesson')}</h3><input id="lt" maxlength="100" placeholder="${t('title')}"><label>${t('goal')}</label><textarea id="lg" rows="3" maxlength="1000"></textarea>
+          <p></p><button id="ls">${t('start')}</button></div>
+      </div><div>
+        <div id="alerts"></div>
+        <div class="card"><div class="row wrapx"><h3 class="grow">${t('live')}${active ? ' · ' + esc(active.title) : ''}</h3><label style="margin:0">${t('date')}</label><input type="date" id="dt" value="${date}" style="width:10rem"></div>
+          <div class="feed" id="feed"></div></div>
+        <div class="card" style="margin-top:12px"><h3>${t('games')}</h3><div class="grid" id="games"></div></div>
+      </div></div>`;
+    wire(); renderAlerts(); renderGames(); await loadFeed();
+  }
+  async function loadFeed() {
+    const q = new URLSearchParams({ student: sel, date }).toString();
+    const ms = await api(`/api/classes/${id}/messages?${q}`);
+    feed().innerHTML = ms.map(msgHtml).join('') || `<p class="muted">${t('empty')}</p>`; bottom();
+    if (!date && !sel) alerts = ms.filter((m) => m.role === 'blocked').slice(-5).reverse(); renderAlerts();
+  }
+  function renderAlerts() {
+    $('#alerts').innerHTML = alerts.map((m) => `<div class="alert ${m.flag === 'self_harm' ? 'urgent' : ''}">${t('alerts').slice(0, 2)} <b>${esc(m.nickname)}</b>: ${t('sc_' + m.flag)}</div>`).join('');
+  }
+  async function loadGames() { games = await api(`/api/classes/${id}/games`); renderGames(); }
+  function renderGames() {
+    const el = $('#games'); if (!el) return;
+    el.replaceChildren(...games.map((g) => {
+      const c = document.createElement('div'); c.className = 'card gcard';
+      c.innerHTML = `<b>${esc(g.title)}</b> <span class="muted">${esc(g.nickname)}</span><div class="row wrapx" style="margin-top:.4rem"></div>`;
+      const r = c.querySelector('.row'), f = gameFrame(g.html); f.setAttribute('loading', 'lazy'); c.insertBefore(f, r);
+      const b = (l, fn, cls = 'ghost') => { const x = document.createElement('button'); x.className = cls; x.textContent = l; x.onclick = fn; r.append(x); };
+      b(t('play'), () => openGame(g));
+      b(t('showToClass'), async (e) => { await api(`/api/games/${g.id}/showcase`, 'POST'); e.target.textContent = '✓ ' + t('showing'); }, '');
+      return c;
+    }));
+    if (!games.length) el.innerHTML = `<p class="muted">${t('noGames')}</p>`;
+  }
+  function wire() {
+    root.querySelectorAll('[data-s]').forEach((e) => (e.onclick = () => { sel = e.dataset.s; load(); }));
+    root.querySelectorAll('[data-p]').forEach((e) => (e.onclick = async (ev) => { ev.stopPropagation(); await api('/api/students/' + e.dataset.p, 'PATCH', { paused: +e.dataset.v === 1 }); load(); }));
+    root.querySelectorAll('[data-k]').forEach((e) => (e.onclick = async (ev) => { ev.stopPropagation(); await api('/api/students/' + e.dataset.k, 'DELETE'); if (sel == e.dataset.k) sel = ''; load(); }));
+    root.querySelectorAll('[data-a]').forEach((e) => (e.onclick = async () => { await api('/api/classes/' + id, 'PATCH', { active_lesson: +e.dataset.a }); load(); }));
+    $('#pa').onclick = async () => { await api('/api/classes/' + id, 'PATCH', { paused: !cls.paused }); load(); };
+    $('#dls').onclick = async () => { await api('/api/classes/' + id, 'PATCH', { daily_limit: +$('#dl').value }); load(); };
+    $('#dt').onchange = (e) => { date = e.target.value; loadFeed(); };
+    $('#ls').onclick = async () => { if (!$('#lt').value.trim() || !$('#lg').value.trim()) return; await api(`/api/classes/${id}/lessons`, 'POST', { title: $('#lt').value, goal: $('#lg').value }); load(); };
+  }
+
+  await load(); loadGames();
+  let gt;
+  onEvents(`/api/classes/${id}/events`, (ev) => {
+    if (ev.type === 'joined') load();
+    if (ev.type === 'usage') { clearTimeout(gt); gt = setTimeout(() => { loadGames(); }, 2000); }
+    if (ev.type === 'message') {
+      const m = ev.message;
+      if (m.role === 'blocked') { alerts.unshift(m); alerts = alerts.slice(0, 5); renderAlerts(); }
+      if (!date && (!sel || sel == m.student_id)) { feed().insertAdjacentHTML('beforeend', msgHtml(m)); bottom(); }
+    }
+  });
+}
+</script></body></html>

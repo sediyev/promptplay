@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="az"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PromptPlay</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<div class="top"><b id="nick"></b><span class="muted grow" id="lesson"></span><span class="muted" id="left"></span><button class="ghost" id="lang"></button></div>
+<div class="banner" id="seen" data-t="seen"></div>
+<div class="banner stop" id="status" hidden></div>
+<div class="app">
+  <div class="card pane">
+    <div class="log" id="log"></div>
+    <form class="composer" id="form"><textarea id="text" maxlength="1500" data-ph="placeholder"></textarea><button id="send" data-t="send"></button></form>
+  </div>
+  <div class="card pane">
+    <div class="row"><h3 class="grow" data-t="yourGame"></h3><button id="save" class="ok" data-t="save" hidden></button></div>
+    <div id="stage" class="pane grow" style="min-height:200px"><p class="muted" data-t="noGame"></p></div>
+    <h3 data-t="myGames"></h3><div class="grid" id="games" style="max-height:30%;overflow:auto"></div>
+  </div>
+</div>
+<div id="modal" class="modal" hidden><div><div class="row"><b class="grow" id="mt"></b><button class="ghost" id="mc" data-t="close"></button></div><div id="mb" class="pane grow"></div></div></div>
+<script type="module">
+import { api, t, applyI18n, toggleLang, esc, $, onEvents, extractGame, gameFrame } from '/common.js';
+applyI18n(); $('#lang').textContent = t('lang'); $('#lang').onclick = toggleLang;
+let me, currentGame = null, busy = false;
+
+// Replace complete ```html blocks with a chip; hide an unfinished one while it streams.
+function display(text) {
+  let s = text.replace(/```html[\s\S]*?```/g, '\n' + t('gameReady') + '\n');
+  const open = s.indexOf('```html');
+  if (open >= 0) s = s.slice(0, open) + '\n' + t('building');
+  return s.trim();
+}
+function addMsg(role, text) {
+  const d = document.createElement('div'); d.className = 'msg ' + role; d.textContent = text;
+  $('#log').append(d); $('#log').scrollTop = 1e9; return d;
+}
+function showGame(html) {
+  currentGame = html; $('#stage').replaceChildren(Object.assign(gameFrame(html), { className: 'game' })); $('#save').hidden = false;
+}
+function renderState() {
+  $('#nick').textContent = me.nickname; $('#lesson').textContent = me.lesson ? `${t('lesson')}: ${me.lesson.title}` : '';
+  const left = Math.max(0, me.limit - me.used); $('#left').textContent = `${left} ${t('left')}`;
+  const msg = me.classPaused ? 'paused' : me.paused ? 'pausedYou' : left <= 0 ? 'limit' : me.budget ? 'budget' : !me.lesson ? 'noLesson' : null;
+  $('#status').hidden = !msg || msg === 'noLesson'; if (msg) $('#status').textContent = t(msg);
+  const off = !!msg || busy; $('#text').disabled = off; $('#send').disabled = off;
+}
+async function refresh() { me = await api('/api/student/me'); renderState(); }
+async function loadGames() {
+  const gs = await api('/api/games');
+  $('#games').replaceChildren(...gs.map((g) => {
+    const mine = g.nickname === me.nickname, c = document.createElement('div'); c.className = 'card gcard';
+    c.innerHTML = `<b>${esc(g.title)}</b> <span class="muted">${mine ? '' : t('by') + ' ' + esc(g.nickname)}</span><div class="row wrapx"></div>`;
+    const r = c.querySelector('.row');
+    const btn = (label, fn, cls = 'ghost') => { const b = document.createElement('button'); b.className = cls; b.textContent = label; b.onclick = fn; r.append(b); };
+    btn(t('play'), () => showGame(g.html));
+    if (mine) {
+      btn(g.shared ? t('unshare') : t('share'), async () => { await api('/api/games/' + g.id, 'PATCH', { shared: !g.shared }); loadGames(); });
+      btn(t('delete'), async () => { await api('/api/games/' + g.id, 'DELETE'); loadGames(); });
+    }
+    return c;
+  }));
+}
+$('#save').onclick = async () => {
+  const m = currentGame.match(/<title>([^<]*)<\/title>/i);
+  await api('/api/games', 'POST', { html: currentGame, title: (m && m[1].trim()) || me.lesson?.title || 'Game' });
+  $('#save').textContent = t('saved'); setTimeout(() => ($('#save').textContent = t('save')), 1500); loadGames();
+};
+$('#form').onsubmit = async (e) => {
+  e.preventDefault();
+  const text = $('#text').value.trim(); if (!text || busy) return;
+  $('#text').value = ''; busy = true; renderState(); addMsg('user', text);
+  const bubble = addMsg('assistant', t('thinking'));
+  try {
+    const r = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) });
+    if ((r.headers.get('content-type') || '').includes('json')) {
+      const j = await r.json(); bubble.className = 'msg note';
+      bubble.textContent = j.blocked ? t(j.category === 'self_harm' ? 'blocked_self_harm' : j.category === 'personal_info' ? 'blocked_personal_info' : 'blocked') : t(j.error);
+    } else {
+      const reader = r.body.getReader(), dec = new TextDecoder(); let full = '';
+      for (;;) {
+        const { done, value } = await reader.read(); if (done) break;
+        full += dec.decode(value, { stream: true });
+        bubble.textContent = display(full.replace('\u0000error', '')) || t('thinking'); $('#log').scrollTop = 1e9;
+      }
+      if (full.includes('\u0000error')) { bubble.className = 'msg note'; bubble.textContent = t('try_again'); }
+      const g = extractGame(full); if (g) showGame(g);
+    }
+  } catch { bubble.className = 'msg note'; bubble.textContent = t('try_again'); }
+  busy = false; await refresh().catch(() => {});
+};
+$('#text').onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#form').requestSubmit(); } };
+$('#mc').onclick = () => ($('#modal').hidden = true);
+
+try { await refresh(); } catch { location = '/'; }
+for (const m of me.messages) addMsg(m.role, m.role === 'assistant' ? display(m.content) : m.content);
+const lastGame = [...me.messages].reverse().map((m) => m.role === 'assistant' && extractGame(m.content)).find(Boolean);
+if (lastGame) showGame(lastGame);
+loadGames();
+onEvents('/api/student/events', async (ev) => {
+  if (ev.type === 'state') refresh().catch(() => {});
+  if (ev.type === 'showcase') {
+    $('#mt').textContent = `${t('showcase')}: ${ev.game.title} (${ev.game.nickname})`;
+    $('#mb').replaceChildren(Object.assign(gameFrame(ev.game.html), { className: 'game' })); $('#modal').hidden = false;
+  }
+});
+</script></body></html>

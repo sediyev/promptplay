@@ -1,0 +1,17 @@
+{
+  "name": "promptplay",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Classroom app where kids learn prompting and build games with Claude, under teacher supervision",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server/index.js",
+    "dev": "node --watch --env-file-if-exists=.env server/index.js",
+    "test": "node --test"
+  },
+  "engines": { "node": ">=22.5" },
+  "dependencies": {
+    "@anthropic-ai/sdk": "latest",
+    "express": "^5.0.0"
+  }
+}
