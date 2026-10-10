@@ -64,6 +64,71 @@ const DICT = {
     showing: 'Sinfə göstərilir', lang: 'EN', tagline: 'Oyun düzəldərək süni intellektlə danışmağı öyrən', student: 'Şagird', teacher: 'Müəllim',
   },
 };
+// Rooms, courses and the level map
+Object.assign(DICT.en, {
+  pin: 'Secret PIN (4 digits, remember it!)', pickAvatar: 'Pick your avatar', invitedTo: "You're invited to", haveCode: 'Have a class code instead?',
+  bad_pin: 'Wrong PIN for this nickname. Ask your teacher if you forgot it.', bad_pin_format: 'Your PIN must be exactly 4 digits.',
+  pin_locked: 'Too many tries. Wait 5 minutes or ask your teacher.', room_closed: 'This room is closed right now. Wait for your teacher to open it.',
+  bad_invite: 'This invite link is not valid. Ask your teacher for a new one.', sessionEnded: 'Your teacher ended the session. See you next time! 👋',
+  newHere: 'New here? Pick a nickname and a PIN. Coming back? Use the same ones.',
+  map: 'Map', level: 'Level', backToMap: '🗺️ Map', checkWork: '✅ Check my work', checking: 'Checking your work…', task: 'Your task',
+  passed: 'Level complete!', notYet: 'Not quite yet!', pendingMsg: 'Sent to your teacher. Waiting for approval ⏳', pending: 'Waiting for teacher',
+  no_work: 'Work on the task with the AI first!', no_output: 'Make your creation with the AI first, then check your work.',
+  too_fast: 'Wait a few seconds before checking again.', locked: 'This level is still locked.', nextLevel: 'Next level →', keepGoing: 'Keep going',
+  yourCreation: 'Your creation', noCreation: 'Ask the AI to help you create it. It will appear here!', creationReady: '✨ Creation updated! See it on the right.',
+  chatLevel: 'This level is a conversation. Talk it through with the AI, then press "Check my work".', courseDone: 'You finished the whole course! 🏆',
+  teacher_pass: 'Your teacher approved a level! ⭐', teacher_reject: 'Your teacher wants you to keep working on this level.',
+  teacher_reset: 'Your teacher reset a level so you can play it again.', youAreHere: 'You are here', myWork: 'Gallery', replay: 'Play again',
+  rooms: 'My rooms', newRoom: 'New room', roomName: 'Room name', course: 'Course', courses: 'My courses', newCourse: 'New course',
+  importCourse: '⬆ Upload course (JSON)', starter: '+ Starter course', levelsN: 'levels', roomsN: 'rooms', studentsN: 'students',
+  approvalMode: 'Who unlocks the next level?', approval_ai: 'AI checks the work (you can override)', approval_teacher: 'I approve each level',
+  startSession: '▶ Start session', endSession: '■ End session', liveNow: 'LIVE', closedRoom: 'Closed', inviteLink: 'Invite link', copy: 'Copy',
+  copied: 'Copied!', newLink: 'New link', qr: 'QR code', classMap: 'Class map', approvals: 'Waiting for your approval', approve: 'Approve',
+  reject: 'Send back', passLevel: 'Pass', resetLevel: 'Reset', resetPin: 'PIN', newPin: 'New PIN for', aiSuggests: 'AI suggests',
+  outputs: 'Student work', allLevels: 'All levels', typing: 'typing…', noCourses: 'Create or upload a course first.', finish: 'Finished',
+  confirmEnd: 'End the session? All students will be logged out until you start it again.', confirmNewLink: 'Make a new link? The old link will stop working.',
+  in_use: 'This course is used by a room, so it cannot be deleted.', deleteCourse: 'Delete course', saveCourse: 'Save course',
+  exportJson: '⬇ Download JSON', addLevel: '+ Add level', emoji: 'Emoji', intro: 'Story intro (shown to students)', taskL: 'Task (what the student must do)',
+  aiGuide: 'How the AI should guide (students do not see this)', criteria: 'Completion criteria (used to check the work)', outputType: 'Output',
+  out_game: '🎮 Game', out_creation: '✨ Creation card', out_chat: '💬 Conversation only', description: 'Description', remove: 'Remove',
+  levels_err: 'Every level needs a title and a task (max 100 levels).', title_err: 'The course needs a title.', badFile: 'That file is not a valid course JSON.',
+  autoClose: 'The room closes by itself 15 minutes after this dashboard is closed.', progressOf: 'Progress', checked: 'checked',
+  passedShort: 'passed', failedShort: 'not yet', sentToYou: 'waiting for you', confirmDelete: 'Delete this course?', unsaved: 'Unsaved changes',
+  editCourse: 'Edit course', useCourse: 'Rooms are live copies: changes apply to every room using this course.', share2: 'Students open this link:',
+  confirmRemove: 'Remove this student and their progress?', levelsTitle: 'Levels', edit: 'Edit',
+});
+Object.assign(DICT.az, {
+  pin: 'Gizli PIN (4 rəqəm, yadda saxla!)', pickAvatar: 'Avatarını seç', invitedTo: 'Dəvət olundun:', haveCode: 'Sinif kodun var?',
+  bad_pin: 'Bu ləqəb üçün PIN səhvdir. Unutmusansa, müəllimindən soruş.', bad_pin_format: 'PIN düz 4 rəqəm olmalıdır.',
+  pin_locked: 'Çox cəhd oldu. 5 dəqiqə gözlə və ya müəllimindən soruş.', room_closed: 'Bu otaq hazırda bağlıdır. Müəllimin açmasını gözlə.',
+  bad_invite: 'Bu dəvət linki etibarsızdır. Müəllimindən yenisini istə.', sessionEnded: 'Müəllim dərsi bitirdi. Növbəti dəfə görüşərik! 👋',
+  newHere: 'Yenisən? Ləqəb və PIN seç. Qayıdırsan? Eynilərini yaz.',
+  map: 'Xəritə', level: 'Səviyyə', backToMap: '🗺️ Xəritə', checkWork: '✅ İşimi yoxla', checking: 'İşin yoxlanılır…', task: 'Tapşırığın',
+  passed: 'Səviyyə tamamlandı!', notYet: 'Hələ yox!', pendingMsg: 'Müəllimə göndərildi. Təsdiq gözlənilir ⏳', pending: 'Müəllim gözlənilir',
+  no_work: 'Əvvəlcə süni intellektlə tapşırıq üzərində işlə!', no_output: 'Əvvəlcə süni intellektlə yaradıcılığını düzəlt, sonra yoxla.',
+  too_fast: 'Yenidən yoxlamadan əvvəl bir neçə saniyə gözlə.', locked: 'Bu səviyyə hələ bağlıdır.', nextLevel: 'Növbəti səviyyə →', keepGoing: 'Davam et',
+  yourCreation: 'Sənin yaradıcılığın', noCreation: 'Süni intellektdən kömək istə. Burada görünəcək!', creationReady: '✨ Yaradıcılığın yeniləndi! Sağda bax.',
+  chatLevel: 'Bu səviyyə söhbətdir. Süni intellektlə danış, sonra "İşimi yoxla" düyməsini bas.', courseDone: 'Bütün kursu bitirdin! 🏆',
+  teacher_pass: 'Müəllim səviyyəni təsdiqlədi! ⭐', teacher_reject: 'Müəllim bu səviyyə üzərində işləməyə davam etməyini istəyir.',
+  teacher_reset: 'Müəllim bir səviyyəni yenidən oynamağın üçün sıfırladı.', youAreHere: 'Sən buradasan', myWork: 'Qalereya', replay: 'Yenidən oyna',
+  rooms: 'Otaqlarım', newRoom: 'Yeni otaq', roomName: 'Otağın adı', course: 'Kurs', courses: 'Kurslarım', newCourse: 'Yeni kurs',
+  importCourse: '⬆ Kurs yüklə (JSON)', starter: '+ Başlanğıc kursu', levelsN: 'səviyyə', roomsN: 'otaq', studentsN: 'şagird',
+  approvalMode: 'Növbəti səviyyəni kim açır?', approval_ai: 'Süni intellekt yoxlayır (dəyişə bilərsiniz)', approval_teacher: 'Hər səviyyəni mən təsdiqləyirəm',
+  startSession: '▶ Dərsi başlat', endSession: '■ Dərsi bitir', liveNow: 'CANLI', closedRoom: 'Bağlı', inviteLink: 'Dəvət linki', copy: 'Kopyala',
+  copied: 'Kopyalandı!', newLink: 'Yeni link', qr: 'QR kod', classMap: 'Sinif xəritəsi', approvals: 'Təsdiqinizi gözləyir', approve: 'Təsdiqlə',
+  reject: 'Geri qaytar', passLevel: 'Keçir', resetLevel: 'Sıfırla', resetPin: 'PIN', newPin: 'Yeni PIN:', aiSuggests: 'Süni intellektin təklifi',
+  outputs: 'Şagird işləri', allLevels: 'Bütün səviyyələr', typing: 'yazır…', noCourses: 'Əvvəlcə kurs yaradın və ya yükləyin.', finish: 'Bitirdi',
+  confirmEnd: 'Dərsi bitirmək? Yenidən başladana qədər bütün şagirdlər çıxarılacaq.', confirmNewLink: 'Yeni link yaradılsın? Köhnə link işləməyəcək.',
+  in_use: 'Bu kurs otaqda istifadə olunur, silinə bilməz.', deleteCourse: 'Kursu sil', saveCourse: 'Kursu yadda saxla',
+  exportJson: '⬇ JSON yüklə', addLevel: '+ Səviyyə əlavə et', emoji: 'Emoji', intro: 'Hekayə girişi (şagirdlər görür)', taskL: 'Tapşırıq (şagird nə etməlidir)',
+  aiGuide: 'Süni intellekt necə yönləndirsin (şagirdlər görmür)', criteria: 'Tamamlanma meyarları (işi yoxlamaq üçün)', outputType: 'Nəticə',
+  out_game: '🎮 Oyun', out_creation: '✨ Yaradıcılıq kartı', out_chat: '💬 Yalnız söhbət', description: 'Təsvir', remove: 'Sil',
+  levels_err: 'Hər səviyyənin başlığı və tapşırığı olmalıdır (maks. 100 səviyyə).', title_err: 'Kursun başlığı olmalıdır.', badFile: 'Bu fayl düzgün kurs JSON-u deyil.',
+  autoClose: 'Bu panel bağlandıqdan 15 dəqiqə sonra otaq avtomatik bağlanır.', progressOf: 'İrəliləyiş', checked: 'yoxladı',
+  passedShort: 'keçdi', failedShort: 'hələ yox', sentToYou: 'sizi gözləyir', confirmDelete: 'Bu kurs silinsin?', unsaved: 'Yadda saxlanmamış dəyişikliklər',
+  editCourse: 'Kursu redaktə et', useCourse: 'Otaqlar canlı nüsxədir: dəyişikliklər bu kursdan istifadə edən bütün otaqlara aiddir.', share2: 'Şagirdlər bu linki açır:',
+  confirmRemove: 'Bu şagird və irəliləyişi silinsin?', levelsTitle: 'Səviyyələr', edit: 'Redaktə',
+});
 let lang = 'az';
 try { lang = localStorage.getItem('lang') || 'az'; } catch {}
 export const t = (k) => DICT[lang][k] ?? DICT.en[k] ?? k;
@@ -91,10 +156,10 @@ export function onEvents(url, handler) {
   return es;
 }
 
-// Last complete ```html block in an AI reply, or null
-export function extractGame(text) {
+// Last complete ```html (or ```creation) block in an AI reply, or null
+export function extractGame(text, tag = 'html') {
   let m, last = null;
-  const re = /```html\s*([\s\S]*?)```/g;
+  const re = new RegExp('```' + tag + '\\s*([\\s\\S]*?)```', 'g');
   while ((m = re.exec(text))) last = m[1].trim();
   return last;
 }
@@ -112,4 +177,24 @@ export function gameFrame(html) {
   f.setAttribute('referrerpolicy', 'no-referrer');
   f.srcdoc = gameDoc(html);
   return f;
+}
+
+// Creation card: first line is the name, "Label: value" lines get a bold label. Text only, never HTML.
+export function creationCard(text) {
+  const card = document.createElement('div'); card.className = 'creation';
+  const [name, ...lines] = String(text).trim().split('\n');
+  const h = document.createElement('h3'); h.textContent = name.replace(/^[#*\s]+|[*\s]+$/g, ''); card.append(h);
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    const p = document.createElement('p'), m = line.match(/^\s*[-*]?\s*([^:]{1,30}):\s*(.*)$/);
+    if (m) { const b = document.createElement('b'); b.textContent = m[1].replace(/\*/g, '') + ': '; p.append(b, m[2].replace(/\*\*/g, '')); }
+    else p.textContent = line.replace(/\*\*/g, '');
+    card.append(p);
+  }
+  return card;
+}
+export const stars = (n, max = 3) => '★'.repeat(n) + '☆'.repeat(Math.max(0, max - n));
+export function toast(text, kind = '') {
+  const d = Object.assign(document.createElement('div'), { className: 'toast ' + kind, textContent: text });
+  document.body.append(d); setTimeout(() => d.remove(), 4000);
 }
