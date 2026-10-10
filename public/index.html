@@ -1,27 +1,30 @@
 <!doctype html>
 <html lang="az"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>PromptPlay</title><link rel="stylesheet" href="/style.css"></head>
-<body>
-<div class="wrap">
-  <h1>🎮 PromptPlay</h1>
-  <form id="join" class="card">
-    <h2 data-t="join"></h2>
-    <label data-t="code"></label><input id="code" maxlength="8" autocapitalize="characters" autocomplete="off" required>
-    <label data-t="nickname"></label><input id="nick" maxlength="20" autocomplete="off" required>
-    <p class="err" id="jerr"></p><button data-t="go"></button>
-  </form>
-  <details style="margin-top:1rem"><summary class="muted" data-t="teacherLogin"></summary>
-    <form id="login" class="card" style="margin-top:.5rem">
-      <label data-t="email"></label><input id="email" type="email" required>
-      <label data-t="password"></label><input id="pw" type="password" required>
-      <p class="err" id="lerr"></p><button data-t="login"></button>
+<body><body>
+<div class="hero"><div class="box">
+  <h1><span class="logo">🎮 PromptPlay</span></h1>
+  <p class="sub" data-t="tagline"></p>
+  <div class="card">
+    <div class="seg"><button id="tabS" class="on" data-t="student" type="button"></button><button id="tabT" data-t="teacher" type="button"></button></div>
+    <form id="join">
+      <label data-t="code"></label><input id="code" maxlength="8" autocomplete="off" required>
+      <label data-t="nickname"></label><input id="nick" maxlength="20" autocomplete="off" required>
+      <p class="err" id="jerr"></p><button class="big" data-t="go"></button>
     </form>
-  </details>
-  <p><button class="ghost" id="lang"></button></p>
-</div>
+    <form id="login" hidden>
+      <label data-t="email"></label><input id="email" type="email" autocomplete="username" required>
+      <label data-t="password"></label><input id="pw" type="password" autocomplete="current-password" required>
+      <p class="err" id="lerr"></p><button class="big" data-t="login"></button>
+    </form>
+  </div>
+  <p style="text-align:center"><button class="ghost" id="lang"></button></p>
+</div></div>
 <script type="module">
 import { api, t, applyI18n, toggleLang, $ } from '/common.js';
 applyI18n(); $('#lang').textContent = t('lang'); $('#lang').onclick = toggleLang;
+const tab = (st) => { $('#join').hidden = !st; $('#login').hidden = st; $('#tabS').classList.toggle('on', st); $('#tabT').classList.toggle('on', !st); };
+$('#tabS').onclick = () => tab(true); $('#tabT').onclick = () => tab(false);
 $('#join').onsubmit = async (e) => {
   e.preventDefault();
   try { await api('/api/join', 'POST', { code: $('#code').value, nickname: $('#nick').value }); location = '/student.html'; }

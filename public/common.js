@@ -29,7 +29,7 @@ const DICT = {
     teacher: 'Teacher', cls: 'Class', exists: 'Email already exists', invalid: 'Check the fields (password min 6 chars)', code_label: 'Code',
     codeCopy: 'Share this code with students:', sc_sexual: 'sexual content', sc_violence: 'violence', sc_self_harm: 'possible self-harm / danger',
     sc_hate: 'hate', sc_drugs: 'drugs', sc_personal_info: 'personal info', sc_jailbreak: 'rule bypass attempt', sc_other: 'unsafe',
-    showing: 'Showing to class', lang: 'AZ',
+    showing: 'Showing to class', lang: 'AZ', tagline: 'Learn to talk to AI by building games', student: 'Student', teacher: 'Teacher',
   },
   az: {
     app: 'PromptPlay', join: 'Sinfə qoşul', code: 'Sinif kodu', nickname: 'Ləqəb (real adın yox!)', go: 'Başla',
@@ -61,7 +61,7 @@ const DICT = {
     teacher: 'Müəllim', cls: 'Sinif', exists: 'Bu e-poçt artıq var', invalid: 'Sahələri yoxlayın (parol min. 6 simvol)', code_label: 'Kod',
     codeCopy: 'Bu kodu şagirdlərlə paylaş:', sc_sexual: 'qeyri-münasib məzmun', sc_violence: 'zorakılıq', sc_self_harm: 'özünə zərər / təhlükə ehtimalı',
     sc_hate: 'nifrət', sc_drugs: 'narkotik', sc_personal_info: 'şəxsi məlumat', sc_jailbreak: 'qaydaları keçməyə cəhd', sc_other: 'təhlükəli',
-    showing: 'Sinfə göstərilir', lang: 'EN',
+    showing: 'Sinfə göstərilir', lang: 'EN', tagline: 'Oyun düzəldərək süni intellektlə danışmağı öyrən', student: 'Şagird', teacher: 'Müəllim',
   },
 };
 let lang = 'az';

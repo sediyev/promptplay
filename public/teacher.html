@@ -2,7 +2,7 @@
 <html lang="az"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>PromptPlay – Teacher</title><link rel="stylesheet" href="/style.css"></head>
 <body>
-<div class="top"><b>🎮 PromptPlay</b><span class="grow"></span><button class="ghost" id="lang"></button><button class="ghost" id="out" data-t="logout"></button></div>
+<div class="top"><b class="logo">🎮 PromptPlay</b><span class="grow"></span><button class="ghost" id="lang"></button><button class="ghost" id="out" data-t="logout"></button></div>
 <div id="root"></div>
 <div id="modal" class="modal" hidden><div><div class="row"><b class="grow" id="mt"></b><button class="ghost" id="mc" data-t="close"></button></div><div id="mb" class="pane grow"></div></div></div>
 <script type="module">
@@ -27,7 +27,7 @@ async function listPage() {
     <label>${t('dailyLimit')}</label><input id="dl" type="number" min="1" value="30">
     <label style="display:flex;gap:.5rem;align-items:flex-start;color:inherit"><input type="checkbox" id="cc" style="width:auto;margin-top:.3rem">${t('consent')}</label>
     <p class="err" id="err"></p><button id="mk">${t('create')}</button></div>
-    <div class="card"><h2>${t('classes')}</h2>${cs.map((c) => `<p><a href="?class=${c.id}"><b>${esc(c.name)}</b></a> <span class="muted">${t('code_label')}: ${esc(c.code)}</span></p>`).join('') || `<p class="muted">${t('empty')}</p>`}</div></div>`;
+    <div class="card"><h2>${t('classes')}</h2>${cs.map((c) => `<a class="classlink" href="?class=${c.id}"><b>${esc(c.name)}</b><span class="pill">${t('code_label')}: ${esc(c.code)}</span></a>`).join('') || `<p class="muted">${t('empty')}</p>`}</div></div>`;
   $('#mk').onclick = async () => {
     if (!$('#cc').checked) return ($('#err').textContent = t('consentNeeded'));
     try { const r = await api('/api/classes', 'POST', { name: $('#cn').value, consent: true, daily_limit: +$('#dl').value }); location = '?class=' + r.id; }
@@ -41,12 +41,13 @@ async function classPage(id) {
   const label = (m) => `<b>${esc(m.nickname)}${m.role === 'blocked' ? ` · ${t('blockedMsg')}: ${t('sc_' + m.flag)}` : ''} · ${new Date(m.created).toLocaleTimeString()}${m.lesson ? ' · ' + esc(m.lesson) : ''}</b>`;
   const body = (c) => { // fold code blocks so the feed stays readable
     const parts = String(c).split(/```(?:html)?\n?([\s\S]*?)```/);
-    return parts.map((p, i) => (i % 2 ? `<details><summary>code</summary><pre>${esc(p)}</pre></details>` : esc(p))).join('');
+    return parts.map((p, i) => (i % 2 ? `<details><summary>code</summary><pre>${esc(p)}</pre></details>` : p.trim() ? `<div style="white-space:pre-wrap">${esc(p.trim())}</div>` : '')).join('');
   };
   const msgHtml = (m) => `<div class="fm ${m.role}">${label(m)}${m.role === 'blocked' ? esc(m.content) : body(m.content)}</div>`;
   const bottom = () => { const f = feed(); f.scrollTop = f.scrollHeight; };
 
   async function load() {
+    const draft = { t: $('#lt')?.value || '', g: $('#lg')?.value || '' }; // keep a half-typed lesson across live refreshes
     cls = await api('/api/classes/' + id);
     const active = cls.lessons.find((l) => l.id === cls.active_lesson);
     root.innerHTML = `<div class="top" style="flex-wrap:wrap"><a href="/teacher.html">${t('back')}</a><h2 style="margin:0">${esc(cls.name)}</h2>
@@ -69,6 +70,7 @@ async function classPage(id) {
           <div class="feed" id="feed"></div></div>
         <div class="card" style="margin-top:12px"><h3>${t('games')}</h3><div class="grid" id="games"></div></div>
       </div></div>`;
+    $('#lt').value = draft.t; $('#lg').value = draft.g;
     wire(); renderAlerts(); renderGames(); await loadFeed();
   }
   async function loadFeed() {

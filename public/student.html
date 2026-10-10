@@ -2,18 +2,18 @@
 <html lang="az"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>PromptPlay</title><link rel="stylesheet" href="/style.css"></head>
 <body>
-<div class="top"><b id="nick"></b><span class="muted grow" id="lesson"></span><span class="muted" id="left"></span><button class="ghost" id="lang"></button></div>
+<div class="top"><b class="logo">🎮</b><b id="nick"></b><span class="muted grow" id="lesson"></span><span class="pill" id="left"></span><button class="ghost" id="lang"></button></div>
 <div class="banner" id="seen" data-t="seen"></div>
 <div class="banner stop" id="status" hidden></div>
 <div class="app">
   <div class="card pane">
-    <div class="log" id="log"></div>
+    <div class="log" id="log"><div class="msg note" id="hint" data-t="noLesson" hidden></div></div>
     <form class="composer" id="form"><textarea id="text" maxlength="1500" data-ph="placeholder"></textarea><button id="send" data-t="send"></button></form>
   </div>
-  <div class="card pane">
+  <div class="card pane" style="overflow:auto">
     <div class="row"><h3 class="grow" data-t="yourGame"></h3><button id="save" class="ok" data-t="save" hidden></button></div>
-    <div id="stage" class="pane grow" style="min-height:200px"><p class="muted" data-t="noGame"></p></div>
-    <h3 data-t="myGames"></h3><div class="grid" id="games" style="max-height:30%;overflow:auto"></div>
+    <div id="stage" class="pane" style="height:min(52vh,430px);flex:none"><p class="muted" data-t="noGame"></p></div>
+    <h3 data-t="myGames"></h3><div class="grid" id="games"></div>
   </div>
 </div>
 <div id="modal" class="modal" hidden><div><div class="row"><b class="grow" id="mt"></b><button class="ghost" id="mc" data-t="close"></button></div><div id="mb" class="pane grow"></div></div></div>
@@ -24,10 +24,10 @@ let me, currentGame = null, busy = false;
 
 // Replace complete ```html blocks with a chip; hide an unfinished one while it streams.
 function display(text) {
-  let s = text.replace(/```html[\s\S]*?```/g, '\n' + t('gameReady') + '\n');
+  let s = text.replace(/\s*```html[\s\S]*?```\s*/g, '\n\n' + t('gameReady') + '\n\n');
   const open = s.indexOf('```html');
   if (open >= 0) s = s.slice(0, open) + '\n' + t('building');
-  return s.trim();
+  return s.replace(/\n{3,}/g, '\n\n').trim();
 }
 function addMsg(role, text) {
   const d = document.createElement('div'); d.className = 'msg ' + role; d.textContent = text;
@@ -41,7 +41,7 @@ function renderState() {
   const left = Math.max(0, me.limit - me.used); $('#left').textContent = `${left} ${t('left')}`;
   const msg = me.classPaused ? 'paused' : me.paused ? 'pausedYou' : left <= 0 ? 'limit' : me.budget ? 'budget' : !me.lesson ? 'noLesson' : null;
   $('#status').hidden = !msg || msg === 'noLesson'; if (msg) $('#status').textContent = t(msg);
-  const off = !!msg || busy; $('#text').disabled = off; $('#send').disabled = off;
+  $('#hint').hidden = !!me.lesson; const off = !!msg || busy; $('#text').disabled = off; $('#send').disabled = off;
 }
 async function refresh() { me = await api('/api/student/me'); renderState(); }
 async function loadGames() {

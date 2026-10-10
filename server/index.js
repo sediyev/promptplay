@@ -29,15 +29,18 @@ function cookie(req, name) {
   const m = (req.headers.cookie || '').match(new RegExp(`(?:^|; )${name}=([^;]+)`));
   return m && m[1];
 }
+// Separate cookies so a teacher and a student can use the same browser (e.g. a teacher testing).
+const COOKIE = { user: 'pp_user', student: 'pp_student' };
 function startSession(res, kind, ref) {
   const token = newToken();
   run('INSERT INTO sessions(token,kind,ref,created) VALUES(?,?,?,?)', token, kind, ref, now());
-  res.append('Set-Cookie', `pp=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${30 * 86400}`);
+  res.append('Set-Cookie', `${COOKIE[kind]}=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${30 * 86400}`);
 }
 function auth(req, _res, next) {
-  const s = one('SELECT * FROM sessions WHERE token=?', cookie(req, 'pp') || '');
-  if (s?.kind === 'user') req.user = one('SELECT id,email,name,role FROM users WHERE id=?', s.ref);
-  if (s?.kind === 'student') req.student = one('SELECT * FROM students WHERE id=?', s.ref);
+  const u = one("SELECT * FROM sessions WHERE token=? AND kind='user'", cookie(req, COOKIE.user) || '');
+  if (u) req.user = one('SELECT id,email,name,role FROM users WHERE id=?', u.ref);
+  const s = one("SELECT * FROM sessions WHERE token=? AND kind='student'", cookie(req, COOKIE.student) || '');
+  if (s) req.student = one('SELECT * FROM students WHERE id=?', s.ref);
   next();
 }
 app.use(auth);
@@ -63,7 +66,7 @@ app.post('/api/login', (req, res) => {
   res.json({ role: u.role });
 });
 app.post('/api/logout', (req, res) => {
-  run('DELETE FROM sessions WHERE token=?', cookie(req, 'pp') || '');
+  run('DELETE FROM sessions WHERE token=?', cookie(req, COOKIE.user) || '');
   res.json({ ok: true });
 });
 app.get('/api/me', (req, res) => (req.user ? res.json(req.user) : fail(res, 401, 'auth')));
