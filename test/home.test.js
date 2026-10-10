@@ -8,7 +8,8 @@ import os from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { HOME } from '../public/home-i18n.js';
-import { sync } from '../scripts/sync-home.mjs';
+import { sync, TARGETS } from '../scripts/sync-home.mjs';
+import { PAGES } from '../public/pages-i18n.js';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..'), PUB = path.join(ROOT, 'public');
 const read = (f) => fs.readFileSync(path.join(PUB, f), 'utf8');
@@ -63,11 +64,35 @@ test('the ten starter levels are exactly the ones in server/starter-course.json,
 });
 
 test('business details are clearly marked placeholders, and listed in one place', () => {
-  for (const ph of ['[ORG NAME]', '[CONTACT]', '[CTA LINK]', '[PRIVACY POLICY LINK]', '[OG IMAGE]']) assert.ok(html.includes(ph), ph + ' missing from index.html');
-  for (const ph of ['[PRICE]', '[LOCATIONS AND SCHEDULE]', '[PRIVACY POLICY LINK]']) assert.ok(HOME.en.a7.includes(ph) || Object.values(HOME.en).includes(ph), ph + ' missing from the dictionary');
+  for (const ph of ['[ORG NAME]', '[CONTACT]', '[OG IMAGE]']) assert.ok(html.includes(ph), ph + ' missing from index.html');
+  for (const ph of ['[PRICE]', '[LOCATIONS AND SCHEDULE]']) assert.ok(Object.values(HOME.en).includes(ph), ph + ' missing from the dictionary');
   assert.match(html, /<section class="sec" id="proof" hidden><\/section>/, 'hidden social proof placeholder');
   assert.match(html, /TODO social proof/);
   assert.match(HOME.en.cta, /free trial/i); // [PRIMARY CTA] shows an example label until the real one is decided
+});
+
+test('every link on the home page goes somewhere real', () => {
+  const hrefs = [...html.matchAll(/<a\b[^>]*\shref="([^"]*)"/g)].map((m) => m[1]);
+  assert.ok(hrefs.length >= 15, 'links found');
+  const ids = new Set([...html.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]));
+  for (const h of hrefs) {
+    assert.ok(!h.startsWith('[') && h !== '#' && h !== '', `placeholder or empty link: ${h}`);
+    if (h.startsWith('#')) assert.ok(ids.has(h.slice(1)), `${h} points at a missing section`);
+    else assert.match(h, /^\/(?:join(?:#teacher)?|trial|privacy)?$/, `unexpected link target ${h}`);
+  }
+  assert.equal(hrefs.filter((h) => h === '/trial').length, 4, 'nav, hero, final and sticky buttons go to the trial form');
+  assert.ok(hrefs.filter((h) => h === '/privacy').length >= 2, 'footer and FAQ link to the privacy policy');
+  assert.ok(!/data-todo|a\[href\^="\["\]/.test(read('home.js')), 'home.js no longer rewrites placeholder links');
+});
+
+test('trial and privacy pages: static text in sync, every key translated', () => {
+  for (const [name, az] of TARGETS.slice(1)) {
+    const page = read(name);
+    assert.equal(sync(page, az), page, name + ' is out of date, run "npm run home:sync"');
+    for (const k of new Set([...page.matchAll(/data-t="(\w+)"/g)].map((m) => m[1]))) assert.ok(PAGES.en[k] && PAGES.az[k], `${name}: ${k} needs en and az text`);
+  }
+  assert.equal(Object.keys(PAGES.en).sort().join(), Object.keys(PAGES.az).sort().join(), 'en and az have the same keys');
+  assert.match(read('trial.html'), /href="\/privacy"/);
 });
 
 test('structure: one h1, landmarks, meta tags, language', () => {

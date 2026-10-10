@@ -12,7 +12,7 @@ npm test               # offline end-to-end test with a fake Anthropic API
 Needs Node >= 22.5 (built-in `node:sqlite`). Put it behind HTTPS (e.g. Caddy) for the pilot; students connect from home.
 
 ## Flow
-- `/` the public home page for parents and kids (see "Home page" below). `/join` is where students join (class code) and teachers or admins log in; `/join/<token>` is the room invite link, `/join#teacher` opens the teacher tab. Admin (from `.env`) adds teachers at `/admin.html`.
+- `/` the public home page for parents and kids (see "Home page" below); `/trial` is the free trial request form and `/privacy` the privacy policy. `/join` is where students join (class code) and teachers or admins log in; `/join/<token>` is the room invite link, `/join#teacher` opens the teacher tab. Admin (from `.env`) adds teachers at `/admin.html`.
 - **Courses** (`/course.html`): the teacher builds a course of levels in the browser, or uploads one as JSON. A starter course of 10 levels ships with the app (`server/starter-course.json`). Each level has a story intro, a task, hidden guidance for the AI, completion criteria and an output type: `game` (HTML game), `creation` (a text card such as a superhero profile) or `chat` (conversation only).
 - **Rooms** (`/teacher.html`): one course can be opened as many rooms as needed. Each room has its own invite link (`/join/<token>`, also as a QR code), a short class code, consent checkbox, daily limit and approval mode. "New link" revokes the old one.
 - **Sessions**: students can only join while the teacher has started the session. "End session" logs every student out at once; accounts and progress stay for next time. If the teacher's dashboard is closed for 15 minutes (`SESSION_GRACE_MS`), the room closes by itself.
@@ -49,14 +49,13 @@ Needs Node >= 22.5 (built-in `node:sqlite`). Put it behind HTTPS (e.g. Caddy) fo
 - **Static baseline**: the page is complete HTML in Azerbaijani before any script runs (no empty flash, no layout shift, readable without JavaScript). After editing the `az` strings run `npm run home:sync` to rewrite that text in `index.html`; `npm test` fails if it is out of date.
 - **Player**: the avatar chosen in the hero is saved in localStorage (`avatar`), shown in the demo window, on the map and in the shield, and preselected on the join page.
 - **Motion**: animations only touch `transform` and `opacity`, loops pause off screen, and with `prefers-reduced-motion` every demo shows its final state. Colours reuse the `style.css` tokens; `home.css` adds a few AA-safe text shades (checked for both themes in `test/home.test.js`).
+- **Links**: every link on the page is real. `/join` and `/join#teacher` open the join and login page; the four "free trial" buttons go to `/trial` (`trial.html`), a form that stores the request in the `trial_requests` table (name, phone or email, child's age, optional note; honeypot field, 5 requests per hour per address, deleted with the same retention setting as chat history). The admin sees and deletes requests at the bottom of `/admin.html`. The privacy links (footer and FAQ) open `/privacy` (`privacy.html`), which describes only what the code really stores, so update it when the data handling changes and have it reviewed before launch. Both pages take their text from `pages-i18n.js` (Azerbaijani and English); `npm run home:sync` keeps their static Azerbaijani HTML in step, like the home page.
 - **Placeholders to fill in** (business details not decided yet; they are bracketed and highlighted on the page):
 
 | Placeholder | Where |
 | --- | --- |
 | `[PRIMARY CTA]` | button label: key `cta` in `home-i18n.js` (an example label is shown, "Book a free trial class") |
-| `[CTA LINK]` | `href` of the four primary buttons in `index.html` (until set, they scroll to the footer contact line) |
 | `[ORG NAME]`, `[CONTACT]` | footer in `index.html` |
-| `[PRIVACY POLICY LINK]` | footer `href` in `index.html` (until set, it jumps to the FAQ) and the text of FAQ answer `a7` |
 | `[PRICE]` | FAQ answer `a9` in `home-i18n.js` |
 | `[LOCATIONS AND SCHEDULE]` | FAQ answer `a8` in `home-i18n.js` |
 | `[OG IMAGE]` | `og:image` and `twitter:image` in the `<head>` of `index.html` |

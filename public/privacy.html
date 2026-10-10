@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="az">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title data-t="pv_title">Məxfilik siyasəti · PromptPlay</title>
+<meta name="theme-color" content="#f4f5fb" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f111a" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%F0%9F%8E%AE%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/style.css">
+<style>
+  .doc { max-width: 720px; margin: 0 auto; padding: 24px 16px 64px; }
+  .doc h1 { margin: .6em 0 .3em; }
+  .doc h2 { font-size: 1.15rem; margin: 1.6em 0 .3em; }
+  .doc p { line-height: 1.65; margin: .4em 0; }
+  .doc .lead { font-size: 1.05rem; color: var(--muted); }
+  .doc .bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+</style>
+</head>
+<body>
+<main class="doc">
+  <div class="bar">
+    <a class="logo" href="/">🎮 PromptPlay</a>
+    <button class="ghost" id="lang" type="button"></button>
+  </div>
+  <h1 data-t="pv_h">Məxfilik siyasəti</h1>
+  <p class="lead" data-t="pv_lead">PromptPlay uşaqlar üçün qurulub, ona görə saxladığımız məlumatı mümkün qədər az tuturuq. Bu səhifədə nəyin, nə üçün və nə qədər müddətə saxlandığı dəqiq izah olunur.</p>
+  <h2 data-t="pv_h1">Uşaqlar nə daxil edir</h2>
+  <p data-t="pv_p1">Ləqəb, avatar və 4 rəqəmli PIN. Real ad, e-poçt ünvanı və ya telefon nömrəsi heç vaxt istənilmir. PIN yalnız birtərəfli şifrələnmiş (hash) şəkildə saxlanır, ona görə heç kim onu geri oxuya bilməz.</p>
+  <p data-t="pv_p1b">Uşağın süni intellektə yazdığı mesajlar, sinifdə düzəltdiyi oyun və yaradıcılıqlar və səviyyə irəliləyişi saxlanılır ki, müəllim prosesi izləyə bilsin və uşaq növbəti dəfə qaldığı yerdən davam etsin.</p>
+  <h2 data-t="pv_h2">Müəllim nə görür</h2>
+  <p data-t="pv_p2">Müəllim hər mesajı və süni intellektin hər cavabını canlı görür, bir uşağı və ya bütün sinfi dayandıra və sessiyanı istənilən anda bitirə bilər. Uşaqlara bu, yazışma ekranında bildirilir.</p>
+  <h2 data-t="pv_h3">Təhlükəsizlik yoxlaması və süni intellekt təminatçısı</h2>
+  <p data-t="pv_p3">Hər mesaj süni intellektə çatmazdan əvvəl avtomatik təhlükəsizlik filtrindən keçir. Mesajlar və səviyyə işi yalnız cavab hazırlamaq və səviyyənin tamamlanıb-tamamlanmadığını qiymətləndirmək üçün Claude süni intellekt modelinin təminatçısı olan Anthropic şirkətinə göndərilir. Təhlükəli görünən mesajlar dayandırılır və müəllimə göstərilir.</p>
+  <h2 data-t="pv_h4">Valideynlər sınaq formasında nə daxil edir</h2>
+  <p data-t="pv_p4">Adınız, telefon nömrəsi və ya e-poçt, övladınızın yaşı və istəyə bağlı qeyd. Bunlar yalnız sorğunuza cavab vermək üçün istifadə olunur, üçüncü tərəflərlə paylaşılmır və reklam üçün işlədilmir.</p>
+  <h2 data-t="pv_h5">Məlumat nə qədər saxlanılır</h2>
+  <p data-t="pv_p5">Söhbət tarixçəsi, oyunlar, sınaq sorğuları və istifadə olunmayan uşaq hesabları 30 gündən sonra avtomatik silinir (hazırkı standart ayar).</p>
+  <h2 data-t="pv_h6">Cihazdakı çerezlər və yaddaş</h2>
+  <p data-t="pv_p6">Yalnız xidmətin işləməsi üçün lazım olanlar: uşaq və ya müəllim üçün giriş çerezi, brauzerdə isə seçilmiş dil, seçilmiş avatar və sonuncu dəvət linki. Analitika, reklam və izləyicilər yoxdur, səhifələr başqa saytlardan heç nə yükləmir.</p>
+  <h2 data-t="pv_h7">Valideyn razılığı</h2>
+  <p data-t="pv_p7">Müəllim sinifdəki hər uşaq üçün valideyn razılığının alındığını təsdiq etməyənə qədər sinif aça bilməz.</p>
+  <h2 data-t="pv_h8">Sizin hüquqlarınız</h2>
+  <p data-t="pv_p8">Övladınızın məlumatlarını görmək və ya silməyi istənilən vaxt ana səhifənin altındakı əlaqə məlumatları vasitəsilə xahiş edə bilərsiniz.</p>
+  <p class="muted" data-t="pv_note">Bu mətn xidmətin hazırkı iş qaydasını təsvir edir və dəyişdikcə yenilənə bilər.</p>
+  <p><a href="/" data-t="tr_home">← Ana səhifəyə qayıt</a></p>
+</main>
+<script type="module">
+import { t, getLang, addStrings, applyI18n, toggleLang, $ } from '/common.js';
+import { PAGES } from '/pages-i18n.js';
+addStrings(PAGES);
+if (getLang() !== 'az') { applyI18n(); document.documentElement.lang = getLang(); document.title = t('pv_title'); }
+$('#lang').textContent = t('lang'); $('#lang').onclick = toggleLang;
+</script>
+</body>
+</html>

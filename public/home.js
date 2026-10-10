@@ -22,10 +22,6 @@ $$('[data-lang]').forEach((b) => (b.onclick = () => { setLang(getLang() === 'az'
 if (getLang() !== 'az') applyLang(); // the HTML is already Azerbaijani
 root.classList.remove('pend');
 
-// ---------- links whose destination is not decided yet ([CTA LINK], [PRIVACY POLICY LINK]) ----------
-// They keep their bracket text in data-todo and point somewhere sensible until the real address is filled in.
-$$('a[href^="["]').forEach((a) => { a.dataset.todo = a.getAttribute('href'); a.setAttribute('href', a.matches('[data-cta]') ? '#contact' : '#faq'); });
-
 // ---------- top bar: compact once the page scrolls (IntersectionObserver on a marker at the top, no scroll listener) ----------
 const bar = $('#bar'), more = $('.more');
 new IntersectionObserver(([e]) => bar.classList.toggle('is-compact', !e.isIntersecting)).observe($('#topmark'));

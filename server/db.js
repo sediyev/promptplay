@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS levels (id INTEGER PRIMARY KEY, course_id INTEGER, po
 CREATE INDEX IF NOT EXISTS level_course ON levels(course_id, position);
 CREATE TABLE IF NOT EXISTS progress (student_id INTEGER, level_id INTEGER, status TEXT, stars INTEGER DEFAULT 0, feedback TEXT, output_id INTEGER, created INTEGER,
   PRIMARY KEY(student_id, level_id));
+CREATE TABLE IF NOT EXISTS trial_requests (id INTEGER PRIMARY KEY, parent_name TEXT, contact TEXT, child_age INTEGER, lang TEXT, note TEXT, created INTEGER);
 `);
 
 // ---------- migrations (columns added after the pilot) ----------
@@ -79,6 +80,7 @@ export function purgeOld() {
   db.prepare('DELETE FROM students WHERE last_seen<?').run(cutoff);
   db.prepare("DELETE FROM sessions WHERE kind='student' AND ref NOT IN (SELECT id FROM students)").run();
   db.prepare('DELETE FROM progress WHERE student_id NOT IN (SELECT id FROM students)').run();
+  db.prepare('DELETE FROM trial_requests WHERE created<?').run(cutoff); // parents' contact details follow the same retention setting
 }
 
 // Pilot classes had a flat list of lessons; turn each class's lessons into a course of levels so nothing is lost.

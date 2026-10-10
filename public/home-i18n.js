@@ -114,7 +114,8 @@ export const HOME = {
     q4: 'Is this just more screen time?', a4: 'It is creating with a teacher, not scrolling. Kids invent heroes and build games, and accounts only work during class.',
     q5: 'What device do we need?', a5: 'Any modern browser on a laptop, tablet or phone. There is nothing to install.',
     q6: 'Which languages does it use?', a6: 'Azerbaijani and English. The AI answers in the language your child writes in.',
-    q7: 'What happens to my child’s data?', a7: 'Kids sign in with a nickname, an avatar and a 4 digit PIN. No real names, emails or phone numbers are asked for. Chat history is deleted automatically after 30 days (the current default setting). Full policy: [PRIVACY POLICY LINK]',
+    q7: 'What happens to my child’s data?', a7: 'Kids sign in with a nickname, an avatar and a 4 digit PIN. No real names, emails or phone numbers are asked for. Chat history is deleted automatically after 30 days (the current default setting).',
+    a7l: 'Read the full privacy policy',
     q8: 'Where and when are classes?', a8: '[LOCATIONS AND SCHEDULE]',
     q9: 'How much does it cost?', a9: '[PRICE]',
 
@@ -232,7 +233,8 @@ export const HOME = {
     q4: 'Bu, sadəcə daha çox ekran vaxtıdırmı?', a4: 'Bu, sonsuz sürüşdürmə yox, müəllimlə birgə yaratmaqdır. Uşaqlar qəhrəman icad edir, oyun qurur; hesablar isə yalnız dərs zamanı işləyir.',
     q5: 'Hansı cihaz lazımdır?', a5: 'Noutbuk, planşet və ya telefonda istənilən müasir brauzer kifayətdir. Heç nə quraşdırmaq lazım deyil.',
     q6: 'Hansı dillərdə işləyir?', a6: 'Azərbaycan və ingilis dillərində. Süni intellekt uşağın yazdığı dildə cavab verir.',
-    q7: 'Övladımın məlumatlarına nə olur?', a7: 'Uşaqlar ləqəb, avatar və 4 rəqəmli PIN ilə daxil olur. Real ad, e-poçt və ya telefon nömrəsi istənilmir. Söhbət tarixçəsi 30 gündən sonra avtomatik silinir (hazırkı standart ayar). Tam siyasət: [PRIVACY POLICY LINK]',
+    q7: 'Övladımın məlumatlarına nə olur?', a7: 'Uşaqlar ləqəb, avatar və 4 rəqəmli PIN ilə daxil olur. Real ad, e-poçt və ya telefon nömrəsi istənilmir. Söhbət tarixçəsi 30 gündən sonra avtomatik silinir (hazırkı standart ayar).',
+    a7l: 'Tam məxfilik siyasətini oxu',
     q8: 'Siniflər harada və nə vaxt keçirilir?', a8: '[LOCATIONS AND SCHEDULE]',
     q9: 'Qiyməti nə qədərdir?', a9: '[PRICE]',
 

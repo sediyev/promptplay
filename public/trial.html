@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="az">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title data-t="tr_title">Pulsuz sınaq dərsinə yazıl · PromptPlay</title>
+<meta name="theme-color" content="#f4f5fb" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f111a" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%F0%9F%8E%AE%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/style.css">
+<style>
+  .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+  .tr-foot { text-align: center; margin: .8rem 0 0; }
+  .fine { font-size: .85rem; color: var(--muted); margin: .8rem 0 0; }
+</style>
+</head>
+<body>
+<div class="hero"><div class="box">
+  <h1><a class="logo" href="/">🎮 PromptPlay</a></h1>
+  <div class="card">
+    <form id="trial" novalidate>
+      <h2 style="margin:0 0 .2em" data-t="tr_h">Pulsuz sınaq dərsinə yazıl</h2>
+      <p class="muted" style="margin:0 0 .4rem" data-t="tr_sub">Məlumatlarınızı buraxın, övladınız üçün sınaq dərsini razılaşdırmaq məqsədilə sizinlə əlaqə saxlayaq.</p>
+      <label for="name" data-t="tr_name">Adınız (valideyn və ya qəyyum)</label>
+      <input id="name" name="name" maxlength="80" autocomplete="name" required>
+      <label for="contact" data-t="tr_contact">Telefon nömrəsi və ya e-poçt</label>
+      <input id="contact" name="contact" maxlength="120" autocomplete="email tel" inputmode="email" required>
+      <label for="age" data-t="tr_age">Övladınızın yaşı</label>
+      <select id="age" name="age" required>
+        <option value="" data-t="tr_age_ph">Seçin</option>
+        <option>8</option><option>9</option><option>10</option><option>11</option><option>12</option>
+        <option>13</option><option>14</option><option>15</option><option>16</option><option>17</option>
+      </select>
+      <label for="note" data-t="tr_note">Bilməli olduğumuz bir şey varmı? (istəyə bağlı)</label>
+      <textarea id="note" name="note" rows="3" maxlength="500"></textarea>
+      <div class="hp" aria-hidden="true"><label for="website">Website</label><input id="website" name="website" tabindex="-1" autocomplete="off"></div>
+      <p class="err" id="err" role="alert"></p>
+      <button class="big" id="send" data-t="tr_send">Sorğunu göndər</button>
+      <p class="fine"><span data-t="tr_consent">Bu məlumatlardan yalnız sınaq dərsi barədə cavab vermək üçün istifadə edirik və 30 gündən sonra avtomatik silirik (hazırkı standart ayar).</span> <a href="/privacy" data-t="tr_policy">Məxfilik siyasətini oxu</a></p>
+    </form>
+    <div id="done" hidden role="status">
+      <h2 style="margin:0 0 .2em" data-t="tr_ok_h">Təşəkkür edirik! 🎉</h2>
+      <p data-t="tr_ok_p">Sorğunuz bizə çatdı, tezliklə sizinlə əlaqə saxlayacağıq.</p>
+    </div>
+  </div>
+  <p class="tr-foot"><a href="/" data-t="tr_home">← Ana səhifəyə qayıt</a></p>
+  <p style="text-align:center"><button class="ghost" id="lang" type="button"></button></p>
+</div></div>
+<script type="module">
+import { api, t, getLang, addStrings, applyI18n, toggleLang, $ } from '/common.js';
+import { PAGES } from '/pages-i18n.js';
+addStrings(PAGES);
+if (getLang() !== 'az') { applyI18n(); document.documentElement.lang = getLang(); document.title = t('tr_title'); }
+$('#lang').textContent = t('lang'); $('#lang').onclick = toggleLang;
+
+$('#trial').onsubmit = async (e) => {
+  e.preventDefault();
+  $('#err').textContent = ''; $('#send').disabled = true; $('#send').textContent = t('tr_sending');
+  try {
+    await api('/api/trial', 'POST', { name: $('#name').value, contact: $('#contact').value, age: $('#age').value, note: $('#note').value, website: $('#website').value, lang: getLang() });
+    $('#trial').hidden = true; $('#done').hidden = false; $('#done').focus?.();
+  } catch (x) {
+    $('#err').textContent = t(x.code && x.code !== 'error' ? x.code : 'try_again');
+    $('#send').disabled = false; $('#send').textContent = t('tr_send');
+  }
+};
+</script>
+</body>
+</html>

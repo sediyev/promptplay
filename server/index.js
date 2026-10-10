@@ -19,6 +19,9 @@ app.use(express.json({ limit: '300kb' }));
 app.use(express.static(PUBLIC));
 // "/" is the public home page (public/index.html, served by express.static); joining and logging in live at /join.
 app.get(['/join', '/join/:token'], (_req, res) => res.sendFile(path.join(PUBLIC, 'join.html')));
+// The two public pages the home page links to: the free trial request form and the privacy policy.
+app.get('/trial', (_req, res) => res.sendFile(path.join(PUBLIC, 'trial.html')));
+app.get('/privacy', (_req, res) => res.sendFile(path.join(PUBLIC, 'privacy.html')));
 
 // ---------- helpers ----------
 const one = (sql, ...p) => db.prepare(sql).get(...p);
@@ -500,7 +503,26 @@ app.delete('/api/games/:id', needStudent, gameOwner, (req, res) => {
   res.json({ ok: true });
 });
 
+// ---------- free trial requests (public form on /trial, read by the admin) ----------
+const trialHits = new Map(); // ip -> request times in the last hour: stops a script from filling the table
+app.post('/api/trial', (req, res) => {
+  if (req.body.website) return res.json({ ok: true }); // honeypot field: real visitors never see or fill it, bots do
+  const hits = (trialHits.get(req.ip) || []).filter((x) => x > now() - 3600000);
+  if (hits.length >= 5) return fail(res, 429, 'too_many');
+  const name = String(req.body.name || '').trim().replace(/\s+/g, ' '), contact = String(req.body.contact || '').trim(), age = Math.floor(+req.body.age);
+  const note = String(req.body.note || '').trim().slice(0, 500), lang = req.body.lang === 'en' ? 'en' : 'az';
+  if (name.length < 2 || name.length > 80) return fail(res, 400, 'trial_name');
+  const phone = contact.replace(/\D/g, '').length >= 7 && /^[\d\s+()-]+$/.test(contact), mail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact);
+  if (contact.length > 120 || !(phone || mail)) return fail(res, 400, 'trial_contact');
+  if (!(age >= 8 && age <= 17)) return fail(res, 400, 'trial_age');
+  hits.push(now()); trialHits.set(req.ip, hits);
+  run('INSERT INTO trial_requests(parent_name,contact,child_age,lang,note,created) VALUES(?,?,?,?,?,?)', name, contact, age, lang, note, now());
+  res.json({ ok: true });
+});
+
 // ---------- admin ----------
+app.get('/api/admin/trials', needAdmin, (_req, res) => res.json(all('SELECT id,parent_name,contact,child_age,lang,note,created FROM trial_requests ORDER BY id DESC LIMIT 200')));
+app.delete('/api/admin/trials/:id', needAdmin, (req, res) => { run('DELETE FROM trial_requests WHERE id=?', +req.params.id); res.json({ ok: true }); });
 app.get('/api/admin/teachers', needAdmin, (_req, res) => res.json(all("SELECT id,email,name FROM users WHERE role='teacher' ORDER BY id")));
 app.post('/api/admin/teachers', needAdmin, (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase(), name = String(req.body.name || '').trim(), pw = String(req.body.password || '');
