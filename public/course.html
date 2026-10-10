@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="az"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PromptPlay – Course</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<div class="top"><a href="/teacher.html" data-t="back"></a><b class="logo">🎮 PromptPlay</b><span class="grow"></span><span class="muted" id="dirty" hidden data-t="unsaved"></span>
+  <button class="ghost" id="exp" data-t="exportJson"></button><button id="save" data-t="saveCourse"></button><button class="ghost" id="lang"></button></div>
+<div class="editor">
+  <div class="card"><h2 data-t="editCourse"></h2>
+    <label data-t="title"></label><input id="title" maxlength="100">
+    <label data-t="description"></label><textarea id="desc" rows="2" maxlength="1000"></textarea>
+    <p class="muted" data-t="useCourse"></p><p class="err" id="err"></p></div>
+  <h2 data-t="levelsTitle" style="margin:18px 4px 8px"></h2>
+  <div id="levels"></div>
+  <div class="row" style="margin:12px 0 40px"><button class="ghost" id="add" data-t="addLevel"></button><span class="grow"></span><button class="bad" id="del" data-t="deleteCourse" hidden></button></div>
+</div>
+<script type="module">
+import { api, t, applyI18n, toggleLang, esc, $ } from '/common.js';
+applyI18n(); $('#lang').textContent = t('lang'); $('#lang').onclick = toggleLang;
+try { await api('/api/me'); } catch { location = '/'; }
+let id = +new URLSearchParams(location.search).get('id') || null, levels = [], dirty = false;
+const FIELDS = ['title', 'emoji', 'output', 'intro', 'task', 'ai_guide', 'criteria'];
+const blank = () => ({ title: '', emoji: '⭐', output: 'creation', intro: '', task: '', ai_guide: '', criteria: '' });
+const mark = () => { dirty = true; $('#dirty').hidden = false; };
+window.onbeforeunload = (e) => { if (dirty) e.preventDefault(); };
+
+if (id) {
+  const c = await api('/api/courses/' + id);
+  $('#title').value = c.title; $('#desc').value = c.description || ''; levels = c.levels; $('#del').hidden = false;
+} else levels = [blank()];
+$('#title').oninput = $('#desc').oninput = mark;
+
+function render() {
+  $('#levels').innerHTML = levels.map((l, i) => `<div class="card lvcard" data-i="${i}">
+    <div class="row"><span class="lvnum">${i + 1}</span><input data-f="emoji" value="${esc(l.emoji)}" maxlength="8" class="emoji" aria-label="${t('emoji')}">
+      <input data-f="title" value="${esc(l.title)}" maxlength="100" placeholder="${t('title')}" class="grow">
+      <select data-f="output" style="width:auto">${['game', 'creation', 'chat'].map((o) => `<option value="${o}" ${l.output === o ? 'selected' : ''}>${t('out_' + o)}</option>`).join('')}</select>
+      <button class="ghost" data-mv="-1" ${i ? '' : 'disabled'}>↑</button><button class="ghost" data-mv="1" ${i < levels.length - 1 ? '' : 'disabled'}>↓</button>
+      <button class="ghost" data-rm title="${t('remove')}">✕</button></div>
+    <div class="lvgrid">
+      <div><label>${t('intro')}</label><textarea data-f="intro" rows="2" maxlength="1000">${esc(l.intro)}</textarea></div>
+      <div><label>${t('taskL')}</label><textarea data-f="task" rows="2" maxlength="2000">${esc(l.task)}</textarea></div>
+      <div><label>${t('aiGuide')}</label><textarea data-f="ai_guide" rows="2" maxlength="2000">${esc(l.ai_guide)}</textarea></div>
+      <div><label>${t('criteria')}</label><textarea data-f="criteria" rows="2" maxlength="1000">${esc(l.criteria)}</textarea></div>
+    </div></div>`).join('');
+  $('#levels').querySelectorAll('.lvcard').forEach((card) => {
+    const i = +card.dataset.i;
+    card.querySelectorAll('[data-f]').forEach((f) => (f.oninput = () => { levels[i][f.dataset.f] = f.value; mark(); }));
+    card.querySelectorAll('[data-mv]').forEach((b) => (b.onclick = () => { const j = i + +b.dataset.mv; [levels[i], levels[j]] = [levels[j], levels[i]]; mark(); render(); }));
+    card.querySelector('[data-rm]').onclick = () => { if (levels.length > 1) { levels.splice(i, 1); mark(); render(); } };
+  });
+}
+render();
+$('#add').onclick = () => { levels.push(blank()); mark(); render(); $('#levels').lastElementChild.querySelector('[data-f=title]').focus(); };
+
+const payload = () => ({ title: $('#title').value, description: $('#desc').value, levels: levels.map((l) => Object.fromEntries([['id', l.id], ...FIELDS.map((f) => [f, l[f]])])) });
+$('#save').onclick = async () => {
+  $('#err').textContent = '';
+  try {
+    if (id) await api('/api/courses/' + id, 'PUT', payload());
+    else { id = (await api('/api/courses', 'POST', payload())).id; history.replaceState(null, '', '?id=' + id); $('#del').hidden = false; }
+    levels = (await api('/api/courses/' + id)).levels; render(); // pick up ids of new levels
+    dirty = false; $('#dirty').hidden = true; $('#save').textContent = '✓ ' + t('saved'); setTimeout(() => ($('#save').textContent = t('saveCourse')), 1500);
+  } catch (x) { $('#err').textContent = ['title', 'levels'].includes(x.code) ? t(x.code + '_err') : x.code; window.scrollTo(0, 0); }
+};
+// Exported files leave out ids so they can be uploaded as a new course anywhere.
+$('#exp').onclick = () => {
+  const { title, description } = payload(), data = { title, description, levels: levels.map((l) => Object.fromEntries(FIELDS.map((f) => [f, l[f]]))) };
+  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })),
+    download: (title || 'course').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').toLowerCase() + '.json' });
+  a.click(); URL.revokeObjectURL(a.href);
+};
+$('#del').onclick = async () => {
+  if (!confirm(t('confirmDelete'))) return;
+  try { await api('/api/courses/' + id, 'DELETE'); dirty = false; location = '/teacher.html'; } catch (x) { $('#err').textContent = t(x.code); }
+};
+</script></body></html>

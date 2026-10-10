@@ -9,9 +9,12 @@
     "dev": "node --watch --env-file-if-exists=.env server/index.js",
     "test": "node --test"
   },
-  "engines": { "node": ">=22.5" },
+  "engines": {
+    "node": ">=22.5"
+  },
   "dependencies": {
     "@anthropic-ai/sdk": "latest",
-    "express": "^5.0.0"
+    "express": "^5.0.0",
+    "qrcode": "^1.5.4"
   }
 }

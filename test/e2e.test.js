@@ -11,18 +11,24 @@ const GAME = '<!doctype html><html><head><title>Tap</title></head><body><button 
 const fake = http.createServer((req, res) => {
   let b = ''; req.on('data', (c) => (b += c)); req.on('end', () => {
     const body = JSON.parse(b || '{}'), usage = { input_tokens: 100, output_tokens: 50 };
-    const isMod = String(body.system).includes('safety filter');
+    const isMod = String(body.system).includes('safety filter'), isEval = String(body.system).includes('level evaluator');
     const base = { id: 'msg_1', type: 'message', role: 'assistant', model: body.model, stop_reason: 'end_turn', stop_sequence: null, usage };
     if (isMod) {
       const bad = body.messages[0].content.includes('badword');
       res.setHeader('content-type', 'application/json');
       return res.end(JSON.stringify({ ...base, content: [{ type: 'text', text: bad ? '{"ok":false,"category":"sexual"}' : '{"ok":true}' }] }));
     }
+    if (isEval) { // passes unless the student only said "lazy"
+      const lazy = /STUDENT: lazy\n?(?!STUDENT)/.test(body.messages[0].content) && !/STUDENT: (?!lazy)/.test(body.messages[0].content);
+      res.setHeader('content-type', 'application/json');
+      return res.end(JSON.stringify({ ...base, content: [{ type: 'text', text: lazy ? '{"pass":false,"stars":0,"feedback":"Try more"}' : '{"pass":true,"stars":2,"feedback":"Great job"}' }] }));
+    }
+    const reply = String(body.system).includes('Making creations') ? 'Nice!\n```creation\nCaptain Cloud\nPowers: rain\n```' : 'Here you go!\n```html\n' + GAME + '\n```';
     res.writeHead(200, { 'content-type': 'text/event-stream' });
     const ev = (type, data) => res.write(`event: ${type}\ndata: ${JSON.stringify({ type, ...data })}\n\n`);
     ev('message_start', { message: { ...base, content: [], usage: { input_tokens: 100, output_tokens: 1 } } });
     ev('content_block_start', { index: 0, content_block: { type: 'text', text: '' } });
-    ev('content_block_delta', { index: 0, delta: { type: 'text_delta', text: 'Here you go!\n```html\n' + GAME + '\n```' } });
+    ev('content_block_delta', { index: 0, delta: { type: 'text_delta', text: reply } });
     ev('content_block_stop', { index: 0 });
     ev('message_delta', { delta: { stop_reason: 'end_turn', stop_sequence: null }, usage: { output_tokens: 50 } });
     ev('message_stop', {}); res.end();
@@ -43,52 +49,159 @@ before(async () => {
   await new Promise((r) => fake.listen(0, r));
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-'));
   const port = 3100 + Math.floor(Math.random() * 500); base = `http://localhost:${port}`;
-  server = spawn('node', ['server/index.js'], { env: { ...process.env, PORT: port, DB_PATH: path.join(dir, 't.db'), ANTHROPIC_API_KEY: 'x',
+  server = spawn('node', ['server/index.js'], { env: { ...process.env, PORT: port, SESSION_GRACE_MS: '600', SUBMIT_COOLDOWN_MS: '1000', DB_PATH: path.join(dir, 't.db'), ANTHROPIC_API_KEY: 'x',
     ANTHROPIC_BASE_URL: `http://localhost:${fake.address().port}`, ADMIN_EMAIL: 'a@x.com', ADMIN_PASSWORD: 'adminpw' }, stdio: 'inherit' });
   for (let i = 0; i < 50; i++) { try { await fetch(base + '/api/me'); break; } catch { await new Promise((r) => setTimeout(r, 100)); } }
 });
 after(() => { server.kill(); fake.close(); fs.rmSync(dir, { recursive: true, force: true }); });
 
-test('full classroom flow', async () => {
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+test('courses, rooms, live sessions and levels', async () => {
   assert.equal((await call('t', 'POST', '/api/login', { email: 'a@x.com', password: 'nope' })).status, 401);
   assert.equal((await call('adm', 'POST', '/api/login', { email: 'a@x.com', password: 'adminpw' })).data.role, 'admin');
   assert.equal((await call('adm', 'POST', '/api/admin/teachers', { name: 'T', email: 't@x.com', password: 'secret1' })).status, 200);
   assert.equal((await call('t', 'POST', '/api/login', { email: 't@x.com', password: 'secret1' })).data.role, 'teacher');
   assert.equal((await call('t', 'GET', '/api/admin/usage')).status, 401, 'teacher cannot see admin');
 
-  assert.equal((await call('t', 'POST', '/api/classes', { name: 'C', consent: false })).status, 400, 'consent required');
-  const { id } = (await call('t', 'POST', '/api/classes', { name: 'C', consent: true, daily_limit: 2 })).data;
-  const code = (await call('t', 'GET', '/api/classes/' + id)).data.code;
+  // course: uploaded as JSON, validated, editable, starter available
+  assert.equal((await call('t', 'POST', '/api/courses', { title: 'X', levels: [{ title: 'no task' }] })).status, 400, 'level needs a task');
+  const course = (await call('t', 'POST', '/api/courses', { title: 'Mini', levels: [
+    { title: 'Hero', emoji: '🦸', task: 'Invent a superhero', criteria: 'has a power', output: 'creation' },
+    { title: 'Game', task: 'Build a game', output: 'game' },
+    { title: 'Talk', task: 'Share tips', output: 'chat' },
+  ] })).data.id;
+  const starter = (await call('t', 'POST', '/api/courses/starter')).data.id;
+  assert.equal((await call('t', 'GET', '/api/courses/' + starter)).data.levels.length, 10);
+  const lv = (await call('t', 'GET', '/api/courses/' + course)).data.levels;
+  assert.deepEqual(lv.map((l) => l.output), ['creation', 'game', 'chat']);
 
-  assert.equal((await call('s', 'POST', '/api/join', { code: 'NOPE1', nickname: 'Leyla' })).status, 404);
-  assert.equal((await call('s', 'POST', '/api/join', { code, nickname: 'Leyla' })).status, 200);
-  assert.equal((await call('s2', 'POST', '/api/join', { code, nickname: 'Leyla' })).status, 409, 'nickname taken from another browser');
-  assert.equal((await call('s', 'POST', '/api/join', { code, nickname: 'Leyla' })).status, 200, 'rejoin same browser');
+  // rooms: many instances of one course, each with its own invite link
+  assert.equal((await call('t', 'POST', '/api/classes', { name: 'A', consent: true, course_id: 999 })).status, 400, 'course required');
+  assert.equal((await call('t', 'POST', '/api/classes', { name: 'A', consent: false, course_id: course })).status, 400, 'consent required');
+  const id = (await call('t', 'POST', '/api/classes', { name: 'A', consent: true, daily_limit: 20, course_id: course })).data.id;
+  const id2 = (await call('t', 'POST', '/api/classes', { name: 'B', consent: true, course_id: course })).data.id;
+  const room = (await call('t', 'GET', '/api/classes/' + id)).data;
+  assert.notEqual(room.invite, (await call('t', 'GET', '/api/classes/' + id2)).data.invite);
+  assert.equal((await call('t', 'DELETE', '/api/courses/' + course)).status, 409, 'course in use');
+  assert.match((await call('t', 'GET', `/api/classes/${id}/qr.svg`)).data, /<svg/);
+  assert.equal((await call('x', 'GET', '/api/invite/' + room.invite)).data.live, false);
 
-  assert.equal((await call('s', 'POST', '/api/chat', { text: 'hi' })).data.error, 'no_lesson');
-  await call('t', 'POST', `/api/classes/${id}/lessons`, { title: 'Guess', goal: 'Build a guessing game' });
+  // students can only join while the session is live
+  const join = (who, nickname, pin, extra = {}) => call(who, 'POST', '/api/join', { invite: room.invite, nickname, pin, avatar: '🐼', ...extra });
+  assert.equal((await join('s', 'Leyla', '1234')).data.error, 'room_closed');
+  await call('t', 'PATCH', '/api/classes/' + id, { live: true });
+  assert.equal((await join('s', 'Leyla', '12')).data.error, 'bad_pin_format');
+  assert.equal((await join('s', 'Leyla', '1234')).status, 200);
+  assert.equal((await join('s2', 'Leyla', '9999')).data.error, 'bad_pin', 'nickname is protected by its PIN');
+  assert.equal((await join('s3', 'Leyla', '1234')).status, 200, 'same account from another device');
+  assert.equal((await call('s', 'POST', '/api/join', { code: room.code, nickname: 'Leyla', pin: '1234' })).status, 200, 'class code still works');
 
-  const ok = await call('s', 'POST', '/api/chat', { text: 'make a tap game' });
-  assert.match(ok.data, /```html/);
-  const bad = await call('s', 'POST', '/api/chat', { text: 'badword' });
-  assert.deepEqual(bad.data, { blocked: true, category: 'sexual' });
+  // level map: first level current, rest locked
+  let me = (await call('s', 'GET', '/api/student/me')).data;
+  assert.deepEqual(me.levels.map((l) => l.status), ['current', 'locked', 'locked']);
+  assert.equal((await call('s', 'GET', '/api/student/levels/' + lv[1].id)).status, 403, 'locked level hidden');
+  assert.equal((await call('s', 'POST', '/api/chat', { text: 'hi', level_id: lv[1].id })).data.error, 'locked');
+  assert.equal((await call('s', 'POST', `/api/levels/${lv[0].id}/submit`)).data.error, 'no_work');
 
-  let msgs = (await call('t', 'GET', `/api/classes/${id}/messages`)).data;
-  assert.deepEqual(msgs.map((m) => m.role), ['user', 'assistant', 'blocked'], 'blocked message logged, never answered');
+  // teacher sees the reply stream live
+  const ctl = new AbortController(), events = [];
+  const es = await fetch(`${base}/api/classes/${id}/events`, { headers: { cookie: jar.t }, signal: ctl.signal });
+  (async () => { const dec = new TextDecoder(); try { for await (const c of es.body) events.push(dec.decode(c)); } catch {} })();
+  const r1 = await call('s', 'POST', '/api/chat', { text: 'a hero who controls clouds', level_id: lv[0].id });
+  assert.match(r1.data, /```creation/);
+  await sleep(400);
+  assert.ok(events.join('').includes('"type":"delta"'), 'teacher got streaming deltas');
+  assert.ok(events.join('').includes('Captain Cloud'), 'teacher got the reply');
+  assert.deepEqual((await call('s', 'POST', '/api/chat', { text: 'badword', level_id: lv[0].id })).data, { blocked: true, category: 'sexual' });
 
-  await call('t', 'PATCH', `/api/classes/${id}`, { paused: true });
-  assert.equal((await call('s', 'POST', '/api/chat', { text: 'again' })).data.error, 'paused');
-  await call('t', 'PATCH', `/api/classes/${id}`, { paused: false });
-  assert.equal((await call('s', 'POST', '/api/chat', { text: 'second' })).status, 200);
-  assert.equal((await call('s', 'POST', '/api/chat', { text: 'third' })).data.error, 'limit', 'daily limit of 2 enforced');
+  // check my work: AI passes, next level unlocks, output lands in the teacher gallery
+  const sub = (await call('s', 'POST', `/api/levels/${lv[0].id}/submit`)).data;
+  assert.deepEqual(sub, { pass: true, stars: 2, feedback: 'Great job' });
+  me = (await call('s', 'GET', '/api/student/me')).data;
+  assert.deepEqual(me.levels.map((l) => l.status), ['done', 'current', 'locked']);
+  const outs = (await call('t', 'GET', `/api/classes/${id}/games`)).data;
+  assert.equal(outs[0].kind, 'creation'); assert.equal(outs[0].title, 'Captain Cloud');
+  assert.equal((await call('s', 'POST', `/api/levels/${lv[0].id}/submit`)).data.error, 'too_fast');
 
-  const g = await call('s', 'POST', '/api/games', { title: 'Tap', html: GAME });
-  await call('s', 'PATCH', '/api/games/' + g.data.id, { shared: true });
-  assert.equal((await call('t', 'GET', `/api/classes/${id}/games`)).data.length, 1);
+  // teacher approval mode: submission waits for the teacher
+  await call('t', 'PATCH', '/api/classes/' + id, { approval: 'teacher' });
+  await call('s', 'POST', '/api/chat', { text: 'make a tap game', level_id: lv[1].id });
+  await sleep(1100);
+  assert.deepEqual((await call('s', 'POST', `/api/levels/${lv[1].id}/submit`)).data, { pending: true });
+  let cls = (await call('t', 'GET', '/api/classes/' + id)).data;
+  assert.equal(cls.pending.length, 1);
+  const leyla = cls.students[0].id;
+  assert.equal((await call('s', 'POST', `/api/levels/${lv[1].id}/submit`)).data.error, 'pending');
+  await call('t', 'POST', `/api/students/${leyla}/progress`, { level_id: lv[1].id, action: 'pass', stars: 3 });
+  me = (await call('s', 'GET', '/api/student/me')).data;
+  assert.deepEqual(me.levels.map((l) => [l.status, l.stars]), [['done', 2], ['done', 3], ['current', 0]]);
+  await call('t', 'POST', `/api/students/${leyla}/progress`, { level_id: lv[0].id, action: 'reset' });
+  me = (await call('s', 'GET', '/api/student/me')).data;
+  assert.deepEqual(me.levels.map((l) => l.status), ['current', 'done', 'locked'], 'reset level is played again');
 
+  // PIN reset by teacher
+  const pin = (await call('t', 'PATCH', '/api/students/' + leyla, { reset_pin: true })).data.pin;
+  assert.equal((await join('s4', 'Leyla', '1234')).data.error, 'bad_pin');
+  assert.equal((await join('s4', 'Leyla', pin)).status, 200);
+
+  // ending the session logs everyone out (open student streams are hung up), progress is kept
+  const sctl = new AbortController(), sev = [];
+  const ses = await fetch(`${base}/api/student/events`, { headers: { cookie: jar.s }, signal: sctl.signal });
+  const sdone = (async () => { const dec = new TextDecoder(); try { for await (const c of ses.body) sev.push(dec.decode(c)); } catch {} })();
+  await call('t', 'PATCH', '/api/classes/' + id, { live: false });
+  await call('t', 'PATCH', '/api/classes/' + id, { daily_limit: 20 }); // broadcasts to the room right after the hang-up
+  await sdone; sctl.abort();
+  assert.ok(sev.join('').includes('"type":"closed"'), 'student told the session ended');
+  assert.equal((await call('s', 'GET', '/api/student/me')).status, 401, 'logged out');
+  assert.equal((await join('s', 'Leyla', pin)).data.error, 'room_closed', 'cannot log back in while closed');
+  await call('t', 'PATCH', '/api/classes/' + id, { live: true });
+  assert.equal((await call('s', 'GET', '/api/student/me')).status, 401, 'old session is gone');
+  assert.equal((await join('s', 'Leyla', pin)).status, 200);
+  assert.deepEqual((await call('s', 'GET', '/api/student/me')).data.levels.map((l) => l.status), ['current', 'done', 'locked']);
+
+  // the room closes by itself when the teacher dashboard is gone for the grace period
+  ctl.abort();
+  await sleep(1000);
+  assert.equal((await call('t', 'GET', '/api/classes/' + id)).data.live, 0, 'auto-closed after teacher left');
+
+  // limits, pause and spend cap still apply
+  await call('t', 'PATCH', '/api/classes/' + id2, { live: true, daily_limit: 1 });
+  const r2 = (await call('t', 'GET', '/api/classes/' + id2)).data;
+  await call('k', 'POST', '/api/join', { invite: r2.invite, nickname: 'Kamal', pin: '4321' });
+  await call('t', 'PATCH', '/api/classes/' + id2, { paused: true });
+  assert.equal((await call('k', 'POST', '/api/chat', { text: 'x', level_id: lv[0].id })).data.error, 'paused');
+  await call('t', 'PATCH', '/api/classes/' + id2, { paused: false });
+  assert.equal((await call('k', 'POST', '/api/chat', { text: 'x', level_id: lv[0].id })).status, 200);
+  assert.equal((await call('k', 'POST', '/api/chat', { text: 'y', level_id: lv[0].id })).data.error, 'limit');
   const u = (await call('adm', 'GET', '/api/admin/usage')).data;
-  assert.ok(u.total > 0 && u.classes[0].cost > 0);
+  assert.ok(u.total > 0);
   await call('adm', 'PUT', '/api/admin/settings', { spend_cap: 0.000001 });
-  await call('t', 'PATCH', `/api/classes/${id}`, { daily_limit: 50 });
-  assert.equal((await call('s', 'POST', '/api/chat', { text: 'x' })).data.error, 'budget', 'spend cap enforced');
+  await call('t', 'PATCH', '/api/classes/' + id2, { daily_limit: 50 });
+  assert.equal((await call('k', 'POST', '/api/chat', { text: 'z', level_id: lv[0].id })).data.error, 'budget', 'spend cap enforced');
+});
+
+test('pilot database: lessons become a course, history keeps its level', async () => {
+  const { DatabaseSync } = await import('node:sqlite');
+  const file = path.join(dir, 'pilot.db'), old = new DatabaseSync(file);
+  old.exec(`CREATE TABLE classes (id INTEGER PRIMARY KEY, teacher_id INTEGER, name TEXT, code TEXT UNIQUE, consent_at INTEGER,
+      daily_limit INTEGER DEFAULT 30, paused INTEGER DEFAULT 0, active_lesson INTEGER, created INTEGER);
+    CREATE TABLE lessons (id INTEGER PRIMARY KEY, class_id INTEGER, title TEXT, goal TEXT, created INTEGER);
+    CREATE TABLE students (id INTEGER PRIMARY KEY, class_id INTEGER, nickname TEXT, paused INTEGER DEFAULT 0, created INTEGER, last_seen INTEGER, UNIQUE(class_id, nickname));
+    CREATE TABLE messages (id INTEGER PRIMARY KEY, class_id INTEGER, student_id INTEGER, lesson_id INTEGER, role TEXT, content TEXT, flag TEXT, created INTEGER);
+    CREATE TABLE games (id INTEGER PRIMARY KEY, class_id INTEGER, student_id INTEGER, title TEXT, html TEXT, shared INTEGER DEFAULT 0, created INTEGER);
+    INSERT INTO classes(id,teacher_id,name,code) VALUES(1,7,'Old','ABCDE');
+    INSERT INTO lessons(id,class_id,title,goal) VALUES(1,1,'Guess','Build a guessing game'),(2,1,'Quiz','Build a quiz');
+    INSERT INTO messages(class_id,student_id,lesson_id,role,content,created) VALUES(1,1,2,'user','hi',${Date.now()});`);
+  old.close();
+  const out = await new Promise((resolve, reject) => {
+    const p = spawn('node', ['-e', `import('./server/db.js').then(({ db, migrateLessons }) => { migrateLessons(); migrateLessons();
+      console.log(JSON.stringify({ c: db.prepare('SELECT course_id, invite FROM classes').get(), l: db.prepare('SELECT title, task, position FROM levels ORDER BY position').all(),
+        m: db.prepare('SELECT level_id FROM messages').get(), n: db.prepare('SELECT COUNT(*) n FROM courses').get().n })); })`], { env: { ...process.env, DB_PATH: file } });
+    let s = ''; p.stdout.on('data', (d) => (s += d)); p.on('close', (code) => (code ? reject(new Error('exit ' + code)) : resolve(JSON.parse(s))));
+  });
+  assert.equal(out.n, 1, 'migration is idempotent');
+  assert.ok(out.c.course_id && out.c.invite);
+  assert.deepEqual(out.l, [{ title: 'Guess', task: 'Build a guessing game', position: 1 }, { title: 'Quiz', task: 'Build a quiz', position: 2 }]);
+  assert.ok(out.m.level_id, 'old messages point at the new level');
 });

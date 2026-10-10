@@ -6,116 +6,233 @@
 <div id="root"></div>
 <div id="modal" class="modal" hidden><div><div class="row"><b class="grow" id="mt"></b><button class="ghost" id="mc" data-t="close"></button></div><div id="mb" class="pane grow"></div></div></div>
 <script type="module">
-import { api, t, applyI18n, toggleLang, esc, $, onEvents, gameFrame } from '/common.js';
+import { api, t, applyI18n, toggleLang, esc, $, onEvents, gameFrame, creationCard, stars, toast } from '/common.js';
 applyI18n(); $('#lang').textContent = t('lang'); $('#lang').onclick = toggleLang;
 $('#out').onclick = async () => { await api('/api/logout', 'POST'); location = '/'; };
 $('#mc').onclick = () => { $('#modal').hidden = true; $('#mb').replaceChildren(); };
 const root = $('#root');
 try { await api('/api/me'); } catch { location = '/'; }
 const classId = new URLSearchParams(location.search).get('class');
-classId ? classPage(+classId) : listPage();
+classId ? roomPage(+classId) : listPage();
 
-function openGame(g) {
-  $('#mt').textContent = `${g.title} – ${g.nickname}`;
-  $('#mb').replaceChildren(Object.assign(gameFrame(g.html), { className: 'game' })); $('#modal').hidden = false;
+function openModal(title, el, small) {
+  $('#mt').textContent = title; $('#mb').replaceChildren(el);
+  $('#modal').firstElementChild.classList.toggle('small', !!small); $('#modal').hidden = false;
 }
+const outputEl = (g) => (g.kind === 'creation' ? creationCard(g.html) : Object.assign(gameFrame(g.html), { className: 'game' }));
 
+// ---------- rooms and courses ----------
 async function listPage() {
-  const cs = await api('/api/classes');
-  root.innerHTML = `<div class="layout"><div class="card"><h2>${t('newClass')}</h2>
-    <label>${t('className')}</label><input id="cn" maxlength="60">
-    <label>${t('dailyLimit')}</label><input id="dl" type="number" min="1" value="30">
-    <label style="display:flex;gap:.5rem;align-items:flex-start;color:inherit"><input type="checkbox" id="cc" style="width:auto;margin-top:.3rem">${t('consent')}</label>
-    <p class="err" id="err"></p><button id="mk">${t('create')}</button></div>
-    <div class="card"><h2>${t('classes')}</h2>${cs.map((c) => `<a class="classlink" href="?class=${c.id}"><b>${esc(c.name)}</b><span class="pill">${t('code_label')}: ${esc(c.code)}</span></a>`).join('') || `<p class="muted">${t('empty')}</p>`}</div></div>`;
-  $('#mk').onclick = async () => {
+  const [rooms, courses] = await Promise.all([api('/api/classes'), api('/api/courses')]);
+  root.innerHTML = `<div class="layout">
+    <div><div class="card"><h2>${t('newRoom')}</h2>
+      ${courses.length ? `<label>${t('roomName')}</label><input id="cn" maxlength="60">
+      <label>${t('course')}</label><select id="co">${courses.map((c) => `<option value="${c.id}">${esc(c.title)} (${c.levels} ${t('levelsN')})</option>`).join('')}</select>
+      <label>${t('approvalMode')}</label><select id="ap"><option value="ai">${t('approval_ai')}</option><option value="teacher">${t('approval_teacher')}</option></select>
+      <label>${t('dailyLimit')}</label><input id="dl" type="number" min="1" value="30">
+      <label style="display:flex;gap:.5rem;align-items:flex-start;color:inherit"><input type="checkbox" id="cc" style="width:auto;margin-top:.3rem">${t('consent')}</label>
+      <p class="err" id="err"></p><button id="mk">${t('create')}</button>` : `<p class="muted">${t('noCourses')}</p>`}</div>
+    <div class="card" style="margin-top:12px"><div class="row wrapx"><h2 class="grow">${t('courses')}</h2></div>
+      <div class="row wrapx" style="margin-bottom:.6rem"><a class="btnlink" href="/course.html">${t('newCourse')}</a><button class="ghost" id="st">${t('starter')}</button>
+        <label class="ghost btnlike" style="margin:0">${t('importCourse')}<input type="file" id="imp" accept=".json,application/json" hidden></label></div>
+      <p class="err" id="ierr"></p>
+      ${courses.map((c) => `<a class="classlink" href="/course.html?id=${c.id}"><span><b>${esc(c.title)}</b><br><span class="muted">${c.levels} ${t('levelsN')} · ${c.rooms} ${t('roomsN')}</span></span><span class="pill">${t('edit')}</span></a>`).join('') || `<p class="muted">${t('empty')}</p>`}
+    </div></div>
+    <div class="card"><h2>${t('rooms')}</h2>${rooms.map((c) => `<a class="classlink" href="?class=${c.id}"><span><b>${esc(c.name)}</b><br><span class="muted">${esc(c.course || '')} · ${c.students} ${t('studentsN')}</span></span>
+      <span class="pill ${c.live ? 'live' : ''}">${c.live ? '● ' + t('liveNow') : t('closedRoom')}</span></a>`).join('') || `<p class="muted">${t('empty')}</p>`}</div></div>`;
+  if ($('#mk')) $('#mk').onclick = async () => {
     if (!$('#cc').checked) return ($('#err').textContent = t('consentNeeded'));
-    try { const r = await api('/api/classes', 'POST', { name: $('#cn').value, consent: true, daily_limit: +$('#dl').value }); location = '?class=' + r.id; }
+    try { const r = await api('/api/classes', 'POST', { name: $('#cn').value, consent: true, daily_limit: +$('#dl').value, course_id: +$('#co').value, approval: $('#ap').value }); location = '?class=' + r.id; }
     catch (x) { $('#err').textContent = x.code; }
+  };
+  $('#st').onclick = async () => { await api('/api/courses/starter', 'POST'); listPage(); };
+  $('#imp').onchange = async (e) => {
+    try { await api('/api/courses', 'POST', JSON.parse(await e.target.files[0].text())); listPage(); }
+    catch (x) { $('#ierr').textContent = x instanceof SyntaxError ? t('badFile') : (['title', 'levels'].includes(x.code) ? t(x.code + '_err') : t('badFile')); }
   };
 }
 
-async function classPage(id) {
-  let cls, sel = '', date = '', games = [], alerts = [];
-  const feed = () => $('#feed');
-  const label = (m) => `<b>${esc(m.nickname)}${m.role === 'blocked' ? ` · ${t('blockedMsg')}: ${t('sc_' + m.flag)}` : ''} · ${new Date(m.created).toLocaleTimeString()}${m.lesson ? ' · ' + esc(m.lesson) : ''}</b>`;
+// ---------- live room dashboard ----------
+async function roomPage(id) {
+  let cls, sel = '', levelFilter = '', date = '', games = [], alerts = [];
+  const typing = new Map(), live = new Map(); // student id -> typing timer / streaming bubble
+  root.innerHTML = `<div class="top roomtop" id="head"></div>
+    <div class="layout"><div>
+      <div class="card"><div id="students"></div></div>
+      <div class="card" style="margin-top:12px" id="progressCard" hidden></div>
+    </div><div>
+      <div id="alerts"></div>
+      <div class="card approvals" id="pending" hidden></div>
+      <div class="card"><h3>${t('classMap')}</h3><div class="classmap" id="cmap"></div></div>
+      <div class="card" style="margin-top:12px"><div class="row wrapx"><h3 class="grow">${t('live')}</h3>
+        <select id="lf" style="width:auto"></select><input type="date" id="dt" style="width:10rem"></div>
+        <div class="feed" id="feed"></div></div>
+      <div class="card" style="margin-top:12px"><h3>${t('outputs')}</h3><div class="grid" id="games"></div></div>
+    </div></div>`;
+  const stu = (sid) => cls?.students.find((s) => s.id == sid);
+  const levelOf = (lid) => cls?.levels.find((l) => l.id === lid);
+
+  function renderHead() {
+    const open = $('.settings')?.open, dl = open && $('#dl').value; // live refreshes must not close the menu mid-edit
+    const link = `${location.origin}/join/${cls.invite}`;
+    $('#head').innerHTML = `<a href="/teacher.html">${t('back')}</a><div><h2 style="margin:0">${esc(cls.name)}</h2><span class="muted">${esc(cls.course?.title || '')}</span></div>
+      <button id="lv" class="${cls.live ? 'bad' : 'ok'}">${cls.live ? t('endSession') : t('startSession')}</button>
+      ${cls.live ? `<span class="pill live">● ${t('liveNow')}</span>` : ''}
+      <span class="grow"></span>
+      <span class="muted">${t('inviteLink')}:</span><input readonly value="${esc(link)}" id="link" class="linkbox"><button class="ghost" id="cp">${t('copy')}</button>
+      <button class="ghost" id="qr">${t('qr')}</button><button class="ghost" id="nl">${t('newLink')}</button>
+      <span class="muted">${t('code2')}:</span><span class="code small">${esc(cls.code)}</span>
+      <details class="settings"><summary>⚙️</summary><div>
+        <label>${t('approvalMode')}</label><select id="ap"><option value="ai">${t('approval_ai')}</option><option value="teacher">${t('approval_teacher')}</option></select>
+        <label>${t('dailyLimit')}</label><div class="row"><input id="dl" type="number" min="1" value="${cls.daily_limit}"><button class="ghost" id="dls">${t('save2')}</button></div>
+        <p></p><button id="pa" class="${cls.paused ? 'ok' : 'bad'}">${cls.paused ? t('resumeAll') : t('pauseAll')}</button>
+        <p class="muted">${t('autoClose')}</p></div></details>`;
+    $('#ap').value = cls.approval;
+    if (open) { $('.settings').open = true; $('#dl').value = dl; }
+    $('#lv').onclick = async () => { if (cls.live && !confirm(t('confirmEnd'))) return; await api('/api/classes/' + id, 'PATCH', { live: !cls.live }); refresh(); };
+    $('#cp').onclick = async () => { $('#link').select(); try { await navigator.clipboard.writeText(link); } catch { document.execCommand('copy'); } toast(t('copied'), 'ok'); };
+    $('#qr').onclick = () => {
+      const box = document.createElement('div'); box.className = 'qrbox';
+      box.innerHTML = `<img src="/api/classes/${id}/qr.svg?v=${encodeURIComponent(cls.invite)}" alt="QR"><p>${t('share2')}</p><b>${esc(link)}</b>`;
+      openModal(cls.name, box);
+    };
+    $('#nl').onclick = async () => { if (!confirm(t('confirmNewLink'))) return; await api('/api/classes/' + id, 'PATCH', { regen_invite: true }); refresh(); };
+    $('#ap').onchange = async (e) => { await api('/api/classes/' + id, 'PATCH', { approval: e.target.value }); refresh(); };
+    $('#dls').onclick = async () => { await api('/api/classes/' + id, 'PATCH', { daily_limit: +$('#dl').value }); refresh(); };
+    $('#pa').onclick = async () => { await api('/api/classes/' + id, 'PATCH', { paused: !cls.paused }); refresh(); };
+  }
+  function renderStudents() {
+    const lvl = (s) => (s.level ? `L${levelOf(s.level)?.position}` : '🏁');
+    $('#students').innerHTML = `<h3>${t('students')} (${cls.students.length})</h3><div class="stu ${sel ? '' : 'sel'}" data-s="">${t('everyone')}</div>` +
+      cls.students.map((s) => `<div class="stu ${sel == s.id ? 'sel' : ''}" data-s="${s.id}">
+        <span class="dot ${s.online ? 'on' : ''}"></span><span class="grow">${s.paused ? '⏸️ ' : ''}${esc(s.avatar)} ${esc(s.nickname)}
+        <span class="muted">${lvl(s)} · ★${s.stars}${s.pending ? ' · ⏳' : ''} · ${s.used}/${cls.daily_limit}</span>
+        <span class="typing" id="ty${s.id}" ${typing.has(s.id) ? '' : 'hidden'}>${t('typing')}</span></span>
+        <button class="ghost" data-p="${s.id}" data-v="${s.paused ? 0 : 1}" title="${s.paused ? t('resume') : t('pause')}">${s.paused ? '▶' : '⏸'}</button>
+        <button class="ghost" data-pin="${s.id}">${t('resetPin')}</button><button class="ghost" data-k="${s.id}">✕</button></div>`).join('');
+    $('#students').querySelectorAll('[data-s]').forEach((e) => (e.onclick = () => select(e.dataset.s)));
+    $('#students').querySelectorAll('[data-p]').forEach((e) => (e.onclick = async (ev) => { ev.stopPropagation(); await api('/api/students/' + e.dataset.p, 'PATCH', { paused: +e.dataset.v === 1 }); refresh(); }));
+    $('#students').querySelectorAll('[data-pin]').forEach((e) => (e.onclick = async (ev) => {
+      ev.stopPropagation(); const r = await api('/api/students/' + e.dataset.pin, 'PATCH', { reset_pin: true });
+      const box = document.createElement('div'); box.className = 'qrbox'; box.innerHTML = `<p>${t('newPin')} <b>${esc(stu(e.dataset.pin).nickname)}</b></p><span class="code">${r.pin}</span>`;
+      openModal(t('resetPin'), box, true);
+    }));
+    $('#students').querySelectorAll('[data-k]').forEach((e) => (e.onclick = async (ev) => {
+      ev.stopPropagation(); if (!confirm(t('confirmRemove'))) return;
+      await api('/api/students/' + e.dataset.k, 'DELETE'); if (sel == e.dataset.k) sel = ''; refresh(); loadFeed();
+    }));
+  }
+  // Each level is a column; students sit on the level they are working on.
+  function renderMap() {
+    const at = (lid) => cls.students.filter((s) => s.level === lid);
+    const chip = (s) => `<button class="chip ${s.online ? '' : 'off'} ${sel == s.id ? 'sel' : ''} ${s.pending ? 'pend' : ''}" data-s="${s.id}" title="${esc(s.nickname)}">${esc(s.avatar)}<span>${esc(s.nickname)}</span></button>`;
+    $('#cmap').innerHTML = cls.levels.map((l) => `<div class="mcol"><div class="mhead">${esc(l.emoji)}<b>L${l.position}</b><span>${esc(l.title)}</span></div>${at(l.id).map(chip).join('')}</div>`).join('')
+      + `<div class="mcol fin"><div class="mhead">🏁<b>${t('finish')}</b></div>${at(null).map(chip).join('')}</div>`;
+    $('#cmap').querySelectorAll('[data-s]').forEach((e) => (e.onclick = () => select(e.dataset.s)));
+  }
+  function renderPending() {
+    $('#pending').hidden = !cls.pending.length;
+    $('#pending').innerHTML = `<h3>⏳ ${t('approvals')} (${cls.pending.length})</h3>` + cls.pending.map((p) => `<div class="row wrapx prow">
+      <span class="grow">${esc(p.avatar)} <b>${esc(p.nickname)}</b> · L${p.position} ${esc(p.title)}<br><span class="muted">${t('aiSuggests')}: ${stars(p.stars)} ${esc(p.feedback)}</span></span>
+      ${p.output_id ? `<button class="ghost" data-o="${p.output_id}">${t('play')}</button>` : ''}
+      <select data-st="${p.student_id}-${p.level_id}" style="width:auto">${[1, 2, 3].map((n) => `<option ${n === (p.stars || 1) ? 'selected' : ''} value="${n}">${stars(n)}</option>`).join('')}</select>
+      <button class="ok" data-ok="${p.student_id}-${p.level_id}">${t('approve')}</button><button class="ghost" data-no="${p.student_id}-${p.level_id}">${t('reject')}</button></div>`).join('');
+    const act = (key, action, extra = {}) => { const [s, l] = key.split('-'); return api(`/api/students/${s}/progress`, 'POST', { level_id: +l, action, ...extra }).then(refresh); };
+    $('#pending').querySelectorAll('[data-ok]').forEach((b) => (b.onclick = () => act(b.dataset.ok, 'pass', { stars: +$(`[data-st="${b.dataset.ok}"]`).value })));
+    $('#pending').querySelectorAll('[data-no]').forEach((b) => (b.onclick = () => act(b.dataset.no, 'reject', { feedback: prompt(t('reject')) || '' })));
+    $('#pending').querySelectorAll('[data-o]').forEach((b) => (b.onclick = async () => { await loadGames(); const g = games.find((x) => x.id === +b.dataset.o); if (g) openModal(`${g.title} – ${g.nickname}`, outputEl(g)); }));
+  }
+  function renderProgress() {
+    const s = stu(sel); $('#progressCard').hidden = !s; if (!s) return;
+    $('#progressCard').innerHTML = `<h3>${esc(s.avatar)} ${esc(s.nickname)} · ${t('progressOf')}</h3>` + cls.levels.map((l) => {
+      const p = s.progress.find((x) => x.id === l.id) || { status: 'locked', stars: 0 };
+      const icon = { done: '✅', pending: '⏳', current: '▶️', locked: '🔒' }[p.status];
+      return `<div class="row lrow"><span class="grow">${icon} L${l.position} ${esc(l.title)} <span class="stars">${p.status === 'done' ? stars(p.stars) : ''}</span></span>
+        ${p.status !== 'done' ? `<button class="ghost" data-pass="${l.id}">${t('passLevel')}</button>` : ''}${p.status === 'done' || p.status === 'pending' ? `<button class="ghost" data-reset="${l.id}">${t('resetLevel')}</button>` : ''}</div>`;
+    }).join('');
+    const act = (lid, action) => api(`/api/students/${s.id}/progress`, 'POST', { level_id: +lid, action }).then(refresh);
+    $('#progressCard').querySelectorAll('[data-pass]').forEach((b) => (b.onclick = () => act(b.dataset.pass, 'pass')));
+    $('#progressCard').querySelectorAll('[data-reset]').forEach((b) => (b.onclick = () => act(b.dataset.reset, 'reset')));
+  }
+  function renderFilters() {
+    $('#lf').innerHTML = `<option value="">${t('allLevels')}</option>` + cls.levels.map((l) => `<option value="${l.id}">L${l.position} ${esc(l.title)}</option>`).join('');
+    $('#lf').value = levelFilter;
+  }
+  async function refresh() {
+    cls = await api('/api/classes/' + id);
+    renderHead(); renderStudents(); renderMap(); renderPending(); renderProgress(); renderFilters(); renderGames();
+  }
+  function select(s) { sel = s; renderStudents(); renderMap(); renderProgress(); renderGames(); loadFeed(); }
+
+  // ---- live feed ----
+  const label = (m) => `<b>${esc(m.avatar || '')} ${esc(m.nickname)}${m.role === 'blocked' ? ` · ${t('blockedMsg')}: ${t('sc_' + m.flag)}` : ''} · ${new Date(m.created).toLocaleTimeString()}${m.level ? ' · ' + esc(m.level) : ''}</b>`;
   const body = (c) => { // fold code blocks so the feed stays readable
-    const parts = String(c).split(/```(?:html)?\n?([\s\S]*?)```/);
+    const parts = String(c).split(/```(?:html|creation)?\n?([\s\S]*?)```/);
     return parts.map((p, i) => (i % 2 ? `<details><summary>code</summary><pre>${esc(p)}</pre></details>` : p.trim() ? `<div style="white-space:pre-wrap">${esc(p.trim())}</div>` : '')).join('');
   };
   const msgHtml = (m) => `<div class="fm ${m.role}">${label(m)}${m.role === 'blocked' ? esc(m.content) : body(m.content)}</div>`;
-  const bottom = () => { const f = feed(); f.scrollTop = f.scrollHeight; };
-
-  async function load() {
-    const draft = { t: $('#lt')?.value || '', g: $('#lg')?.value || '' }; // keep a half-typed lesson across live refreshes
-    cls = await api('/api/classes/' + id);
-    const active = cls.lessons.find((l) => l.id === cls.active_lesson);
-    root.innerHTML = `<div class="top" style="flex-wrap:wrap"><a href="/teacher.html">${t('back')}</a><h2 style="margin:0">${esc(cls.name)}</h2>
-        <span class="muted">${t('code2')}:</span><span class="code">${esc(cls.code)}</span><span class="grow"></span>
-        <label style="margin:0">${t('dailyLimit')}</label><input id="dl" type="number" min="1" value="${cls.daily_limit}" style="width:5rem"><button class="ghost" id="dls">${t('save2')}</button>
-        <button id="pa" class="${cls.paused ? 'ok' : 'bad'}">${cls.paused ? t('resumeAll') : t('pauseAll')}</button></div>
-      <div class="layout"><div>
-        <div class="card"><h3>${t('students')} (${cls.students.length})</h3>
-          <div class="stu ${sel ? '' : 'sel'}" data-s="">${t('everyone')}</div>
-          ${cls.students.map((s) => `<div class="stu ${sel == s.id ? 'sel' : ''}" data-s="${s.id}"><span class="grow">${s.paused ? '⏸️ ' : ''}${esc(s.nickname)} <span class="muted">${s.used}/${cls.daily_limit}${s.games ? ' · 🎮' + s.games : ''}</span></span>
-            <button class="ghost" data-p="${s.id}" data-v="${s.paused ? 0 : 1}">${s.paused ? t('resume') : t('pause')}</button><button class="ghost" data-k="${s.id}">✕</button></div>`).join('')}
-        </div>
-        <div class="card" style="margin-top:12px"><h3>${t('lessons')}</h3>
-          ${cls.lessons.map((l) => `<div class="row"><span class="grow"><b>${esc(l.title)}</b>${l.id === cls.active_lesson ? ` <span class="muted">(${t('active')})</span>` : ''}<br><span class="muted">${esc(l.goal)}</span></span>${l.id === cls.active_lesson ? '' : `<button class="ghost" data-a="${l.id}">${t('makeActive')}</button>`}</div>`).join('')}
-          <h3>${t('newLesson')}</h3><input id="lt" maxlength="100" placeholder="${t('title')}"><label>${t('goal')}</label><textarea id="lg" rows="3" maxlength="1000"></textarea>
-          <p></p><button id="ls">${t('start')}</button></div>
-      </div><div>
-        <div id="alerts"></div>
-        <div class="card"><div class="row wrapx"><h3 class="grow">${t('live')}${active ? ' · ' + esc(active.title) : ''}</h3><label style="margin:0">${t('date')}</label><input type="date" id="dt" value="${date}" style="width:10rem"></div>
-          <div class="feed" id="feed"></div></div>
-        <div class="card" style="margin-top:12px"><h3>${t('games')}</h3><div class="grid" id="games"></div></div>
-      </div></div>`;
-    $('#lt').value = draft.t; $('#lg').value = draft.g;
-    wire(); renderAlerts(); renderGames(); await loadFeed();
-  }
+  const nearBottom = () => { const f = $('#feed'); return f.scrollHeight - f.scrollTop - f.clientHeight < 80; };
+  const bottom = () => { const f = $('#feed'); f.scrollTop = f.scrollHeight; };
+  const shows = (m) => !date && (!sel || sel == m.student_id) && (!levelFilter || levelFilter == m.level_id);
   async function loadFeed() {
-    const q = new URLSearchParams({ student: sel, date }).toString();
-    const ms = await api(`/api/classes/${id}/messages?${q}`);
-    feed().innerHTML = ms.map(msgHtml).join('') || `<p class="muted">${t('empty')}</p>`; bottom();
-    if (!date && !sel) alerts = ms.filter((m) => m.role === 'blocked').slice(-5).reverse(); renderAlerts();
+    const ms = await api(`/api/classes/${id}/messages?${new URLSearchParams({ student: sel, level: levelFilter, date })}`);
+    live.clear(); $('#feed').innerHTML = ms.map(msgHtml).join('') || `<p class="muted">${t('empty')}</p>`; bottom();
+    if (!date && !sel && !levelFilter) { alerts = ms.filter((m) => m.role === 'blocked').slice(-5).reverse(); renderAlerts(); }
   }
   function renderAlerts() {
-    $('#alerts').innerHTML = alerts.map((m) => `<div class="alert ${m.flag === 'self_harm' ? 'urgent' : ''}">${t('alerts').slice(0, 2)} <b>${esc(m.nickname)}</b>: ${t('sc_' + m.flag)}</div>`).join('');
+    $('#alerts').innerHTML = alerts.map((m) => `<div class="alert ${m.flag === 'self_harm' ? 'urgent' : ''}">🚨 <b>${esc(m.nickname)}</b>: ${t('sc_' + m.flag)}</div>`).join('');
   }
   async function loadGames() { games = await api(`/api/classes/${id}/games`); renderGames(); }
   function renderGames() {
-    const el = $('#games'); if (!el) return;
-    el.replaceChildren(...games.map((g) => {
+    const el = $('#games'), list = games.filter((g) => !sel || g.student_id == sel);
+    el.replaceChildren(...list.slice(0, 60).map((g) => {
       const c = document.createElement('div'); c.className = 'card gcard';
-      c.innerHTML = `<b>${esc(g.title)}</b> <span class="muted">${esc(g.nickname)}</span><div class="row wrapx" style="margin-top:.4rem"></div>`;
-      const r = c.querySelector('.row'), f = gameFrame(g.html); f.setAttribute('loading', 'lazy'); c.insertBefore(f, r);
-      const b = (l, fn, cls = 'ghost') => { const x = document.createElement('button'); x.className = cls; x.textContent = l; x.onclick = fn; r.append(x); };
-      b(t('play'), () => openGame(g));
+      c.innerHTML = `<b>${esc(g.title)}</b> <span class="muted">${esc(g.avatar || '')} ${esc(g.nickname)}${g.level ? ' · ' + esc(g.level) : ''}</span><div class="row wrapx" style="margin-top:.4rem"></div>`;
+      const r = c.querySelector('.row'), preview = g.kind === 'creation' ? creationCard(g.html) : gameFrame(g.html);
+      preview.classList.add('preview'); if (g.kind !== 'creation') preview.setAttribute('loading', 'lazy'); c.insertBefore(preview, r);
+      const b = (l, fn, cl = 'ghost') => { const x = document.createElement('button'); x.className = cl; x.textContent = l; x.onclick = fn; r.append(x); };
+      b(t('play'), () => openModal(`${g.title} – ${g.nickname}`, outputEl(g)));
       b(t('showToClass'), async (e) => { await api(`/api/games/${g.id}/showcase`, 'POST'); e.target.textContent = '✓ ' + t('showing'); }, '');
       return c;
     }));
-    if (!games.length) el.innerHTML = `<p class="muted">${t('noGames')}</p>`;
+    if (!list.length) el.innerHTML = `<p class="muted">${t('noGames')}</p>`;
   }
-  function wire() {
-    root.querySelectorAll('[data-s]').forEach((e) => (e.onclick = () => { sel = e.dataset.s; load(); }));
-    root.querySelectorAll('[data-p]').forEach((e) => (e.onclick = async (ev) => { ev.stopPropagation(); await api('/api/students/' + e.dataset.p, 'PATCH', { paused: +e.dataset.v === 1 }); load(); }));
-    root.querySelectorAll('[data-k]').forEach((e) => (e.onclick = async (ev) => { ev.stopPropagation(); await api('/api/students/' + e.dataset.k, 'DELETE'); if (sel == e.dataset.k) sel = ''; load(); }));
-    root.querySelectorAll('[data-a]').forEach((e) => (e.onclick = async () => { await api('/api/classes/' + id, 'PATCH', { active_lesson: +e.dataset.a }); load(); }));
-    $('#pa').onclick = async () => { await api('/api/classes/' + id, 'PATCH', { paused: !cls.paused }); load(); };
-    $('#dls').onclick = async () => { await api('/api/classes/' + id, 'PATCH', { daily_limit: +$('#dl').value }); load(); };
-    $('#dt').onchange = (e) => { date = e.target.value; loadFeed(); };
-    $('#ls').onclick = async () => { if (!$('#lt').value.trim() || !$('#lg').value.trim()) return; await api(`/api/classes/${id}/lessons`, 'POST', { title: $('#lt').value, goal: $('#lg').value }); load(); };
-  }
+  $('#dt').onchange = (e) => { date = e.target.value; loadFeed(); };
+  $('#lf').onchange = (e) => { levelFilter = e.target.value; loadFeed(); };
 
-  await load(); loadGames();
-  let gt;
+  await refresh(); loadFeed(); loadGames();
+  let rt, gt;
+  const soon = () => { clearTimeout(rt); rt = setTimeout(refresh, 300); };
   onEvents(`/api/classes/${id}/events`, (ev) => {
-    if (ev.type === 'joined') load();
-    if (ev.type === 'usage') { clearTimeout(gt); gt = setTimeout(() => { loadGames(); }, 2000); }
+    if (ev.type === 'room') soon();
+    if (ev.type === 'presence') { const s = stu(ev.student_id); if (s) { s.online = ev.online; renderStudents(); renderMap(); } else soon(); }
+    if (ev.type === 'typing') {
+      clearTimeout(typing.get(ev.student_id)); $('#ty' + ev.student_id)?.removeAttribute('hidden');
+      typing.set(ev.student_id, setTimeout(() => { typing.delete(ev.student_id); $('#ty' + ev.student_id)?.setAttribute('hidden', ''); }, 4000));
+    }
+    if (ev.type === 'usage') { clearTimeout(gt); gt = setTimeout(loadGames, 1500); soon(); }
+    if (ev.type === 'submit') {
+      toast(`${ev.avatar} ${ev.nickname} ${t('checked')} "${ev.level}": ${ev.pending ? t('sentToYou') : ev.pass ? t('passedShort') + ' ' + stars(ev.stars) : t('failedShort')}`, ev.pass ? 'ok' : '');
+      clearTimeout(gt); gt = setTimeout(loadGames, 500);
+    }
+    if (ev.type === 'delta' && (!sel || sel == ev.student_id) && !date) { // the AI reply as it is generated
+      let b = live.get(ev.student_id); const stick = nearBottom();
+      if (!b) {
+        const s = stu(ev.student_id);
+        b = Object.assign(document.createElement('div'), { className: 'fm assistant streaming' }); b.raw = '';
+        b.innerHTML = `<b>${esc(s?.avatar || '')} ${esc(s?.nickname || '')} · AI ✍️</b><div style="white-space:pre-wrap"></div>`;
+        $('#feed > p.muted')?.remove(); $('#feed').append(b); live.set(ev.student_id, b);
+      }
+      b.raw += ev.text;
+      b.lastChild.textContent = b.raw.replace(/```(html|creation)[\s\S]*?(```|$)/g, (_, k) => (k === 'html' ? '🛠️ [game code]' : '✨ [creation]'));
+      if (stick) bottom();
+    }
+    if (ev.type === 'delta_end') { live.get(ev.student_id)?.remove(); live.delete(ev.student_id); }
     if (ev.type === 'message') {
       const m = ev.message;
+      if (m.role === 'assistant') { live.get(m.student_id)?.remove(); live.delete(m.student_id); }
       if (m.role === 'blocked') { alerts.unshift(m); alerts = alerts.slice(0, 5); renderAlerts(); }
-      if (!date && (!sel || sel == m.student_id)) { feed().insertAdjacentHTML('beforeend', msgHtml(m)); bottom(); }
+      if (shows(m)) { const stick = nearBottom(); $('#feed > p.muted')?.remove(); $('#feed').insertAdjacentHTML('beforeend', msgHtml(m)); if (stick) bottom(); }
     }
   });
 }

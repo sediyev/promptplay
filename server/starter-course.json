@@ -1,0 +1,96 @@
+{
+  "title": "AI Adventure: from first prompt to first game",
+  "description": "A starter journey of 10 levels. Students learn to talk to AI clearly, invent characters and worlds, then build and improve their own games.",
+  "levels": [
+    {
+      "title": "Hello, AI!",
+      "emoji": "👋",
+      "output": "chat",
+      "intro": "Welcome, explorer! Your AI guide is waiting at the start of the map. Let's find out how it thinks.",
+      "task": "Say hello to the AI and ask it three questions about what it can and cannot do. Then ask it to explain one thing it gets wrong sometimes.",
+      "ai_guide": "Answer honestly and simply. Explain that AI can make mistakes and that clear questions get better answers.",
+      "criteria": "The student asked at least three different questions about the AI, including one about its mistakes or limits."
+    },
+    {
+      "title": "The Clear Prompt Challenge",
+      "emoji": "🎯",
+      "output": "chat",
+      "intro": "A foggy bridge! Only clear prompts can cross it.",
+      "task": "Ask the AI for a short story about an animal. Then improve your prompt twice by adding WHO the story is about, WHAT happens, and HOW it should feel (funny, scary, exciting).",
+      "ai_guide": "After each prompt, give a short story (max 5 sentences) and one tip about what detail could make the prompt clearer. Point out how the story changed when the prompt improved.",
+      "criteria": "The student wrote at least three versions of the prompt, and the later ones clearly add who, what and how details."
+    },
+    {
+      "title": "Invent a Superhero",
+      "emoji": "🦸",
+      "output": "creation",
+      "intro": "The city of Promptopolis needs a brand new hero. Nobody has ever seen one like yours!",
+      "task": "With the AI, create a superhero that has never existed. Decide their name, their unusual power, their weakness, their costume and their sidekick. You make the choices, the AI helps.",
+      "ai_guide": "Ask one question at a time and offer 2 or 3 ideas when the student is stuck. Encourage original ideas, not existing heroes. Keep the creation card updated.",
+      "criteria": "The creation card has a name, a power, a weakness, a costume and a sidekick, and the student made several of these choices themselves."
+    },
+    {
+      "title": "Design a Creature",
+      "emoji": "🐉",
+      "output": "creation",
+      "intro": "Deep in the Prompt Forest lives a creature no scientist has discovered yet.",
+      "task": "Describe a creature that does not exist: where it lives, what it eats, how it moves, one surprising ability, and a fun fact. Use describing words (colours, sizes, sounds).",
+      "ai_guide": "Help the student use vivid describing words. Ask about senses (what does it sound or smell like?). Keep the creation card updated.",
+      "criteria": "The creature card includes habitat, food, movement, an ability and a fun fact, with descriptive words chosen by the student."
+    },
+    {
+      "title": "Build a World",
+      "emoji": "🗺️",
+      "output": "creation",
+      "intro": "Every hero needs a world. Time to become a world builder!",
+      "task": "Create a world for your superhero or creature: its name, weather, three places to visit, who lives there, and one rule that is different from our world.",
+      "ai_guide": "Help the student connect the world to their earlier hero or creature if they like. Keep the creation card updated.",
+      "criteria": "The world card has a name, weather, three places, inhabitants and a special rule."
+    },
+    {
+      "title": "Your First Game",
+      "emoji": "🕹️",
+      "output": "game",
+      "intro": "The Game Workshop opens its doors. Let's make something you can actually play!",
+      "task": "Ask the AI to build a simple clicker game: something to click, a score, and a goal. Then change at least one thing (colour, emoji, speed, or the goal).",
+      "ai_guide": "Start very simple. When the student asks for changes, explain in one sentence what you changed in the code.",
+      "criteria": "A working clicker game exists and the student asked for at least one change of their own."
+    },
+    {
+      "title": "Game Designer",
+      "emoji": "🎨",
+      "output": "game",
+      "intro": "Real game designers plan before they build.",
+      "task": "Before asking for code, describe your game plan to the AI: the player, the goal, how to win, how to lose, and the controls. Then build it together and improve it twice.",
+      "ai_guide": "If the student asks for code without a plan, first ask them for the missing plan parts. Then build exactly what they planned.",
+      "criteria": "The student described a plan with goal, win, lose and controls before the game was built, and asked for at least two improvements."
+    },
+    {
+      "title": "Bug Hunter",
+      "emoji": "🐞",
+      "output": "game",
+      "intro": "Uh oh, a bug is loose in the workshop!",
+      "task": "Ask the AI for a small game that has ONE bug hidden in it on purpose. Play it, find the bug, and explain it to the AI clearly so it can fix it.",
+      "ai_guide": "When asked, make a small game with one obvious, harmless bug (for example the score goes down instead of up). Do not reveal the bug. When the student describes it, praise clear bug reports and fix it.",
+      "criteria": "The student found the bug and described what happened and what should happen instead, and the fixed game was produced."
+    },
+    {
+      "title": "Hero Game",
+      "emoji": "⚡",
+      "output": "game",
+      "intro": "Your hero from Promptopolis wants to star in a game!",
+      "task": "Make a game starring the superhero, creature or world you invented earlier. Use their power as the main game mechanic.",
+      "ai_guide": "Ask the student to remind you of their hero's name and power, then turn the power into a game mechanic.",
+      "criteria": "A working game uses a character the student invented and their power is part of how the game is played."
+    },
+    {
+      "title": "Show and Tell",
+      "emoji": "🏆",
+      "output": "chat",
+      "intro": "The final stage! Every great creator shares what they learned.",
+      "task": "Tell the AI about your favourite thing you made in this course and the three best prompting tips you learned. Ask the AI for one challenge to try next.",
+      "ai_guide": "Celebrate the student's work. Ask follow-up questions about why their tips work. Give one fun next challenge.",
+      "criteria": "The student described something they made and listed at least three prompting tips in their own words."
+    }
+  ]
+}

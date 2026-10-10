@@ -2,30 +2,44 @@
 <html lang="az"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>PromptPlay</title><link rel="stylesheet" href="/style.css"></head>
 <body>
-<div class="top"><b class="logo">🎮</b><b id="nick"></b><span class="muted grow" id="lesson"></span><span class="pill" id="left"></span><button class="ghost" id="lang"></button></div>
+<div class="top"><b class="logo">🎮</b><span id="me" class="mebadge"></span><span class="muted grow" id="course"></span><span class="pill" id="left"></span><button class="ghost" id="lang"></button></div>
 <div class="banner" id="seen" data-t="seen"></div>
 <div class="banner stop" id="status" hidden></div>
-<div class="app">
-  <div class="card pane">
-    <div class="log" id="log"><div class="msg note" id="hint" data-t="noLesson" hidden></div></div>
-    <form class="composer" id="form"><textarea id="text" maxlength="1500" data-ph="placeholder"></textarea><button id="send" data-t="send"></button></form>
-  </div>
-  <div class="card pane" style="overflow:auto">
-    <div class="row"><h3 class="grow" data-t="yourGame"></h3><button id="save" class="ok" data-t="save" hidden></button></div>
-    <div id="stage" class="pane" style="height:min(52vh,430px);flex:none"><p class="muted" data-t="noGame"></p></div>
-    <h3 data-t="myGames"></h3><div class="grid" id="games"></div>
+
+<div id="mapView" class="mapwrap"><h2 id="mapTitle" style="text-align:center"></h2><div class="map" id="map"></div></div>
+
+<div id="levelView" hidden>
+  <div class="levelbar"><button class="ghost" id="toMap" data-t="backToMap"></button><span class="lvemoji" id="lvEmoji"></span>
+    <b class="grow" id="lvTitle"></b><span class="stars" id="lvStars"></span><button class="ok" id="check" data-t="checkWork"></button></div>
+  <details class="taskcard card" id="taskCard" open><summary><b data-t="task"></b></summary><p class="muted" id="lvIntro"></p><p id="lvTask" style="white-space:pre-wrap;margin:0"></p></details>
+  <div class="app">
+    <div class="card pane">
+      <div class="log" id="log"></div>
+      <form class="composer" id="form"><textarea id="text" maxlength="1500" data-ph="placeholder"></textarea><button id="send" data-t="send"></button></form>
+    </div>
+    <div class="card pane" style="overflow:auto">
+      <div class="row"><h3 class="grow" id="outTitle"></h3><button id="save" class="ghost" data-t="save" hidden></button></div>
+      <div id="stage" class="pane" style="height:min(52vh,430px);flex:none"></div>
+      <h3 data-t="myWork"></h3><div class="grid" id="games"></div>
+    </div>
   </div>
 </div>
 <div id="modal" class="modal" hidden><div><div class="row"><b class="grow" id="mt"></b><button class="ghost" id="mc" data-t="close"></button></div><div id="mb" class="pane grow"></div></div></div>
+<div id="result" class="modal" hidden><div class="resultbox"><div id="rIcon" class="bigicon"></div><h2 id="rTitle"></h2><div class="stars big" id="rStars"></div>
+  <p id="rText"></p><div class="row" style="justify-content:center"><button class="ghost" id="rStay" data-t="keepGoing"></button><button id="rNext" data-t="nextLevel"></button></div></div></div>
 <script type="module">
-import { api, t, applyI18n, toggleLang, esc, $, onEvents, extractGame, gameFrame } from '/common.js';
+import { api, t, applyI18n, toggleLang, esc, $, onEvents, extractGame, gameFrame, creationCard, stars, toast } from '/common.js';
 applyI18n(); $('#lang').textContent = t('lang'); $('#lang').onclick = toggleLang;
-let me, currentGame = null, busy = false;
+let me, level = null, current = null, busy = false;
+const ended = () => { // back to the room's invite page, so logging in again next session is one step
+  let inv = null; try { inv = localStorage.getItem('invite'); } catch {}
+  location = (inv ? '/join/' + encodeURIComponent(inv) : '/') + '?closed=1';
+};
 
-// Replace complete ```html blocks with a chip; hide an unfinished one while it streams.
+// Replace complete output blocks with a chip; hide an unfinished one while it streams.
 function display(text) {
-  let s = text.replace(/\s*```html[\s\S]*?```\s*/g, '\n\n' + t('gameReady') + '\n\n');
-  const open = s.indexOf('```html');
+  let s = text.replace(/\s*```html[\s\S]*?```\s*/g, '\n\n' + t('gameReady') + '\n\n').replace(/\s*```creation[\s\S]*?```\s*/g, '\n\n' + t('creationReady') + '\n\n');
+  const open = s.search(/```(html|creation)/);
   if (open >= 0) s = s.slice(0, open) + '\n' + t('building');
   return s.replace(/\n{3,}/g, '\n\n').trim();
 }
@@ -33,25 +47,69 @@ function addMsg(role, text) {
   const d = document.createElement('div'); d.className = 'msg ' + role; d.textContent = text;
   $('#log').append(d); $('#log').scrollTop = 1e9; return d;
 }
-function showGame(html) {
-  currentGame = html; $('#stage').replaceChildren(Object.assign(gameFrame(html), { className: 'game' })); $('#save').hidden = false;
+function showOutput(content, kind = level?.output) {
+  current = content ? { content, kind } : null; $('#save').hidden = !content;
+  if (!content) return $('#stage').replaceChildren(Object.assign(document.createElement('p'), { className: 'muted', textContent: kind === 'creation' ? t('noCreation') : kind === 'chat' ? t('chatLevel') : t('noGame') }));
+  $('#stage').replaceChildren(kind === 'creation' ? creationCard(content) : Object.assign(gameFrame(content), { className: 'game' }));
 }
+const tag = (kind) => (kind === 'creation' ? 'creation' : 'html');
+
 function renderState() {
-  $('#nick').textContent = me.nickname; $('#lesson').textContent = me.lesson ? `${t('lesson')}: ${me.lesson.title}` : '';
+  $('#me').textContent = `${me.avatar} ${me.nickname}`; $('#course').textContent = `${me.room} · ${me.course || ''}`;
   const left = Math.max(0, me.limit - me.used); $('#left').textContent = `${left} ${t('left')}`;
-  const msg = me.classPaused ? 'paused' : me.paused ? 'pausedYou' : left <= 0 ? 'limit' : me.budget ? 'budget' : !me.lesson ? 'noLesson' : null;
-  $('#status').hidden = !msg || msg === 'noLesson'; if (msg) $('#status').textContent = t(msg);
-  $('#hint').hidden = !!me.lesson; const off = !!msg || busy; $('#text').disabled = off; $('#send').disabled = off;
+  const msg = me.classPaused ? 'paused' : me.paused ? 'pausedYou' : left <= 0 ? 'limit' : me.budget ? 'budget' : null;
+  $('#status').hidden = !msg; if (msg) $('#status').textContent = t(msg);
+  const off = !!msg || busy || !level; $('#text').disabled = off; $('#send').disabled = off;
+  const lv = level && me.levels.find((l) => l.id === level.id);
+  $('#check').disabled = !!msg || busy || lv?.status === 'pending';
+  $('#check').textContent = lv?.status === 'pending' ? '⏳ ' + t('pending') : t('checkWork');
+  if (lv) $('#lvStars').textContent = lv.status === 'done' ? stars(lv.stars) : '';
 }
-async function refresh() { me = await api('/api/student/me'); renderState(); }
+async function refresh() { me = await api('/api/student/me'); renderState(); if (!$('#mapView').hidden) renderMap(); }
+
+// Winding path: one node per level, the student's avatar sits on the current one.
+function renderMap() {
+  $('#mapTitle').textContent = me.course || '';
+  const gap = 130, h = me.levels.length * gap + 40, pts = me.levels.map((_, i) => [50 + 30 * Math.sin(i * 1.15), 60 + i * gap]);
+  const d = pts.map(([x, y], i) => (i ? `S ${(pts[i - 1][0] + x) / 2} ${y - gap / 2} ${x} ${y}` : `M ${x} ${y}`)).join(' ');
+  const done = me.levels.every((l) => l.status === 'done');
+  $('#map').style.height = h + 'px';
+  $('#map').innerHTML = `<svg viewBox="0 0 100 ${h}" preserveAspectRatio="none"><path d="${d}" /></svg>` + me.levels.map((l, i) => `
+    <button class="node ${l.status}" style="left:${pts[i][0]}%;top:${pts[i][1]}px" data-id="${l.id}" ${l.status === 'locked' ? 'disabled' : ''}>
+      <span class="ball">${l.status === 'locked' ? '🔒' : esc(l.emoji)}${l.status === 'current' || l.status === 'pending' ? `<span class="you" title="${t('youAreHere')}">${esc(me.avatar)}</span>` : ''}</span>
+      <span class="ntitle">${t('level')} ${l.position}: ${esc(l.title)}</span>
+      <span class="stars">${l.status === 'done' ? stars(l.stars) : l.status === 'pending' ? '⏳' : ''}</span></button>`).join('')
+    + (done ? `<div class="finale" style="top:${h - 20}px">${t('courseDone')}</div>` : '');
+  $('#map').querySelectorAll('.node').forEach((b) => (b.onclick = () => (location.hash = 'level=' + b.dataset.id)));
+  $('#map').querySelector('.node.current, .node.pending')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+
+async function openLevel(id) {
+  let r; level = null; renderState(); // nothing can be sent to the previous level while this one loads
+  try { r = await api('/api/student/levels/' + id); } catch (x) { if (x.status === 401) return ended(); toast(t(x.code)); return (location.hash = ''); }
+  level = r.level;
+  $('#mapView').hidden = true; $('#levelView').hidden = false;
+  $('#lvEmoji').textContent = level.emoji; $('#lvTitle').textContent = `${t('level')} ${level.position}: ${level.title}`;
+  $('#lvIntro').textContent = level.intro; $('#lvIntro').hidden = !level.intro; $('#lvTask').textContent = level.task;
+  $('#outTitle').textContent = level.output === 'creation' ? t('yourCreation') : level.output === 'game' ? t('yourGame') : t('task');
+  $('#log').replaceChildren();
+  for (const m of r.messages) addMsg(m.role, m.role === 'assistant' ? display(m.content) : m.content);
+  const last = [...r.messages].reverse().map((m) => m.role === 'assistant' && extractGame(m.content, tag(level.output))).find(Boolean);
+  showOutput(level.output === 'chat' ? null : last); renderState(); $('#text').focus();
+}
+function showMap() { level = null; $('#levelView').hidden = true; $('#mapView').hidden = false; renderMap(); renderState(); }
+const route = () => { const id = +(location.hash.match(/level=(\d+)/)?.[1] || 0); id ? openLevel(id) : showMap(); };
+window.onhashchange = route;
+$('#toMap').onclick = () => (location.hash = '');
+
 async function loadGames() {
   const gs = await api('/api/games');
   $('#games').replaceChildren(...gs.map((g) => {
     const mine = g.nickname === me.nickname, c = document.createElement('div'); c.className = 'card gcard';
-    c.innerHTML = `<b>${esc(g.title)}</b> <span class="muted">${mine ? '' : t('by') + ' ' + esc(g.nickname)}</span><div class="row wrapx"></div>`;
+    c.innerHTML = `<b>${g.kind === 'creation' ? '✨' : '🎮'} ${esc(g.title)}</b> <span class="muted">${mine ? '' : t('by') + ' ' + esc(g.avatar) + ' ' + esc(g.nickname)}</span><div class="row wrapx"></div>`;
     const r = c.querySelector('.row');
     const btn = (label, fn, cls = 'ghost') => { const b = document.createElement('button'); b.className = cls; b.textContent = label; b.onclick = fn; r.append(b); };
-    btn(t('play'), () => showGame(g.html));
+    btn(t('play'), () => openModal(g));
     if (mine) {
       btn(g.shared ? t('unshare') : t('share'), async () => { await api('/api/games/' + g.id, 'PATCH', { shared: !g.shared }); loadGames(); });
       btn(t('delete'), async () => { await api('/api/games/' + g.id, 'DELETE'); loadGames(); });
@@ -59,18 +117,44 @@ async function loadGames() {
     return c;
   }));
 }
+function openModal(g, label) {
+  $('#mt').textContent = label || `${g.title} (${g.nickname})`;
+  $('#mb').replaceChildren(g.kind === 'creation' ? creationCard(g.html) : Object.assign(gameFrame(g.html), { className: 'game' })); $('#modal').hidden = false;
+}
 $('#save').onclick = async () => {
-  const m = currentGame.match(/<title>([^<]*)<\/title>/i);
-  await api('/api/games', 'POST', { html: currentGame, title: (m && m[1].trim()) || me.lesson?.title || 'Game' });
+  const m = current.kind === 'game' && current.content.match(/<title>([^<]*)<\/title>/i);
+  const title = current.kind === 'creation' ? current.content.split('\n')[0].replace(/[#*]/g, '').trim() : (m && m[1].trim()) || level.title;
+  await api('/api/games', 'POST', { html: current.content, kind: current.kind, title, level_id: level.id });
   $('#save').textContent = t('saved'); setTimeout(() => ($('#save').textContent = t('save')), 1500); loadGames();
 };
+
+$('#check').onclick = async () => {
+  busy = true; renderState(); $('#check').textContent = t('checking');
+  try {
+    const r = await api(`/api/levels/${level.id}/submit`, 'POST');
+    await refresh();
+    const next = me.levels.find((l) => l.position === level.position + 1 && l.status !== 'locked');
+    $('#rIcon').textContent = r.pending ? '⏳' : r.pass ? '🎉' : '💪';
+    $('#rTitle').textContent = r.pending ? t('pending') : r.pass ? t('passed') : t('notYet');
+    $('#rStars').textContent = r.pass ? stars(r.stars) : '';
+    $('#rText').textContent = r.pending ? t('pendingMsg') : r.feedback;
+    $('#rNext').hidden = !(r.pass && next); $('#rNext').onclick = () => { $('#result').hidden = true; level = null; renderState(); location.hash = 'level=' + next.id; };
+    $('#result').hidden = false; loadGames();
+  } catch (x) { if (x.status === 401) return ended(); toast(t(x.code), 'bad'); }
+  busy = false; renderState();
+};
+$('#rStay').onclick = () => ($('#result').hidden = true);
+
+let lastTyping = 0;
+$('#text').oninput = () => { if (Date.now() - lastTyping > 3000) { lastTyping = Date.now(); api('/api/student/typing', 'POST').catch(() => {}); } };
 $('#form').onsubmit = async (e) => {
   e.preventDefault();
   const text = $('#text').value.trim(); if (!text || busy) return;
   $('#text').value = ''; busy = true; renderState(); addMsg('user', text);
   const bubble = addMsg('assistant', t('thinking'));
   try {
-    const r = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) });
+    const r = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text, level_id: level.id }) });
+    if (r.status === 401) return ended();
     if ((r.headers.get('content-type') || '').includes('json')) {
       const j = await r.json(); bubble.className = 'msg note';
       bubble.textContent = j.blocked ? t(j.category === 'self_harm' ? 'blocked_self_harm' : j.category === 'personal_info' ? 'blocked_personal_info' : 'blocked') : t(j.error);
@@ -82,24 +166,26 @@ $('#form').onsubmit = async (e) => {
         bubble.textContent = display(full.replace('\u0000error', '')) || t('thinking'); $('#log').scrollTop = 1e9;
       }
       if (full.includes('\u0000error')) { bubble.className = 'msg note'; bubble.textContent = t('try_again'); }
-      const g = extractGame(full); if (g) showGame(g);
+      const out = level.output !== 'chat' && extractGame(full, tag(level.output)); if (out) showOutput(out);
     }
   } catch { bubble.className = 'msg note'; bubble.textContent = t('try_again'); }
   busy = false; await refresh().catch(() => {});
 };
 $('#text').onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#form').requestSubmit(); } };
-$('#mc').onclick = () => ($('#modal').hidden = true);
+$('#mc').onclick = () => { $('#modal').hidden = true; $('#mb').replaceChildren(); };
 
-try { await refresh(); } catch { location = '/'; }
-for (const m of me.messages) addMsg(m.role, m.role === 'assistant' ? display(m.content) : m.content);
-const lastGame = [...me.messages].reverse().map((m) => m.role === 'assistant' && extractGame(m.content)).find(Boolean);
-if (lastGame) showGame(lastGame);
-loadGames();
-onEvents('/api/student/events', async (ev) => {
+try { me = await api('/api/student/me'); } catch (x) { x.code === 'room_closed' ? ended() : (location = '/'); }
+route(); loadGames();
+const es = onEvents('/api/student/events', async (ev) => {
+  if (ev.type === 'closed') { es.close(); return ended(); }
   if (ev.type === 'state') refresh().catch(() => {});
-  if (ev.type === 'showcase') {
-    $('#mt').textContent = `${t('showcase')}: ${ev.game.title} (${ev.game.nickname})`;
-    $('#mb').replaceChildren(Object.assign(gameFrame(ev.game.html), { className: 'game' })); $('#modal').hidden = false;
+  if (ev.type === 'progress') {
+    toast(t('teacher_' + ev.action) + (ev.feedback ? ' ' + ev.feedback : ''), ev.action === 'pass' ? 'ok' : '');
+    await refresh().catch(() => {});
+    if (level?.id === ev.level_id && ev.action === 'reset') openLevel(level.id);
   }
+  if (ev.type === 'showcase') openModal(ev.game, `${t('showcase')}: ${ev.game.title} (${ev.game.nickname})`);
 });
+// A closed EventSource after an error means the server refused us: the session is over.
+es.onerror = () => setTimeout(() => { if (es.readyState === EventSource.CLOSED) api('/api/student/me').catch((x) => x.status === 401 && ended()); }, 500);
 </script></body></html>

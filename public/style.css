@@ -59,6 +59,7 @@ iframe.game { width:100%; flex:1; border:1px solid var(--line); border-radius:14
 
 /* teacher */
 .layout { display:grid; grid-template-columns:300px 1fr; gap:14px; padding:14px 20px; align-items:start; }
+.layout > div { min-width:0; }
 @media (max-width:900px) { .layout { grid-template-columns:1fr; } }
 .stu { display:flex; gap:.4rem; align-items:center; padding:.5rem .6rem; border-radius:10px; cursor:pointer; } .stu:hover { background:var(--bg); }
 .stu.sel { background:var(--brand-soft); font-weight:600; } .stu button { padding:.2em .65em; font-size:.8rem; box-shadow:none; }
@@ -79,3 +80,86 @@ details pre { max-height:200px; overflow:auto; background:var(--bg); padding:.6e
 .classlink:hover { border-color:var(--brand); text-decoration:none; background:var(--brand-soft); }
 table { border-collapse:collapse; width:100%; } td, th { text-align:left; padding:.5em .6em; border-bottom:1px solid var(--line); } th { color:var(--muted); font-size:.8rem; text-transform:uppercase; }
 [hidden] { display:none !important; }
+
+/* join */
+.pin { letter-spacing:.5em; text-align:center; font-weight:700; font-size:1.2rem; }
+.avatars { display:grid; grid-template-columns:repeat(8,1fr); gap:6px; }
+.avatars .av { background:var(--bg); box-shadow:none; font-size:1.4rem; padding:.25em 0; border:2px solid transparent; }
+.avatars .av.on { border-color:var(--brand); background:var(--brand-soft); }
+@media (max-width:420px) { .avatars { grid-template-columns:repeat(4,1fr); } }
+
+/* student map */
+.mebadge { font-weight:700; }
+.mapwrap { max-width:640px; margin:0 auto; padding:16px 16px 60px; }
+.map { position:relative; }
+.map svg { position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
+.map path { fill:none; stroke:var(--line); stroke-width:10; stroke-linecap:round; stroke-dasharray:2 18; vector-effect:non-scaling-stroke; }
+.node { position:absolute; transform:translate(-50%,-38px); display:flex; flex-direction:column; align-items:center; gap:4px; background:none; box-shadow:none; color:var(--ink);
+  padding:0; width:150px; font-weight:600; }
+.node:hover { box-shadow:none; } .node:disabled { opacity:1; }
+.ball { position:relative; width:76px; height:76px; border-radius:50%; display:grid; place-items:center; font-size:2rem; background:var(--card); border:4px solid var(--line);
+  box-shadow:var(--shadow); transition:transform .15s; }
+.node:not(:disabled):hover .ball { transform:scale(1.08); }
+.node.done .ball { border-color:var(--ok); background:color-mix(in srgb,var(--ok) 14%,var(--card)); }
+.node.current .ball { border-color:var(--brand); background:var(--brand-soft); animation:pulse 1.8s infinite; }
+.node.pending .ball { border-color:#f5a623; background:var(--warn); }
+.node.locked .ball { filter:grayscale(1); opacity:.55; }
+.node.locked .ntitle { color:var(--muted); }
+.ntitle { font-size:.85rem; text-align:center; line-height:1.2; background:var(--bg); padding:0 .3em; border-radius:6px; }
+.you { position:absolute; top:-18px; right:-14px; font-size:1.5rem; background:var(--card); border-radius:50%; width:38px; height:38px; display:grid; place-items:center;
+  box-shadow:var(--shadow); animation:bob 1.4s ease-in-out infinite; }
+.stars { color:#f5a623; letter-spacing:.1em; font-size:.95rem; min-height:1em; } .stars.big { font-size:2.2rem; }
+.finale { position:absolute; left:50%; transform:translateX(-50%); font-weight:800; font-size:1.2rem; white-space:nowrap; }
+@keyframes pulse { 0%,100% { box-shadow:0 0 0 0 rgba(108,92,231,.45); } 50% { box-shadow:0 0 0 14px rgba(108,92,231,0); } }
+@keyframes bob { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-5px); } }
+@media (prefers-reduced-motion:reduce) { .node.current .ball, .you { animation:none; } }
+
+/* student level */
+.levelbar { display:flex; gap:.6rem; align-items:center; padding:.6rem 20px 0; flex-wrap:wrap; }
+.lvemoji { font-size:1.6rem; }
+.taskcard { margin:10px 20px 0; padding:.6rem 1rem; } .taskcard summary { cursor:pointer; } .taskcard p { margin:.4rem 0 0; }
+#levelView .app { height:calc(100vh - 230px); }
+.creation { background:linear-gradient(160deg,var(--brand-soft),var(--card)); border:2px solid var(--brand); border-radius:var(--r); padding:1rem 1.2rem; overflow:auto; }
+.creation h3 { font-size:1.4rem; margin:0 0 .4rem; color:var(--brand); } .creation p { margin:.25rem 0; white-space:pre-wrap; }
+.resultbox { height:auto !important; width:min(420px,100%) !important; text-align:center; padding:28px !important; align-items:center; }
+.bigicon { font-size:3.5rem; }
+.toast { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); background:var(--ink); color:var(--card); padding:.7em 1.1em; border-radius:12px;
+  box-shadow:var(--shadow); z-index:20; max-width:calc(100% - 32px); animation:rise .2s ease-out; }
+.toast.ok { background:var(--ok); color:#fff; } .toast.bad { background:var(--bad); color:#fff; }
+@keyframes rise { from { opacity:0; transform:translate(-50%,10px); } }
+
+/* teacher */
+.btnlink, .btnlike { display:inline-block; border:1px solid var(--line); border-radius:12px; padding:.5em 1em; color:var(--ink); font-weight:500; cursor:pointer; font-size:1rem; }
+.btnlink:hover, .btnlike:hover { background:var(--brand-soft); text-decoration:none; }
+.pill.live { background:color-mix(in srgb,var(--bad) 15%,var(--card)); color:var(--bad); }
+.roomtop { flex-wrap:wrap; position:static; }
+.linkbox { width:16rem; font-size:.85rem; padding:.45em .6em; }
+.code.small { font-size:1.1rem; letter-spacing:.15em; }
+.settings { position:relative; } .settings summary { list-style:none; cursor:pointer; font-size:1.3rem; }
+.settings > div { position:absolute; right:0; top:2.2rem; z-index:6; background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:1rem; width:300px; box-shadow:var(--shadow); }
+.dot { width:9px; height:9px; border-radius:50%; background:var(--line); flex:none; } .dot.on { background:var(--ok); }
+.typing { color:var(--brand); font-size:.8rem; font-style:italic; margin-left:.3rem; }
+.classmap { display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; }
+.mcol { min-width:118px; flex:1; background:var(--bg); border-radius:12px; padding:8px; display:flex; flex-direction:column; gap:5px; }
+.mcol.fin { background:color-mix(in srgb,var(--ok) 12%,var(--bg)); }
+.mhead { display:flex; flex-direction:column; align-items:center; font-size:.8rem; text-align:center; line-height:1.2; margin-bottom:4px; }
+.mhead span { color:var(--muted); }
+.chip { background:var(--card); color:var(--ink); border:1px solid var(--line); box-shadow:none; padding:.25em .5em; font-weight:500; font-size:.85rem; display:flex; gap:.3em;
+  align-items:center; border-radius:999px; } .chip span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.chip.off { opacity:.5; } .chip.sel { border-color:var(--brand); background:var(--brand-soft); } .chip.pend { border-color:#f5a623; }
+.approvals { margin-bottom:12px; border-color:#f5a623; } .prow, .lrow { padding:.4rem 0; border-bottom:1px solid var(--line); } .prow:last-child, .lrow:last-child { border:0; }
+.lrow button, .prow button { padding:.25em .7em; font-size:.85rem; }
+.fm.streaming { border-style:dashed; }
+.gcard .creation.preview { height:150px; overflow:hidden; font-size:.75rem; margin:.4rem 0; padding:.6rem; } .gcard .creation.preview h3 { font-size:1rem; }
+.qrbox { text-align:center; overflow:auto; } .qrbox img { width:min(420px,80vw); background:#fff; padding:10px; border-radius:12px; } .qrbox b { word-break:break-all; }
+.modal > div.small { height:auto; width:min(380px,100%); }
+
+/* course editor */
+.editor { max-width:980px; margin:0 auto; padding:16px; }
+.lvcard { margin-bottom:12px; } .lvcard .row { flex-wrap:wrap; }
+.lvcard button { padding:.35em .7em; box-shadow:none; }
+.lvnum { width:2rem; height:2rem; border-radius:50%; background:var(--brand-soft); color:var(--brand); display:grid; place-items:center; font-weight:800; flex:none; }
+.lvcard .emoji { width:3.6rem; text-align:center; font-size:1.2rem; padding:.4em; }
+.lvcard .grow { min-width:10rem; }
+.lvgrid { display:grid; grid-template-columns:1fr 1fr; gap:0 12px; } .lvgrid label { margin-top:.6em; }
+@media (max-width:700px) { .lvgrid { grid-template-columns:1fr; } .linkbox { width:100%; } }
