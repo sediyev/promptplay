@@ -57,6 +57,29 @@ after(() => { server.kill(); fake.close(); fs.rmSync(dir, { recursive: true, for
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+test('home page links: /trial and /privacy are real pages, the trial form stores requests for the admin', async () => {
+  for (const [url, marker] of [['/trial', /id="trial"/], ['/privacy', /pv_h1|Uşaqlar nə daxil edir/]]) {
+    const r = await call('x', 'GET', url);
+    assert.equal(r.status, 200, url); assert.match(r.data, marker, url);
+  }
+  const ok = { name: 'Aygun M.', contact: '+994 50 123 45 67', age: 10, note: 'weekends' };
+  assert.equal((await call('p', 'POST', '/api/trial', { ...ok, name: '' })).data.error, 'trial_name');
+  assert.equal((await call('p', 'POST', '/api/trial', { ...ok, contact: 'nope' })).data.error, 'trial_contact');
+  assert.equal((await call('p', 'POST', '/api/trial', { ...ok, age: 30 })).data.error, 'trial_age');
+  assert.equal((await call('p', 'POST', '/api/trial', { ...ok, website: 'http://spam', name: 'Bot' })).status, 200); // honeypot: pretends to succeed, stores nothing
+  assert.equal((await call('p', 'POST', '/api/trial', ok)).status, 200);
+  assert.equal((await call('p', 'POST', '/api/trial', { ...ok, name: 'Rauf', contact: 'rauf@example.com', age: '12', lang: 'en' })).status, 200);
+  assert.equal((await call('p', 'GET', '/api/admin/trials')).status, 401, 'only the admin can read requests');
+  await call('adm', 'POST', '/api/login', { email: 'a@x.com', password: 'adminpw' });
+  const list = (await call('adm', 'GET', '/api/admin/trials')).data;
+  assert.deepEqual(list.map((x) => [x.parent_name, x.child_age, x.lang]), [['Rauf', 12, 'en'], ['Aygun M.', 10, 'az']]);
+  assert.equal((await call('adm', 'DELETE', '/api/admin/trials/' + list[0].id)).status, 200);
+  assert.equal((await call('adm', 'GET', '/api/admin/trials')).data.length, 1);
+  // a script cannot flood the table: five requests per hour per address
+  let last; for (let i = 0; i < 5; i++) last = await call('p', 'POST', '/api/trial', ok);
+  assert.equal(last.status, 429);
+});
+
 test('pages: / is the public home page, /join and /join/<token> are the join and login page', async () => {
   const home = await call('x', 'GET', '/');
   assert.equal(home.status, 200);

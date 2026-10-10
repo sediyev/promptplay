@@ -12,19 +12,25 @@
   <div class="card"><h3 data-t="addTeacher"></h3>
     <label data-t="name"></label><input id="tn"><label data-t="email"></label><input id="te" type="email"><label data-t="password"></label><input id="tp" type="password">
     <p class="err" id="err"></p><button id="ta" data-t="create"></button><h3 data-t="teachers"></h3><div id="tl"></div></div>
+  <div class="card" style="grid-column:1/-1"><h3 data-t="adm_trials"></h3><div style="overflow-x:auto"><table id="tr"></table></div></div>
 </div>
 <script type="module">
-import { api, t, applyI18n, toggleLang, esc, $ } from '/common.js';
+import { api, t, addStrings, applyI18n, toggleLang, esc, $ } from '/common.js';
+import { PAGES } from '/pages-i18n.js';
+addStrings(PAGES);
 applyI18n(); $('#lang').textContent = t('lang'); $('#lang').onclick = toggleLang;
 $('#out').onclick = async () => { await api('/api/logout', 'POST'); location = '/join#teacher'; };
 const $$ = (n) => '$' + n.toFixed(3);
 async function load() {
-  let u, ts;
-  try { [u, ts] = await Promise.all([api('/api/admin/usage'), api('/api/admin/teachers')]); } catch { location = '/join#teacher'; return; }
+  let u, ts, tr;
+  try { [u, ts, tr] = await Promise.all([api('/api/admin/usage'), api('/api/admin/teachers'), api('/api/admin/trials')]); } catch { location = '/join#teacher'; return; }
   $('#tot').textContent = `${t('spent')}: ${$$(u.total)}${u.cap ? ' / $' + u.cap : ''}`;
   $('#cap').value = u.cap; $('#ret').value = u.retention_days;
   $('#tt').innerHTML = `<tr><th>${t('teacher')}</th><th>${t('cls')}</th><th>${t('tokens')}</th><th>${t('cost')}</th></tr>` + u.teachers.map((x) => `<tr><td>${esc(x.teacher)}</td><td>${x.classes}</td><td>${x.tokens}</td><td>${$$(x.cost)}</td></tr>`).join('');
   $('#ct').innerHTML = `<tr><th>${t('cls')}</th><th>${t('teacher')}</th><th>${t('students')}</th><th>${t('tokens')}</th><th>${t('cost')}</th></tr>` + u.classes.map((x) => `<tr><td>${esc(x.name)}</td><td>${esc(x.teacher)}</td><td>${x.students}</td><td>${x.tokens}</td><td>${$$(x.cost)}</td></tr>`).join('');
+  $('#tr').innerHTML = tr.length ? `<tr><th>${t('adm_when')}</th><th>${t('adm_parent')}</th><th>${t('adm_contact')}</th><th>${t('adm_age')}</th><th></th><th></th></tr>` + tr.map((x) =>
+    `<tr><td>${new Date(x.created).toLocaleString()}</td><td>${esc(x.parent_name)}</td><td>${esc(x.contact)}</td><td>${x.child_age}</td><td>${esc(x.note)}</td><td><button class="ghost" data-del="${x.id}">${t('adm_del')}</button></td></tr>`).join('') : `<tr><td class="muted">${t('empty')}</td></tr>`;
+  $('#tr').querySelectorAll('[data-del]').forEach((b) => (b.onclick = async () => { await api('/api/admin/trials/' + b.dataset.del, 'DELETE'); load(); }));
   $('#tl').innerHTML = ts.map((x) => `<div>${esc(x.name)} <span class="muted">${esc(x.email)}</span></div>`).join('') || `<p class="muted">${t('empty')}</p>`;
 }
 $('#ss').onclick = async () => { await api('/api/admin/settings', 'PUT', { spend_cap: +$('#cap').value, retention_days: +$('#ret').value }); load(); };
