@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="az"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PromptPlay – Admin</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<div class="top"><b class="logo">🎮 PromptPlay</b><span class="pill" data-t="admin"></span><span class="grow"></span><button class="ghost" id="lang"></button><button class="ghost" id="out" data-t="logout"></button></div>
+<div class="layout" style="grid-template-columns:1fr 1fr">
+  <div class="card"><h3 data-t="usage"></h3><p id="tot"></p>
+    <label data-t="cap"></label><input id="cap" type="number" min="0" step="1">
+    <label data-t="retention"></label><input id="ret" type="number" min="1">
+    <p></p><button id="ss" data-t="save2"></button>
+    <h3 data-t="teachers"></h3><table id="tt"></table><h3 data-t="cls"></h3><table id="ct"></table></div>
+  <div class="card"><h3 data-t="addTeacher"></h3>
+    <label data-t="name"></label><input id="tn"><label data-t="email"></label><input id="te" type="email"><label data-t="password"></label><input id="tp" type="password">
+    <p class="err" id="err"></p><button id="ta" data-t="create"></button><h3 data-t="teachers"></h3><div id="tl"></div></div>
+</div>
+<script type="module">
+import { api, t, applyI18n, toggleLang, esc, $ } from '/common.js';
+applyI18n(); $('#lang').textContent = t('lang'); $('#lang').onclick = toggleLang;
+$('#out').onclick = async () => { await api('/api/logout', 'POST'); location = '/'; };
+const $$ = (n) => '$' + n.toFixed(3);
+async function load() {
+  let u, ts;
+  try { [u, ts] = await Promise.all([api('/api/admin/usage'), api('/api/admin/teachers')]); } catch { location = '/'; return; }
+  $('#tot').textContent = `${t('spent')}: ${$$(u.total)}${u.cap ? ' / $' + u.cap : ''}`;
+  $('#cap').value = u.cap; $('#ret').value = u.retention_days;
+  $('#tt').innerHTML = `<tr><th>${t('teacher')}</th><th>${t('cls')}</th><th>${t('tokens')}</th><th>${t('cost')}</th></tr>` + u.teachers.map((x) => `<tr><td>${esc(x.teacher)}</td><td>${x.classes}</td><td>${x.tokens}</td><td>${$$(x.cost)}</td></tr>`).join('');
+  $('#ct').innerHTML = `<tr><th>${t('cls')}</th><th>${t('teacher')}</th><th>${t('students')}</th><th>${t('tokens')}</th><th>${t('cost')}</th></tr>` + u.classes.map((x) => `<tr><td>${esc(x.name)}</td><td>${esc(x.teacher)}</td><td>${x.students}</td><td>${x.tokens}</td><td>${$$(x.cost)}</td></tr>`).join('');
+  $('#tl').innerHTML = ts.map((x) => `<div>${esc(x.name)} <span class="muted">${esc(x.email)}</span></div>`).join('') || `<p class="muted">${t('empty')}</p>`;
+}
+$('#ss').onclick = async () => { await api('/api/admin/settings', 'PUT', { spend_cap: +$('#cap').value, retention_days: +$('#ret').value }); load(); };
+$('#ta').onclick = async () => {
+  try { await api('/api/admin/teachers', 'POST', { name: $('#tn').value, email: $('#te').value, password: $('#tp').value }); $('#err').textContent = ''; ['#tn', '#te', '#tp'].forEach((s) => ($(s).value = '')); load(); }
+  catch (x) { $('#err').textContent = t(x.code); }
+};
+load();
+</script></body></html>
