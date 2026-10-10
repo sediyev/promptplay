@@ -1,71 +1,400 @@
 <!doctype html>
-<html lang="az"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PromptPlay</title><link rel="stylesheet" href="/style.css"></head>
+<html lang="az">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title data-t="m_title">PromptPlay: uşaqlar oynayaraq süni intellektlə yaratmağı öyrənir</title>
+<meta name="description" content="8 ilə 17 yaş arası uşaqlar üçün sinif macərası. Uşaqlar qəhrəman icad edir, oyun qurur və süni intellektə yön verməyi öyrənir. Hər sinfi müəllim aparır və hər şeyi görür." data-meta="m_desc">
+<meta name="theme-color" content="#f4f5fb" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f111a" media="(prefers-color-scheme: dark)">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="PromptPlay">
+<meta property="og:title" content="PromptPlay: uşaqlar oynayaraq süni intellektlə yaratmağı öyrənir" data-meta="m_title">
+<meta property="og:description" content="8 ilə 17 yaş arası uşaqlar üçün sinif macərası. Uşaqlar qəhrəman icad edir, oyun qurur və süni intellektə yön verməyi öyrənir. Hər sinfi müəllim aparır və hər şeyi görür." data-meta="m_desc">
+<meta property="og:image" content="[OG IMAGE]">
+<meta property="og:locale" content="az_AZ">
+<meta property="og:locale:alternate" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="PromptPlay: uşaqlar oynayaraq süni intellektlə yaratmağı öyrənir" data-meta="m_title">
+<meta name="twitter:description" content="8 ilə 17 yaş arası uşaqlar üçün sinif macərası. Uşaqlar qəhrəman icad edir, oyun qurur və süni intellektə yön verməyi öyrənir. Hər sinfi müəllim aparır və hər şeyi görür." data-meta="m_desc">
+<meta name="twitter:image" content="[OG IMAGE]">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%F0%9F%8E%AE%3C/text%3E%3C/svg%3E">
+<!-- Returning English visitors: keep the page invisible until home.js has swapped the text, so nothing flashes or shifts. -->
+<script>try{if(localStorage.getItem('lang')==='en'){var h=document.documentElement;h.lang='en';h.classList.add('pend')}}catch(e){}</script>
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/home.css">
+<link rel="modulepreload" href="/common.js">
+<link rel="modulepreload" href="/home-i18n.js">
+<script type="module" src="/home.js"></script>
+</head>
 <body>
-<div class="hero"><div class="box">
-  <h1><span class="logo">🎮 PromptPlay</span></h1>
-  <p class="sub" data-t="tagline"></p>
-  <div class="banner stop" id="notice" hidden style="border-radius:12px;margin-bottom:12px"></div>
-  <div class="card">
-    <div class="seg"><button id="tabS" class="on" data-t="student" type="button"></button><button id="tabT" data-t="teacher" type="button"></button></div>
-    <form id="join">
-      <div id="invited" hidden><p class="muted" style="margin:0"><span data-t="invitedTo"></span></p><h2 id="roomName" style="margin:.1em 0 0"></h2><p class="muted" id="courseName" style="margin:0 0 .4rem"></p></div>
-      <div id="codeBox"><label data-t="code"></label><input id="code" maxlength="8" autocomplete="off"></div>
-      <p class="muted" data-t="newHere" style="margin:.6rem 0 0"></p>
-      <label data-t="nickname"></label><input id="nick" maxlength="20" autocomplete="off" required>
-      <label data-t="pin"></label><input id="pin" inputmode="numeric" pattern="\d{4}" maxlength="4" autocomplete="off" required class="pin">
-      <label data-t="pickAvatar"></label><div class="avatars" id="avatars"></div>
-      <p class="err" id="jerr"></p><button class="big" data-t="go"></button>
-      <p style="text-align:center;margin:.6rem 0 0" id="useCode" hidden><a href="/" data-t="haveCode"></a></p>
-    </form>
-    <form id="login" hidden>
-      <label data-t="email"></label><input id="email" type="email" autocomplete="username" required>
-      <label data-t="password"></label><input id="pw" type="password" autocomplete="current-password" required>
-      <p class="err" id="lerr"></p><button class="big" data-t="login"></button>
-    </form>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+  <symbol id="i-check" viewBox="0 0 20 20"><circle cx="10" cy="10" r="10" fill="var(--ok)"/><path d="M5.5 10.4l3 3 6-6.4" fill="none" stroke="#0b2a1b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="19" cy="12" r="2.2"/></symbol>
+</defs></svg>
+<div id="topmark" aria-hidden="true"></div>
+<a class="skip" href="#main" data-t="n_skip">Məzmuna keç</a>
+
+<header class="bar" id="bar">
+  <div class="bar-in">
+    <a class="brand" href="/"><span aria-hidden="true">🎮</span><span class="brand-t">PromptPlay</span></a>
+    <nav class="bar-act" data-aria="n_nav" aria-label="Əsas menyu">
+      <button class="lang" type="button" data-lang data-aria="n_lang" aria-label="AZ EN, İngilis dilinə keç"><b lang="az">AZ</b><b lang="en">EN</b></button>
+      <a class="btn sm soft" href="/join" data-t="n_enter">Sinfə qoşul</a>
+      <a class="btn sm quiet wide" href="/join#teacher" data-t="n_teacher">Müəllim girişi</a>
+      <a class="btn sm wide" href="[CTA LINK]" data-cta data-t="cta">Pulsuz sınaq dərsinə yazıl</a>
+      <details class="more narrow">
+        <summary data-aria="n_more" aria-label="Daha çox"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-more"/></svg></summary>
+        <div class="more-p"><a href="/join#teacher" data-t="n_teacher">Müəllim girişi</a></div>
+      </details>
+    </nav>
   </div>
-  <p style="text-align:center"><button class="ghost" id="lang"></button></p>
-</div></div>
-<script type="module">
-import { api, t, applyI18n, toggleLang, $ } from '/common.js';
-applyI18n(); $('#lang').textContent = t('lang'); $('#lang').onclick = toggleLang;
-const tab = (st) => { $('#join').hidden = !st; $('#login').hidden = st; $('#tabS').classList.toggle('on', st); $('#tabT').classList.toggle('on', !st); };
-$('#tabS').onclick = () => tab(true); $('#tabT').onclick = () => tab(false);
+</header>
 
-const params = new URLSearchParams(location.search);
-if (params.get('closed')) { $('#notice').hidden = false; $('#notice').textContent = t('sessionEnded'); }
-const invite = location.pathname.match(/^\/join\/([\w-]+)/)?.[1];
-let avatar;
-function avatars(list) {
-  avatar ||= list[Math.floor(Math.random() * list.length)];
-  $('#avatars').replaceChildren(...list.map((a) => {
-    const b = Object.assign(document.createElement('button'), { type: 'button', textContent: a, className: 'av' + (a === avatar ? ' on' : '') });
-    b.onclick = () => { avatar = a; avatars(list); }; return b;
-  }));
-}
-if (invite) {
-  $('#codeBox').hidden = true; $('#useCode').hidden = false;
-  try {
-    const r = await api('/api/invite/' + invite);
-    $('#invited').hidden = false; $('#roomName').textContent = r.name; $('#courseName').textContent = r.course || '';
-    if (!r.live) { $('#notice').hidden = false; $('#notice').textContent = t('room_closed'); }
-    avatars(r.avatars);
-  } catch (x) { $('#notice').hidden = false; $('#notice').textContent = t(x.code); }
-} else avatars(await api('/api/avatars'));
+<main id="main">
 
-$('#join').onsubmit = async (e) => {
-  e.preventDefault();
-  const body = { nickname: $('#nick').value, pin: $('#pin').value, avatar, ...(invite ? { invite } : { code: $('#code').value }) };
-  try {
-    await api('/api/join', 'POST', body);
-    try { invite ? localStorage.setItem('invite', invite) : localStorage.removeItem('invite'); } catch {}
-    location = '/student.html';
-  }
-  catch (x) { $('#jerr').textContent = t(x.code); }
-};
-$('#login').onsubmit = async (e) => {
-  e.preventDefault();
-  try { const r = await api('/api/login', 'POST', { email: $('#email').value, password: $('#pw').value }); location = r.role === 'admin' ? '/admin.html' : '/teacher.html'; }
-  catch (x) { $('#lerr').textContent = t(x.code); }
-};
-</script></body></html>
+<!-- 2. HERO -->
+<section class="lp-hero" id="hero" aria-labelledby="h1">
+  <div class="wrap hero-grid">
+    <h1 id="h1"><span data-t="hr_h1a">Övladınız süni intellektlə böyüyəcək.</span> <span class="grad" data-t="hr_h1b">Qoy ona yön verməyi öyrənsin.</span></h1>
+    <div class="hero-copy">
+      <p class="kid-wrap"><span class="kid" data-t="hr_kid">Qəhrəman icad et. Öz oyununu yarat. Səviyyəni qaldır.</span></p>
+      <p class="sub" data-t="hr_sub">PromptPlay uşaqların oynayaraq süni intellektlə yaratmağı öyrəndiyi sinif macərasıdır. Hər sinfi müəllim aparır.</p>
+      <div class="cta-row">
+        <a class="btn lg" href="[CTA LINK]" data-cta data-t="cta">Pulsuz sınaq dərsinə yazıl</a>
+        <a class="btn lg ghost" href="#power" data-t="hr_how">Necə işlədiyinə bax</a>
+      </div>
+      <ul class="trust">
+        <li><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span data-t="hr_t1">Müəllim hər şeyi görür</span></li>
+        <li><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span data-t="hr_t2">8 ilə 17 yaş arası</span></li>
+        <li><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span data-t="hr_t3">Azərbaycan və ingilis dilləri</span></li>
+        <li><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span data-t="hr_t4">Quraşdırma lazım deyil</span></li>
+      </ul>
+    </div>
+
+    <div class="hero-demo">
+      <div class="pw" id="pw" role="img" data-aria="pw_alt" aria-label="PromptPlay ekranından nümunə. Uşaq yazır: buludları idarə edən super qəhrəman yarat. Süni intellekt Kapitan Bulud qəhrəmanını yaradır. Uşaq “İşimi yoxla” düyməsini basır, üç ulduz qazanır və növbəti səviyyəni açır.">
+        <div class="pw-in" aria-hidden="true">
+          <div class="pw-head">
+            <span class="pw-me" data-avatar>🦊</span>
+            <span class="pw-lv"><span data-t="lb_lv">Səviyyə</span> 3: <span data-t="lv3t">Super Qəhrəman İcad Et</span></span>
+            <span class="tag" data-t="ex_tag">Nümunə</span>
+          </div>
+          <div class="pw-body">
+            <div class="pw-chat">
+              <p class="bub usr"><span class="tw-g" data-t="pw_prompt">buludları idarə edən super qəhrəman yarat</span><span class="tw" data-live="prompt"></span></p>
+              <p class="bub bot"><span class="dots"><i></i><i></i><i></i></span><span class="tw-g" data-t="pw_reply">Tanış ol: Kapitan Bulud! Qəhrəmanına köməkçi əlavə edək?</span><span class="tw" data-live="reply"></span></p>
+              <p class="pw-check"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span data-t="pw_check">İşimi yoxla</span></p>
+            </div>
+            <div class="pw-card on">
+              <div class="face back"><span>?</span></div>
+              <div class="face front">
+                <div class="pic">🦸<small>☁️</small></div>
+                <b data-t="c3n">Kapitan Bulud</b>
+                <p><i data-t="lb_p">Gücü</i> <span data-t="pw_cp">İstənilən buludu şəkilləndirir</span></p>
+                <p><i data-t="lb_w">Zəifliyi</i> <span data-t="pw_cw">Günəşli günlər</span></p>
+                <span class="meter big" data-live="stars"><i>★</i><i>★</i><i>★</i></span>
+              </div>
+            </div>
+          </div>
+          <ol class="pw-map" data-live="map">
+            <li class="n done">👋</li><li class="n done">🎯</li><li class="n done">🦸</li><li class="n cur">🐉</li><li class="n lock">🗺️</li>
+            <li class="tok" data-avatar>🦊</li>
+            <li class="pw-toast"><span data-t="pw_unlock">Yeni səviyyə açıldı!</span></li>
+          </ol>
+        </div>
+      </div>
+
+      <fieldset class="players" id="players">
+        <legend data-t="pl_title">Oyunçunu seç</legend>
+        <div class="pl-row">
+          <label><input type="radio" name="av" value="🦊"><span class="pl-b" aria-hidden="true">🦊</span><span class="sr" data-t="pl1">Tülkü</span></label>
+          <label><input type="radio" name="av" value="🐼"><span class="pl-b" aria-hidden="true">🐼</span><span class="sr" data-t="pl2">Panda</span></label>
+          <label><input type="radio" name="av" value="🐯"><span class="pl-b" aria-hidden="true">🐯</span><span class="sr" data-t="pl3">Pələng</span></label>
+          <label><input type="radio" name="av" value="🦁"><span class="pl-b" aria-hidden="true">🦁</span><span class="sr" data-t="pl4">Aslan</span></label>
+          <label><input type="radio" name="av" value="🐸"><span class="pl-b" aria-hidden="true">🐸</span><span class="sr" data-t="pl5">Qurbağa</span></label>
+          <label><input type="radio" name="av" value="🦄"><span class="pl-b" aria-hidden="true">🦄</span><span class="sr" data-t="pl6">Təkbuynuz</span></label>
+          <label><input type="radio" name="av" value="🚀"><span class="pl-b" aria-hidden="true">🚀</span><span class="sr" data-t="pl7">Raket</span></label>
+          <label><input type="radio" name="av" value="🤖"><span class="pl-b" aria-hidden="true">🤖</span><span class="sr" data-t="pl8">Robot</span></label>
+        </div>
+        <p class="hint" data-t="pl_hint">Seçdiyin oyunçu nümayişə və xəritəyə qoşulur.</p>
+      </fieldset>
+    </div>
+  </div>
+</section>
+
+<!-- 3. PROMPT POWER-UP -->
+<section class="sec pu" id="power" aria-labelledby="pu-h">
+  <div class="wrap">
+    <header class="sec-h center">
+      <p class="kick" data-t="pu_k">Əsas bacarıq</p>
+      <h2 id="pu-h" data-t="pu_h">Promptu gücləndir</h2>
+      <p class="lead" data-t="pu_lead">Prompt, süni intellektə nə istədiyini aydın şəkildə bildirməkdir. Daha çox detal verəndə nə baş verdiyinə bax.</p>
+    </header>
+
+    <div class="pu-box">
+      <div class="modes" role="group" data-aria="pu_modes" aria-label="Nümayiş rejimi">
+        <button type="button" data-mode="watch" aria-pressed="true" data-t="pu_watch">Gücləndiyini izlə</button>
+        <button type="button" data-mode="mine" aria-pressed="false" data-t="pu_mine">Növbə səndə</button>
+      </div>
+
+      <div class="pu-grid">
+        <div class="pu-left">
+          <p class="lab" data-t="pu_say">Süni intellektə deyirsən</p>
+          <div class="pu-prompt" aria-hidden="true"><span class="tw-g" data-t="pu_p3">buludları idarə edən, günəşli havadan qorxan və qurbağa köməkçisi olan gülməli super qəhrəman yarat</span><span class="tw" id="puText"></span></div>
+
+          <div class="pu-watch" id="puWatch">
+            <div class="steps" role="group" data-aria="pu_steps" aria-label="Gücləndirmə addımları">
+              <button type="button" data-step="1"><b>1</b><span data-t="pu_s1">Sadə</span></button>
+              <button type="button" data-step="2"><b>2</b><span data-t="pu_s2">Daha yaxşı</span></button>
+              <button type="button" data-step="3" class="on" aria-pressed="true"><b>3</b><span data-t="pu_s3">Super</span></button>
+            </div>
+            <button type="button" class="btn lg go" id="puGo"><span aria-hidden="true">⚡</span><span data-t="pu_mine">Növbə səndə</span></button>
+          </div>
+
+          <div class="pu-mine" id="puMine" hidden>
+            <p class="yt-h" data-t="yt_h">Güc, zəiflik və köməkçi seç.</p>
+            <fieldset class="chips" data-g="p">
+              <legend data-t="lb_p">Gücü</legend>
+              <div class="chip-row"><label><input type="radio" name="yp" value="1"><span><span aria-hidden="true">🌈</span> <span data-t="yp1l">Göy qurşağı çəkir</span></span></label>
+              <label><input type="radio" name="yp" value="2"><span><span aria-hidden="true">🦘</span> <span data-t="yp2l">Evlərin üstündən tullanır</span></span></label>
+              <label><input type="radio" name="yp" value="3"><span><span aria-hidden="true">🌱</span> <span data-t="yp3l">Bitkiləri saniyələrdə böyüdür</span></span></label>
+            </div></fieldset>
+            <fieldset class="chips" data-g="w">
+              <legend data-t="lb_w">Zəifliyi</legend>
+              <div class="chip-row"><label><input type="radio" name="yw" value="1"><span><span aria-hidden="true">🍰</span> <span data-t="yw1l">Tortdan əl çəkə bilmir</span></span></label>
+              <label><input type="radio" name="yw" value="2"><span><span aria-hidden="true">😴</span> <span data-t="yw2l">Günorta yuxuya gedir</span></span></label>
+              <label><input type="radio" name="yw" value="3"><span><span aria-hidden="true">🪶</span> <span data-t="yw3l">Çox qıdıqlanır</span></span></label>
+            </div></fieldset>
+            <fieldset class="chips" data-g="s">
+              <legend data-t="lb_s">Köməkçisi</legend>
+              <div class="chip-row"><label><input type="radio" name="ys" value="1"><span><span aria-hidden="true">🐉</span> <span data-t="ys1l">Balaca əjdaha</span></span></label>
+              <label><input type="radio" name="ys" value="2"><span><span aria-hidden="true">🤖</span> <span data-t="ys2l">Kiçik robot</span></span></label>
+              <label><input type="radio" name="ys" value="3"><span><span aria-hidden="true">🐧</span> <span data-t="ys3l">Pinqvin</span></span></label>
+            </div></fieldset>
+            <div class="row-btns">
+              <button type="button" class="btn ghost" id="ytReset" data-t="yt_again">Yenidən başla</button>
+              <button type="button" class="btn ghost" id="ytBack" data-t="yt_back">Nümayişə qayıt</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="pu-right">
+          <p class="lab" data-t="pu_make">Süni intellekt düzəldir</p>
+          <article class="pu-card" id="puCard" data-lv="3" data-tilt>
+            <i class="bg b2"></i><i class="bg b3"></i>
+            <div class="pc-top"><div class="pc-pic" aria-hidden="true">🦸</div><h3 class="pc-name" data-t="c3n">Kapitan Bulud</h3></div>
+            <dl class="pc-rows">
+              <div class="r" data-r="p"><dt data-t="lb_p">Gücü</dt><dd data-t="c3p">Buludları sıçrayan trampolinlərə çevirir.</dd></div>
+              <div class="r" data-r="w"><dt data-t="lb_w">Zəifliyi</dt><dd data-t="c3w">Günəşli günlər. Nəhəng çətirin altında gizlənir!</dd></div>
+              <div class="r" data-r="c"><dt data-t="lb_c">Geyimi</dt><dd data-t="c3c">Yumşaq ağ plaş, yağış damlası çəkmələr və ildırım kəməri.</dd></div>
+              <div class="r" data-r="s"><dt data-t="lb_s">Köməkçisi</dt><dd data-t="c3s">Ildırım zarafatları danışan qurbağa Çiskin.</dd></div>
+            </dl>
+            <div class="pc-foot"><span class="meter big" id="puStars" role="img" data-aria="st3" aria-label="3 ulduz"><i>★</i><i>★</i><i>★</i></span><span class="pc-st" data-t="st3">3 ulduz</span></div>
+            <div class="fx-host" aria-hidden="true"></div>
+          </article>
+        </div>
+      </div>
+
+      <p class="pu-cap" data-t="pu_cap">Əsas bacarıq budur: nə demək istədiyini dəqiq ifadə etmək və sonra onu daha yaxşı etmək. Övladınız bunu hər səviyyədə məşq edir.</p>
+      <p class="note" data-t="pu_demo">Bu, ssenari əsasında hazırlanmış nümayişdir. Sinifdə uşaqlar real süni intellekt köməkçisi ilə işləyir.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 4. ADVENTURE MAP -->
+<section class="sec mapsec" id="map" aria-labelledby="mp-h">
+  <div class="wrap map-grid">
+    <header class="sec-h map-intro">
+      <p class="kick" data-t="mp_k">Macəra</p>
+      <h2 id="mp-h" data-t="mp_h">10 səviyyəlik oyun xəritəsi</h2>
+      <p class="lead" data-t="mp_lead">Hər səviyyə süni intellekt köməkçisi ilə qısa yaradıcı missiyadır. Uşaqlar üç ulduza qədər qazanır, növbəti səviyyəni açır və xəritə boyu irəliləyir.</p>
+      <p class="hud" aria-hidden="true"><span class="hud-me" data-avatar>🦊</span><b><span data-t="lb_lv">Səviyyə</span> <span id="hudLv">10</span> / 10</b><span class="meter"><i>★</i></span><b id="hudSt">27</b></p>
+      <p class="note" data-t="mp_note">Müəllimlər öz kurslarını da yarada bilər.</p>
+      <p class="note" data-t="mp_ex">Göstərilən irəliləyiş nümunədir.</p>
+    </header>
+    <ol class="trail" id="mapList">
+      <li class="lvl" data-stars="3"><span class="orb" aria-hidden="true">👋</span><div class="ntx"><b data-t="lv1t">Salam, Süni İntellekt!</b><span data-t="lv1s">Süni intellektin necə işlədiyi və niyə səhv edə bilməsi</span><span class="meter" role="img" data-aria="st3" aria-label="3 ulduz"><i>★</i><i>★</i><i>★</i></span></div></li>
+      <li class="lvl" data-stars="2"><span class="orb" aria-hidden="true">🎯</span><div class="ntx"><b data-t="lv2t">Aydın Prompt Çağırışı</b><span data-t="lv2s">Nə demək istədiyini dəqiq demək</span><span class="meter" role="img" data-aria="st2" aria-label="2 ulduz"><i>★</i><i>★</i><i class="o">★</i></span></div></li>
+      <li class="lvl" data-stars="3"><span class="orb" aria-hidden="true">🦸</span><div class="ntx"><b data-t="lv3t">Super Qəhrəman İcad Et</b><span data-t="lv3s">Orijinal ideyalar</span><span class="meter" role="img" data-aria="st3" aria-label="3 ulduz"><i>★</i><i>★</i><i>★</i></span></div></li>
+      <li class="lvl" data-stars="3"><span class="orb" aria-hidden="true">🐉</span><div class="ntx"><b data-t="lv4t">Məxluq Dizayn Et</b><span data-t="lv4s">Zəngin, təsvirli dil</span><span class="meter" role="img" data-aria="st3" aria-label="3 ulduz"><i>★</i><i>★</i><i>★</i></span></div></li>
+      <li class="lvl" data-stars="2"><span class="orb" aria-hidden="true">🗺️</span><div class="ntx"><b data-t="lv5t">Dünya Qur</b><span data-t="lv5s">Qayda və sistemlərlə düşünmək</span><span class="meter" role="img" data-aria="st2" aria-label="2 ulduz"><i>★</i><i>★</i><i class="o">★</i></span></div></li>
+      <li class="lvl" data-stars="3"><span class="orb" aria-hidden="true">🕹️</span><div class="ntx"><b data-t="lv6t">İlk Oyunun</b><span data-t="lv6s">Oyunçudan yaradıcıya</span><span class="meter" role="img" data-aria="st3" aria-label="3 ulduz"><i>★</i><i>★</i><i>★</i></span></div></li>
+      <li class="lvl" data-stars="3"><span class="orb" aria-hidden="true">🎨</span><div class="ntx"><b data-t="lv7t">Oyun Dizayneri</b><span data-t="lv7s">Qurmazdan əvvəl planlaşdırmaq</span><span class="meter" role="img" data-aria="st3" aria-label="3 ulduz"><i>★</i><i>★</i><i>★</i></span></div></li>
+      <li class="lvl" data-stars="2"><span class="orb" aria-hidden="true">🐞</span><div class="ntx"><b data-t="lv8t">Xəta Ovçusu</b><span data-t="lv8s">Problemləri tapmaq və aydın izah etmək</span><span class="meter" role="img" data-aria="st2" aria-label="2 ulduz"><i>★</i><i>★</i><i class="o">★</i></span></div></li>
+      <li class="lvl" data-stars="3"><span class="orb" aria-hidden="true">⚡</span><div class="ntx"><b data-t="lv9t">Qəhrəman Oyunu</b><span data-t="lv9s">İdeyaları birləşdirib yeni bir şey yaratmaq</span><span class="meter" role="img" data-aria="st3" aria-label="3 ulduz"><i>★</i><i>★</i><i>★</i></span></div></li>
+      <li class="lvl end" data-stars="3"><span class="orb" aria-hidden="true">🏆</span><div class="ntx"><b data-t="lv10t">Göstər və Danış</b><span data-t="lv10s">Təqdim etmək və nəticə çıxarmaq</span><span class="meter" role="img" data-aria="st3" aria-label="3 ulduz"><i>★</i><i>★</i><i>★</i></span><em data-t="mp_end">Macəra tamamlandı. Sinfə göstərmək vaxtıdır!</em></div></li>
+    </ol>
+  </div>
+</section>
+
+<!-- 5. THINGS KIDS MAKE -->
+<section class="sec ex" id="made" aria-labelledby="ex-h">
+  <div class="wrap">
+    <header class="sec-h center">
+      <h2 id="ex-h" data-t="ex_h">Uşaqların düzəltdikləri</h2>
+      <p class="lead" data-t="ex_lead">Hər səviyyə övladınızın düzəltdiyi bir işlə və 1-dən 3-ə qədər ulduzla bitir. Bunun necə göründüyünə dair nümunələr bunlardır.</p>
+    </header>
+    <div class="ex-grid">
+      <article class="ex-card" data-tilt style="--rot:-1.4deg">
+        <p class="ex-top"><span class="tag" data-t="ex_tag">Nümunə</span><span data-t="ex_t1">Super qəhrəman kartı</span></p>
+        <div class="creation">
+          <h3 data-t="c3n">Kapitan Bulud</h3>
+          <p><b><span data-t="lb_p">Gücü</span>: </b><span data-t="c3p">Buludları sıçrayan trampolinlərə çevirir.</span></p>
+          <p><b><span data-t="lb_w">Zəifliyi</span>: </b><span data-t="c3w">Günəşli günlər. Nəhəng çətirin altında gizlənir!</span></p>
+          <p><b><span data-t="lb_c">Geyimi</span>: </b><span data-t="c3c">Yumşaq ağ plaş, yağış damlası çəkmələr və ildırım kəməri.</span></p>
+          <p><b><span data-t="lb_s">Köməkçisi</span>: </b><span data-t="c3s">Ildırım zarafatları danışan qurbağa Çiskin.</span></p>
+        </div>
+      </article>
+      <article class="ex-card" data-tilt style="--rot:1.1deg">
+        <p class="ex-top"><span class="tag" data-t="ex_tag">Nümunə</span><span data-t="ex_t2">Məxluq kartı</span></p>
+        <div class="creation">
+          <h3 data-t="cr_n">Duman Balinası</h3>
+          <p><b><span data-t="lb_l">Yaşayır</span>: </b><span data-t="cr_l">Prompt Meşəsinin üstündə, yumşaq mavi dumanda.</span></p>
+          <p><b><span data-t="lb_e">Yeyir</span>: </b><span data-t="cr_e">Yağış damlaları və ay işığı.</span></p>
+          <p><b><span data-t="lb_a">Bacarığı</span>: </b><span data-t="cr_a">Zümzümə etdiyi mahnılardan parlayan baloncuqlar yaranır.</span></p>
+          <p><b><span data-t="lb_f">Maraqlı fakt</span>: </b><span data-t="cr_f">Dünyanın ən sakit mahnısını oxuyur.</span></p>
+        </div>
+      </article>
+      <article class="ex-card ex-game" style="--rot:-.6deg">
+        <p class="ex-top"><span class="tag" data-t="ex_tag">Nümunə</span><span data-t="ex_t3">Oynana bilən oyun</span></p>
+        <div class="gm" id="gm"><div class="gm-poster"><span aria-hidden="true">⭐</span><b data-t="gm_n">Ulduz Tutan</b><small data-t="gm_hint">20 saniyə ərzində düşən ulduzlara toxun!</small></div></div>
+        <p class="note" data-t="gm_note">Kiçik nümunə oyun. İnternetə çıxışı olmayan qapalı mühitdə işləyir.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- 6. SKILLS FOR LIFE -->
+<section class="sec skills" id="skills" aria-labelledby="sk-h">
+  <div class="wrap">
+    <header class="sec-h center">
+      <h2 id="sk-h" data-t="sk_h">Həyat üçün bacarıqlar</h2>
+      <p class="lead" data-t="sk_lead">Uşaqlar əyləncə üçün oynayır. Bu arada oyundan kənarda da lazım olan bacarıqları məşq edirlər.</p>
+    </header>
+    <ul class="tiles">
+      <li class="tile"><span class="ico" aria-hidden="true">💬</span><h3 data-t="sk1t">Aydın ünsiyyət</h3><p data-t="sk1d">Aydın istəklər daha yaxşı nəticə verir, ona görə uşaqlar nə demək istədiklərini dəqiq ifadə etməyi öyrənir.</p></li>
+      <li class="tile"><span class="ico" aria-hidden="true">🎨</span><h3 data-t="sk2t">Yaradıcılıq</h3><p data-t="sk2d">Hər missiya boş vərəqdən başlayır: əvvəl heç kimin görmədiyi qəhrəman, məxluq və ya dünya.</p></li>
+      <li class="tile"><span class="ico" aria-hidden="true">🧩</span><h3 data-t="sk3t">Problem həlli</h3><p data-t="sk3d">Oyunda xəta olanda uşaqlar onu tapır, izah edir və düzəltdirir.</p></li>
+      <li class="tile"><span class="ico" aria-hidden="true">🔍</span><h3 data-t="sk4t">Tənqidi düşüncə</h3><p data-t="sk4d">Süni intellekt səhv edə bilər, ona görə uşaqlar inanmazdan əvvəl onun dediklərini yoxlamağı öyrənir.</p></li>
+      <li class="tile"><span class="ico" aria-hidden="true">🛡️</span><h3 data-t="sk5t">Təhlükəsiz onlayn vərdişlər</h3><p data-t="sk5d">Uşaqlar müəllimin rəhbərliyi ilə şəxsi məlumatları gizli saxlamağı və mövzudan çıxmamağı məşq edir.</p></li>
+      <li class="tile"><span class="ico" aria-hidden="true">🚀</span><h3 data-t="sk6t">Yaratmaq inamı</h3><p data-t="sk6d">Kodlaşdırma lazım deyil. Uşaqlar ideyalarının oynayıb paylaşa biləcəkləri real oyunlara çevrildiyini görür.</p></li>
+    </ul>
+  </div>
+</section>
+
+<!-- 7. SAFETY -->
+<section class="sec safe" id="safety" aria-labelledby="sa-h">
+  <div class="wrap safe-grid">
+    <div class="shield" id="shield">
+      <svg viewBox="0 0 300 340" role="img" data-aria="sa_alt" aria-label="Uşağın ətrafında dörd qoruma qatı: müəllim, təhlükəsizlik yoxlaması, uşaq üçün təhlükəsiz süni intellekt qaydaları və qapalı mühit.">
+        <g class="ring r1"><path d="M150 8 L276 48 V158 C276 238 222 296 150 332 C78 296 24 238 24 158 V48 Z"/></g>
+        <g class="ring r2"><path transform="translate(150 176) scale(.78) translate(-150 -176)" d="M150 8 L276 48 V158 C276 238 222 296 150 332 C78 296 24 238 24 158 V48 Z"/></g>
+        <g class="ring r3"><path transform="translate(150 176) scale(.56) translate(-150 -176)" d="M150 8 L276 48 V158 C276 238 222 296 150 332 C78 296 24 238 24 158 V48 Z"/></g>
+        <g class="ring r4"><path transform="translate(150 176) scale(.34) translate(-150 -176)" d="M150 8 L276 48 V158 C276 238 222 296 150 332 C78 296 24 238 24 158 V48 Z"/></g>
+        <g class="badges"><circle cx="150" cy="30" r="12"/><circle cx="150" cy="66" r="12"/><circle cx="150" cy="102" r="12"/><circle cx="150" cy="138" r="12"/>
+          <text x="150" y="35" text-anchor="middle">1</text><text x="150" y="71" text-anchor="middle">2</text><text x="150" y="107" text-anchor="middle">3</text><text x="150" y="143" text-anchor="middle">4</text></g>
+        <text class="core" x="150" y="222" text-anchor="middle" data-avatar>🦊</text>
+      </svg>
+    </div>
+    <div class="safe-copy">
+      <header class="sec-h">
+        <p class="kick" data-t="sa_k">Təhlükəsizlik</p>
+        <h2 id="sa-h" data-t="sa_h">Başdan uşaqlar üçün qurulub</h2>
+        <p class="lead" data-t="sa_lead">Dörd qat birlikdə işləyir. Heç bir vasitə qüsursuz deyil, ona görə hər sinfə müəllim rəhbərlik edir.</p>
+      </header>
+      <ol class="layers">
+        <li><span class="num">1</span><div><h3 data-t="sl1t">Müəllim</h3><p data-t="sl1d">Hər mesajı və süni intellektin hər cavabını canlı görür, istənilən anda bir uşağı və ya bütün sinfi dayandıra bilər.</p></div></li>
+        <li><span class="num">2</span><div><h3 data-t="sl2t">Təhlükəsizlik yoxlaması</h3><p data-t="sl2d">Uşağın göndərdiyi hər mesaj süni intellektə çatmazdan əvvəl yoxlanılır. Təhlükəli mesajlar bloklanır və müəllimə dərhal xəbər verilir. Uşağın təhlükədə ola biləcəyini göstərən işarələr ayrıca vurğulanır.</p></div></li>
+        <li><span class="num">3</span><div><h3 data-t="sl3t">Uşaq üçün təhlükəsiz qaydalar</h3><p data-t="sl3d">Süni intellekt ciddi qaydalara əməl edir: dərsdən kənara çıxmır, hər şeyi yaşa uyğun saxlayır və uşaqlara şəxsi məlumat paylaşmamağı xatırladır.</p></div></li>
+        <li><span class="num">4</span><div><h3 data-t="sl4t">Qapalı mühit</h3><p data-t="sl4d">Uşaqların düzəltdiyi oyunlar internetə çıxışı olmayan qapalı mühitdə işləyir.</p></div></li>
+      </ol>
+      <h3 class="more-h" data-t="sa_more">Daha nələr var, sadə sözlərlə</h3>
+      <ul class="checks">
+        <li><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span data-t="sa_a">Uşaqlar ləqəb, avatar və 4 rəqəmli PIN ilə daxil olur. Real ad, e-poçt və ya telefon nömrəsi istənilmir.</span></li>
+        <li><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span data-t="sa_b">Hesablar yalnız müəllim sinfi açıq saxladığı müddətdə işləyir.</span></li>
+        <li><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span data-t="sa_c">Günlük mesaj limiti var, söhbət tarixçəsi isə 30 gündən sonra avtomatik silinir (hazırkı standart ayar).</span></li>
+        <li><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span data-t="sa_d">Müəllim valideyn razılığını təsdiq etməyənə qədər sinif başlaya bilməz.</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 8. HOW A CLASS WORKS -->
+<section class="sec how" id="how" aria-labelledby="hw-h">
+  <div class="wrap">
+    <header class="sec-h center"><h2 id="hw-h" data-t="hw_h">Sinif necə keçir</h2></header>
+    <ol class="how-steps">
+      <li>
+        <div class="ill i1" aria-hidden="true"><b class="livepill"><i></i><span data-t="live">CANLI</span></b><span>🔓</span><span>✅</span></div>
+        <span class="num">1</span><h3 data-t="hw1t">Müəllim sinfi açır</h3><p data-t="hw1d">Valideyn razılığını təsdiq edir və dərsi başladır. Uşaqlar yalnız sinif açıq olanda qoşula bilər.</p>
+      </li>
+      <li>
+        <div class="ill i2" aria-hidden="true"><span class="lnk">🔗</span><span class="avs"><i>🦊</i><i>🐼</i><i class="on">🐯</i><i>🦁</i><i>🐸</i><i>🦄</i></span></div>
+        <span class="num">2</span><h3 data-t="hw2t">Uşaqlar linklə qoşulur və avatar seçir</h3><p data-t="hw2d">Lazım olan yalnız ləqəb, avatar və 4 rəqəmli PIN-dir.</p>
+      </li>
+      <li>
+        <div class="ill i3" aria-hidden="true"><span class="path"><i>🦸</i><i>🐉</i><i>🏆</i></span><span class="meter"><i>★</i><i>★</i><i>★</i></span><span class="eye">👀</span></div>
+        <span class="num">3</span><h3 data-t="hw3t">Səviyyələri keçir və ulduz qazanırlar</h3><p data-t="hw3d">Müəllim izləyir və onların işini alqışlayır.</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<!-- TODO social proof: add real testimonials, reviews or school names here only with written permission.
+     Do not invent quotes, ratings, logos or user numbers. Remove "hidden" when there is something real to show. -->
+<section class="sec" id="proof" hidden></section>
+
+<!-- 9. PARENT FAQ -->
+<section class="sec faq" id="faq" aria-labelledby="fq-h">
+  <div class="wrap narrow-wrap">
+    <header class="sec-h center"><h2 id="fq-h" data-t="fq_h">Valideynlərin sualları</h2></header>
+    <div class="qa-list">
+      <details class="qa" name="faq" open><summary><span data-t="q1">Övladımın kodlaşdırma bilməsi lazımdırmı?</span></summary><div class="qa-a"><p data-t="a1">Xeyr. Oyun kodunu süni intellekt yazır. Uşaqlar ona yön verməyi, nəticəni sınamağı və xətaları düzəltdirməyi öyrənir.</p></div></details>
+      <details class="qa" name="faq"><summary><span data-t="q2">Hansı yaş üçündür?</span></summary><div class="qa-a"><p data-t="a2">8 ilə 17 yaş arası. Missiyalar açıq xarakterlidir: kiçik uşaqlar sadə saxlayır, böyüklər isə daha dərinə gedir.</p></div></details>
+      <details class="qa" name="faq"><summary><span data-t="q3">Təhlükəsizdirmi?</span></summary><div class="qa-a"><p data-t="a3">Bir neçə qoruma qatı ilə qurulub. Müəllim hər mesajı və süni intellektin hər cavabını canlı görür, hər mesaj süni intellektə çatmazdan əvvəl yoxlanılır, müəllim isə istənilən anda bir uşağı və ya bütün sinfi dayandıra bilər. Heç bir vasitə qüsursuz deyil, ona görə rəhbərlik həmişə müəllimdədir. Bütün qorumalar yuxarıda göstərilib.</p></div></details>
+      <details class="qa" name="faq"><summary><span data-t="q4">Bu, sadəcə daha çox ekran vaxtıdırmı?</span></summary><div class="qa-a"><p data-t="a4">Bu, sonsuz sürüşdürmə yox, müəllimlə birgə yaratmaqdır. Uşaqlar qəhrəman icad edir, oyun qurur; hesablar isə yalnız dərs zamanı işləyir.</p></div></details>
+      <details class="qa" name="faq"><summary><span data-t="q5">Hansı cihaz lazımdır?</span></summary><div class="qa-a"><p data-t="a5">Noutbuk, planşet və ya telefonda istənilən müasir brauzer kifayətdir. Heç nə quraşdırmaq lazım deyil.</p></div></details>
+      <details class="qa" name="faq"><summary><span data-t="q6">Hansı dillərdə işləyir?</span></summary><div class="qa-a"><p data-t="a6">Azərbaycan və ingilis dillərində. Süni intellekt uşağın yazdığı dildə cavab verir.</p></div></details>
+      <details class="qa" name="faq"><summary><span data-t="q7">Övladımın məlumatlarına nə olur?</span></summary><div class="qa-a"><p data-t="a7">Uşaqlar ləqəb, avatar və 4 rəqəmli PIN ilə daxil olur. Real ad, e-poçt və ya telefon nömrəsi istənilmir. Söhbət tarixçəsi 30 gündən sonra avtomatik silinir (hazırkı standart ayar). Tam siyasət: [PRIVACY POLICY LINK]</p></div></details>
+      <details class="qa" name="faq"><summary><span data-t="q8">Siniflər harada və nə vaxt keçirilir?</span></summary><div class="qa-a"><p class="ph" data-t="a8">[LOCATIONS AND SCHEDULE]</p></div></details>
+      <details class="qa" name="faq"><summary><span data-t="q9">Qiyməti nə qədərdir?</span></summary><div class="qa-a"><p class="ph" data-t="a9">[PRICE]</p></div></details>
+    </div>
+  </div>
+</section>
+
+<!-- 10. FINAL CALL TO ACTION -->
+<section class="final" id="final" aria-labelledby="fi-h">
+  <div class="wrap">
+    <div class="final-card">
+      <span class="fl f1" aria-hidden="true">⭐</span><span class="fl f2" aria-hidden="true">✨</span><span class="fl f3" aria-hidden="true">🎮</span><span class="fl f4" aria-hidden="true">⭐</span>
+      <h2 id="fi-h" data-t="fi_h">Macəraya başlamağa hazırsınız?</h2>
+      <a class="btn lg white" href="[CTA LINK]" data-cta data-t="cta">Pulsuz sınaq dərsinə yazıl</a>
+      <p class="code-line"><span data-t="fi_code">Sinif kodunuz artıq var?</span> <a href="/join" data-t="n_enter">Sinfə qoşul</a></p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- 11. FOOTER -->
+<footer class="foot">
+  <div class="wrap foot-in">
+    <div>
+      <a class="brand" href="/"><span aria-hidden="true">🎮</span><span class="brand-t">PromptPlay</span></a>
+      <p class="org"><mark class="ph">[ORG NAME]</mark></p>
+    </div>
+    <ul class="foot-links">
+      <li id="contact"><span data-t="ft_contact">Əlaqə</span>: <mark class="ph">[CONTACT]</mark></li>
+      <li><a href="[PRIVACY POLICY LINK]" data-t="ft_privacy">Məxfilik siyasəti</a></li>
+      <li><a href="/join" data-t="n_enter">Sinfə qoşul</a></li>
+      <li><a href="/join#teacher" data-t="n_teacher">Müəllim girişi</a></li>
+    </ul>
+    <button class="lang" type="button" data-lang data-aria="n_lang" aria-label="AZ EN, İngilis dilinə keç"><b lang="az">AZ</b><b lang="en">EN</b></button>
+  </div>
+</footer>
+
+<div class="sticky-cta" id="stickyCta"><a class="btn lg" href="[CTA LINK]" data-cta data-t="cta">Pulsuz sınaq dərsinə yazıl</a></div>
+<div class="sr" id="live" role="status" aria-live="polite" aria-atomic="true"></div>
+</body>
+</html>

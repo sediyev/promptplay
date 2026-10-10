@@ -17,7 +17,8 @@ const app = express();
 app.set('trust proxy', 'loopback'); // Caddy on the same host forwards the real protocol
 app.use(express.json({ limit: '300kb' }));
 app.use(express.static(PUBLIC));
-app.get('/join/:token', (_req, res) => res.sendFile(path.join(PUBLIC, 'index.html')));
+// "/" is the public home page (public/index.html, served by express.static); joining and logging in live at /join.
+app.get(['/join', '/join/:token'], (_req, res) => res.sendFile(path.join(PUBLIC, 'join.html')));
 
 // ---------- helpers ----------
 const one = (sql, ...p) => db.prepare(sql).get(...p);

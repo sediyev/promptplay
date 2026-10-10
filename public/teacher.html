@@ -8,10 +8,10 @@
 <script type="module">
 import { api, t, applyI18n, toggleLang, esc, $, onEvents, gameFrame, creationCard, stars, toast } from '/common.js';
 applyI18n(); $('#lang').textContent = t('lang'); $('#lang').onclick = toggleLang;
-$('#out').onclick = async () => { await api('/api/logout', 'POST'); location = '/'; };
+$('#out').onclick = async () => { await api('/api/logout', 'POST'); location = '/join#teacher'; };
 $('#mc').onclick = () => { $('#modal').hidden = true; $('#mb').replaceChildren(); };
 const root = $('#root');
-try { await api('/api/me'); } catch { location = '/'; }
+try { await api('/api/me'); } catch { location = '/join#teacher'; await new Promise(() => {}); } // leaving: do not run the rest of the page
 const classId = new URLSearchParams(location.search).get('class');
 classId ? roomPage(+classId) : listPage();
 
