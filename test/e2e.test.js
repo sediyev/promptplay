@@ -57,6 +57,28 @@ after(() => { server.kill(); fake.close(); fs.rmSync(dir, { recursive: true, for
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+test('pages: / is the public home page, /join and /join/<token> are the join and login page', async () => {
+  const home = await call('x', 'GET', '/');
+  assert.equal(home.status, 200);
+  assert.match(home.data, /<h1 id="h1"/, '/ serves the home page');
+  assert.match(home.data, /href="\/home\.css"/);
+  assert.doesNotMatch(home.data, /id="join"|id="login"/, 'the home page has no join or login form');
+  assert.match(home.data, /href="\/join"/, '"Enter class" goes to /join');
+  assert.match(home.data, /href="\/join#teacher"/, '"Teacher login" goes to /join#teacher');
+  for (const url of ['/join', '/join/', '/join/some-invite-token', '/join.html']) {
+    const r = await call('x', 'GET', url);
+    assert.equal(r.status, 200, url);
+    assert.match(r.data, /id="join"/, url + ' serves the join page');
+    assert.match(r.data, /id="login"/, url + ' has the teacher login form');
+  }
+  // the home page loads from same-origin files only, served with usable content types
+  for (const [url, type] of [['/home.css', /text\/css/], ['/home.js', /javascript/], ['/home-i18n.js', /javascript/], ['/home-hero.js', /javascript/], ['/home-power.js', /javascript/], ['/home-map.js', /javascript/], ['/home-game.js', /javascript/], ['/home-fx.js', /javascript/]]) {
+    const r = await fetch(base + url);
+    assert.equal(r.status, 200, url);
+    assert.match(r.headers.get('content-type'), type, url);
+  }
+});
+
 test('courses, rooms, live sessions and levels', async () => {
   assert.equal((await call('t', 'POST', '/api/login', { email: 'a@x.com', password: 'nope' })).status, 401);
   assert.equal((await call('adm', 'POST', '/api/login', { email: 'a@x.com', password: 'adminpw' })).data.role, 'admin');
@@ -86,6 +108,9 @@ test('courses, rooms, live sessions and levels', async () => {
   assert.equal((await call('t', 'DELETE', '/api/courses/' + course)).status, 409, 'course in use');
   assert.match((await call('t', 'GET', `/api/classes/${id}/qr.svg`)).data, /<svg/);
   assert.equal((await call('x', 'GET', '/api/invite/' + room.invite)).data.live, false);
+  const invitePage = await call('x', 'GET', '/join/' + room.invite);
+  assert.equal(invitePage.status, 200);
+  assert.match(invitePage.data, /id="join"/, 'a real invite link still serves the join page');
 
   // students can only join while the session is live
   const join = (who, nickname, pin, extra = {}) => call(who, 'POST', '/api/join', { invite: room.invite, nickname, pin, avatar: '🐼', ...extra });

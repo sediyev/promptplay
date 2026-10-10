@@ -16,7 +16,7 @@
 <script type="module">
 import { api, t, applyI18n, toggleLang, esc, $ } from '/common.js';
 applyI18n(); $('#lang').textContent = t('lang'); $('#lang').onclick = toggleLang;
-try { await api('/api/me'); } catch { location = '/'; }
+try { await api('/api/me'); } catch { location = '/join#teacher'; await new Promise(() => {}); } // leaving: do not run the rest of the page
 let id = +new URLSearchParams(location.search).get('id') || null, levels = [], dirty = false;
 const FIELDS = ['title', 'emoji', 'output', 'intro', 'task', 'ai_guide', 'criteria'];
 const blank = () => ({ title: '', emoji: '⭐', output: 'creation', intro: '', task: '', ai_guide: '', criteria: '' });

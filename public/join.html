@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="az"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PromptPlay</title><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%F0%9F%8E%AE%3C/text%3E%3C/svg%3E"><link rel="stylesheet" href="/style.css"></head>
+<body>
+<div class="hero"><div class="box">
+  <h1><a class="logo" href="/">🎮 PromptPlay</a></h1>
+  <p class="sub" data-t="tagline"></p>
+  <div class="banner stop" id="notice" hidden style="border-radius:12px;margin-bottom:12px"></div>
+  <div class="card">
+    <div class="seg"><button id="tabS" class="on" data-t="student" type="button"></button><button id="tabT" data-t="teacher" type="button"></button></div>
+    <form id="join">
+      <div id="invited" hidden><p class="muted" style="margin:0"><span data-t="invitedTo"></span></p><h2 id="roomName" style="margin:.1em 0 0"></h2><p class="muted" id="courseName" style="margin:0 0 .4rem"></p></div>
+      <div id="codeBox"><label data-t="code"></label><input id="code" maxlength="8" autocomplete="off"></div>
+      <p class="muted" data-t="newHere" style="margin:.6rem 0 0"></p>
+      <label data-t="nickname"></label><input id="nick" maxlength="20" autocomplete="off" required>
+      <label data-t="pin"></label><input id="pin" inputmode="numeric" pattern="\d{4}" maxlength="4" autocomplete="off" required class="pin">
+      <label data-t="pickAvatar"></label><div class="avatars" id="avatars"></div>
+      <p class="err" id="jerr"></p><button class="big" data-t="go"></button>
+      <p style="text-align:center;margin:.6rem 0 0" id="useCode" hidden><a href="/join" data-t="haveCode"></a></p>
+    </form>
+    <form id="login" hidden>
+      <label data-t="email"></label><input id="email" type="email" autocomplete="username" required>
+      <label data-t="password"></label><input id="pw" type="password" autocomplete="current-password" required>
+      <p class="err" id="lerr"></p><button class="big" data-t="login"></button>
+    </form>
+  </div>
+  <p style="text-align:center"><button class="ghost" id="lang"></button></p>
+</div></div>
+<script type="module">
+import { api, t, applyI18n, toggleLang, $ } from '/common.js';
+applyI18n(); $('#lang').textContent = t('lang'); $('#lang').onclick = toggleLang;
+const tab = (st) => { $('#join').hidden = !st; $('#login').hidden = st; $('#tabS').classList.toggle('on', st); $('#tabT').classList.toggle('on', !st); };
+$('#tabS').onclick = () => tab(true); $('#tabT').onclick = () => tab(false);
+// /join#teacher opens the teacher tab (logout and expired logins land here)
+const fromHash = () => { if (location.hash === '#teacher') tab(false); };
+fromHash(); addEventListener('hashchange', fromHash);
+
+const params = new URLSearchParams(location.search);
+if (params.get('closed')) { $('#notice').hidden = false; $('#notice').textContent = t('sessionEnded'); }
+const invite = location.pathname.match(/^\/join\/([\w-]+)/)?.[1];
+let avatar; try { avatar = localStorage.getItem('avatar'); } catch {} // the player chosen on the home page
+function avatars(list) {
+  if (!list.includes(avatar)) avatar = list[Math.floor(Math.random() * list.length)];
+  $('#avatars').replaceChildren(...list.map((a) => {
+    const b = Object.assign(document.createElement('button'), { type: 'button', textContent: a, className: 'av' + (a === avatar ? ' on' : '') });
+    b.onclick = () => { avatar = a; try { localStorage.setItem('avatar', a); } catch {} avatars(list); }; return b;
+  }));
+}
+if (invite) {
+  $('#codeBox').hidden = true; $('#useCode').hidden = false;
+  try {
+    const r = await api('/api/invite/' + invite);
+    $('#invited').hidden = false; $('#roomName').textContent = r.name; $('#courseName').textContent = r.course || '';
+    if (!r.live) { $('#notice').hidden = false; $('#notice').textContent = t('room_closed'); }
+    avatars(r.avatars);
+  } catch (x) { $('#notice').hidden = false; $('#notice').textContent = t(x.code); }
+} else avatars(await api('/api/avatars'));
+
+$('#join').onsubmit = async (e) => {
+  e.preventDefault();
+  const body = { nickname: $('#nick').value, pin: $('#pin').value, avatar, ...(invite ? { invite } : { code: $('#code').value }) };
+  try {
+    await api('/api/join', 'POST', body);
+    try { invite ? localStorage.setItem('invite', invite) : localStorage.removeItem('invite'); } catch {}
+    location = '/student.html';
+  }
+  catch (x) { $('#jerr').textContent = t(x.code); }
+};
+$('#login').onsubmit = async (e) => {
+  e.preventDefault();
+  try { const r = await api('/api/login', 'POST', { email: $('#email').value, password: $('#pw').value }); location = r.role === 'admin' ? '/admin.html' : '/teacher.html'; }
+  catch (x) { $('#lerr').textContent = t(x.code); }
+};
+</script></body></html>

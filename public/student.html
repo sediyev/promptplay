@@ -33,7 +33,7 @@ applyI18n(); $('#lang').textContent = t('lang'); $('#lang').onclick = toggleLang
 let me, level = null, current = null, busy = false;
 const ended = () => { // back to the room's invite page, so logging in again next session is one step
   let inv = null; try { inv = localStorage.getItem('invite'); } catch {}
-  location = (inv ? '/join/' + encodeURIComponent(inv) : '/') + '?closed=1';
+  location = (inv ? '/join/' + encodeURIComponent(inv) : '/join') + '?closed=1';
 };
 
 // Replace complete output blocks with a chip; hide an unfinished one while it streams.
@@ -174,7 +174,7 @@ $('#form').onsubmit = async (e) => {
 $('#text').onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#form').requestSubmit(); } };
 $('#mc').onclick = () => { $('#modal').hidden = true; $('#mb').replaceChildren(); };
 
-try { me = await api('/api/student/me'); } catch (x) { x.code === 'room_closed' ? ended() : (location = '/'); }
+try { me = await api('/api/student/me'); } catch (x) { x.code === 'room_closed' ? ended() : (location = '/join'); await new Promise(() => {}); } // leaving: do not run the rest of the page
 route(); loadGames();
 const es = onEvents('/api/student/events', async (ev) => {
   if (ev.type === 'closed') { es.close(); return ended(); }

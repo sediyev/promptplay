@@ -130,15 +130,24 @@ Object.assign(DICT.az, {
   confirmRemove: 'Bu şagird və irəliləyişi silinsin?', levelsTitle: 'Səviyyələr', edit: 'Redaktə',
 });
 let lang = 'az';
-try { lang = localStorage.getItem('lang') || 'az'; } catch {}
+try { const saved = localStorage.getItem('lang'); if (DICT[saved]) lang = saved; } catch {}
 export const t = (k) => DICT[lang][k] ?? DICT.en[k] ?? k;
 export const getLang = () => lang;
 export function toggleLang() { try { localStorage.setItem('lang', lang === 'az' ? 'en' : 'az'); } catch {} location.reload(); }
+// Switch language without a reload (the home page does this); call applyI18n() afterwards.
+export function setLang(l) {
+  if (!DICT[l]) return;
+  lang = l; document.documentElement.lang = l;
+  try { localStorage.setItem('lang', l); } catch {}
+}
+// A page with many strings of its own registers them here instead of growing DICT for every page.
+export function addStrings(extra) { for (const l of Object.keys(extra)) Object.assign((DICT[l] ??= {}), extra[l]); }
 
-// Fill [data-t] / [data-ph] elements
+// Fill [data-t] / [data-ph] / [data-aria] elements
 export function applyI18n(root = document) {
   root.querySelectorAll('[data-t]').forEach((e) => (e.textContent = t(e.dataset.t)));
   root.querySelectorAll('[data-ph]').forEach((e) => (e.placeholder = t(e.dataset.ph)));
+  root.querySelectorAll('[data-aria]').forEach((e) => e.setAttribute('aria-label', t(e.dataset.aria)));
 }
 
 export async function api(url, method = 'GET', body) {

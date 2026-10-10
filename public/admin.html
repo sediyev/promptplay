@@ -16,11 +16,11 @@
 <script type="module">
 import { api, t, applyI18n, toggleLang, esc, $ } from '/common.js';
 applyI18n(); $('#lang').textContent = t('lang'); $('#lang').onclick = toggleLang;
-$('#out').onclick = async () => { await api('/api/logout', 'POST'); location = '/'; };
+$('#out').onclick = async () => { await api('/api/logout', 'POST'); location = '/join#teacher'; };
 const $$ = (n) => '$' + n.toFixed(3);
 async function load() {
   let u, ts;
-  try { [u, ts] = await Promise.all([api('/api/admin/usage'), api('/api/admin/teachers')]); } catch { location = '/'; return; }
+  try { [u, ts] = await Promise.all([api('/api/admin/usage'), api('/api/admin/teachers')]); } catch { location = '/join#teacher'; return; }
   $('#tot').textContent = `${t('spent')}: ${$$(u.total)}${u.cap ? ' / $' + u.cap : ''}`;
   $('#cap').value = u.cap; $('#ret').value = u.retention_days;
   $('#tt').innerHTML = `<tr><th>${t('teacher')}</th><th>${t('cls')}</th><th>${t('tokens')}</th><th>${t('cost')}</th></tr>` + u.teachers.map((x) => `<tr><td>${esc(x.teacher)}</td><td>${x.classes}</td><td>${x.tokens}</td><td>${$$(x.cost)}</td></tr>`).join('');
