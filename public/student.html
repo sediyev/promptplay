@@ -6,7 +6,8 @@
 <div class="banner" id="seen" data-t="seen"></div>
 <div class="banner stop" id="status" hidden></div>
 
-<div id="mapView" class="mapwrap"><h2 id="mapTitle" style="text-align:center"></h2><div class="map" id="map"></div></div>
+<div id="mapView" class="mapwrap"><h2 id="mapTitle" style="text-align:center"></h2><div class="map" id="map"></div>
+  <div class="card" id="nextUp" style="text-align:center;margin-top:24px" hidden></div></div>
 
 <div id="levelView" hidden>
   <div class="levelbar"><button class="ghost" id="toMap" data-t="backToMap"></button><span class="lvemoji" id="lvEmoji"></span>
@@ -28,7 +29,7 @@
 <div id="result" class="modal" hidden><div class="resultbox"><div id="rIcon" class="bigicon"></div><h2 id="rTitle"></h2><div class="stars big" id="rStars"></div>
   <p id="rText"></p><div class="row" style="justify-content:center"><button class="ghost" id="rStay" data-t="keepGoing"></button><button id="rNext" data-t="nextLevel"></button></div></div></div>
 <script type="module">
-import { api, t, applyI18n, toggleLang, esc, $, onEvents, extractGame, gameFrame, creationCard, stars, toast } from '/common.js';
+import { api, t, getLang, applyI18n, toggleLang, esc, $, onEvents, extractGame, gameFrame, creationCard, stars, toast } from '/common.js';
 applyI18n(); $('#lang').textContent = t('lang'); $('#lang').onclick = toggleLang;
 let me, level = null, current = null, busy = false;
 const ended = () => { // back to the room's invite page, so logging in again next session is one step
@@ -81,6 +82,10 @@ function renderMap() {
       <span class="stars">${l.status === 'done' ? stars(l.stars) : l.status === 'pending' ? '⏳' : ''}</span></button>`).join('')
     + (done ? `<div class="finale" style="top:${h - 20}px">${t('courseDone')}</div>` : '');
   $('#map').querySelectorAll('.node').forEach((b) => (b.onclick = () => (location.hash = 'level=' + b.dataset.id)));
+  // A finished course points to what comes next (the teacher opens it; students cannot pick courses).
+  const next = done ? me.next || [] : [];
+  $('#nextUp').hidden = !next.length;
+  $('#nextUp').innerHTML = next.length ? `<h3>${t('nextAdv')}</h3>` + next.map((n) => `<p><b>${esc(n.emoji)} ${esc(n.title[getLang()] || n.title.en || n.title.az)}</b></p>`).join('') + `<p class="muted">${t('askTeacher')}</p>` : '';
   $('#map').querySelector('.node.current, .node.pending')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 

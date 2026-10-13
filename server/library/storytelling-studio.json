@@ -1,0 +1,246 @@
+{
+  "id": "storytelling-studio",
+  "emoji": "📖",
+  "title": {
+    "az": "Hekayə Studiyası",
+    "en": "Storytelling Studio"
+  },
+  "promise": {
+    "az": "Uşaqlar süni intellekt köməkçisi ilə personajlar, məkanlar və gözlənilməz dönüşlər icad edir, öz qısa hekayəsini yazır və sinfə ucadan oxuyur.",
+    "en": "Children invent characters, places and plot twists with an AI helper, write their own short story and read it aloud to the class."
+  },
+  "description": {
+    "az": "Dörd dərslik hekayə emalatxanası: ideya qığılcımı, personaj, məkan, süjet və dönüş, təsvir sənəti, hekayənin yazılması, seçimli macəra oyunu və sinifdə oxu günü. Hər səviyyənin kartı növbəti səviyyəyə material verir, hekayə isə Qalereyada qalır. Son dərsdə hər şagird hekayəsini sinfə oxuyur, siz isə kartı ekranda göstərə bilərsiniz.",
+    "en": "A four-session story workshop: a spark of an idea, characters, setting, plot and twist, painting with words, writing the story, a choose-your-own-adventure game and a reading day. Each card feeds the next level, and the story stays in the Gallery. In the last session each student reads their story to the class, and you can show their card on screen."
+  },
+  "age": {
+    "min": 8,
+    "max": 14
+  },
+  "themes": [
+    "stories"
+  ],
+  "programmes": [
+    "term-2",
+    "holiday"
+  ],
+  "sessions": 4,
+  "minutes": [
+    45,
+    60
+  ],
+  "next": [
+    "science-explainers",
+    "ai-detective"
+  ],
+  "goals": {
+    "az": [
+      "Qığılcım kimi bir ideyanı başlanğıcı, problemi və sonu olan hekayəyə çevirmək.",
+      "Personajları və məkanları 'böyük' və ya 'gözəl' demək əvəzinə detallar və hisslərlə təsvir etmək.",
+      "Oxucunu təəccübləndirən, amma yenə də məntiqli olan dönüş planlamaq.",
+      "Süni intellektdən ideya və rəy almaq, amma bütün vacib seçimləri özü etmək.",
+      "Öz hekayəsini ifadəli və özünəinamla ucadan oxumaq."
+    ],
+    "en": [
+      "Turn a spark of an idea into a story with a beginning, a problem and an ending.",
+      "Describe characters and places with details and senses instead of just 'big' or 'nice'.",
+      "Plan a plot twist that surprises readers but still makes sense.",
+      "Ask an AI for ideas and feedback while making every important choice themselves.",
+      "Read their own story aloud with expression and confidence."
+    ]
+  },
+  "levels": [
+    {
+      "emoji": "💡",
+      "output": "chat",
+      "title": {
+        "az": "Hekayə qığılcımı",
+        "en": "Story Spark"
+      },
+      "intro": {
+        "az": "Hər hekayə qığılcımla başlayır: nəyisə istəyən biri və yolunda duran problem.",
+        "en": "Every story begins with a spark: someone who wants something, and a problem in the way."
+      },
+      "task": {
+        "az": "Süni intellektdən beş hekayə başlanğıcı istə. Ən çox xoşuna gələni seç və onu özününkü etmək üçün bir şeyi dəyişdir (personajı, yeri və ya problemi). Sonra hekayə ideyanı bir cümlə ilə yaz: 'Kimsə ... istəyir, amma ...'.",
+        "en": "Ask the AI for five story starters. Choose your favourite and change one thing about it (the character, the place or the problem) to make it yours. Then write your story idea in one sentence: 'Someone wants ... but ...'."
+      },
+      "ai_guide": {
+        "az": "Uşaqlara uyğun beş qısa, fərqli hekayə başlanğıcı ver (hər biri bir-iki cümlə). Şagird birini seçib dəyişəndə dəyişikliyi tərifləyin və 'Kimsə ... istəyir, amma ...' şəklində ifadə etməyə kömək et. Eyni anda bir sual ver. Yalnız uydurma adlar işlət.",
+        "en": "Give five short, different story starters (one or two sentences each) suitable for children. When the student chooses and changes one, praise the change and help them say it as 'Someone wants ... but ...'. Ask one question at a time. Use made-up names only."
+      },
+      "criteria": {
+        "az": "Şagird hekayə başlanğıcı seçdi, onun ən azı bir hissəsini dəyişdi və kimsə, istək və problem olan bir cümləlik hekayə ideyası yazdı.",
+        "en": "The student picked a story starter, changed at least one part of it and wrote a one-sentence story idea with a someone, a want and a problem."
+      }
+    },
+    {
+      "emoji": "🧑‍🎤",
+      "output": "creation",
+      "title": {
+        "az": "Personajlarla tanış ol",
+        "en": "Meet the Characters"
+      },
+      "intro": {
+        "az": "Personajlar oxucunu hekayəyə bağlayır. Gəl, sənin personajınla tanış olaq.",
+        "en": "Characters make readers care. Let's meet yours."
+      },
+      "task": {
+        "az": "Qəhrəmanın üçün personaj kartı hazırla: uydurma ad, necə göründüyü, ən çox nəyi istədiyi, nədən qorxduğu, gizli istedadı və bir gülməli vərdişi. Bir dost və ya rəqib də əlavə et. İlişdiyin yerdə süni intellektdən üç variant istə və birini seç.",
+        "en": "Make a character card for your hero: a made-up name, what they look like, what they want most, what they are afraid of, a secret talent and one funny habit. Add one friend or rival too. When you get stuck, ask the AI for three options and pick one."
+      },
+      "ai_guide": {
+        "az": "Eyni anda bir detal soruş. Şagird ilişəndə üç variant ver və seçimi ona burax. Yalnız 'yaxşı' və ya 'cəsur' demək əvəzinə xarakteri göstərən detalları (vərdiş, sevimli söz) təşviq et. Adlar uydurma olmalıdır, real insanlar yox. Kartı yeniləməyə davam et: Ad, Görünüşü, İstəyi, Qorxusu, Gizli istedadı, Gülməli vərdişi, Dost və ya rəqib.",
+        "en": "Ask about one detail at a time. When the student is stuck, give three options and let them choose. Encourage details that show personality (a habit, a favourite word) instead of just 'nice' or 'brave'. Names must be made up, never real people. Keep the card updated with Name, Looks, Wants, Afraid of, Secret talent, Funny habit, Friend or rival."
+      },
+      "criteria": {
+        "az": "Kartda uydurma ad, görünüş, istək, qorxu, gizli istedad, gülməli vərdiş və dost və ya rəqib var, detalları şagird seçib.",
+        "en": "The card has a made-up name, looks, a want, a fear, a secret talent, a funny habit and a friend or rival, and the student chose the details."
+      }
+    },
+    {
+      "emoji": "🏝️",
+      "output": "creation",
+      "title": {
+        "az": "Məkanı seç",
+        "en": "Place It!"
+      },
+      "intro": {
+        "az": "Hekayənin harada isə baş verməsi lazımdır. Gözlərini yum: orada nə görürsən, nə eşidirsən, nə qoxusu gəlir?",
+        "en": "A story needs somewhere to happen. Close your eyes: what do you see, hear and smell there?"
+      },
+      "task": {
+        "az": "Hekayənin məkanını dizayn et. Harada və nə vaxt baş verdiyini, orada nə gördüyünü, eşitdiyini, qoxusunu və toxunuşunu yaz. Orada vacib bir şeyin baş verə biləcəyi gizli bir guşə əlavə et. Süni intellektdən təsviri daha canlı etməsini istə, sonra ən yaxşı sözləri saxla.",
+        "en": "Design the setting of your story. Write where and when it happens, and what you can see, hear, smell and feel there. Add a secret spot where something important can happen. Ask the AI to make your description more vivid, then keep the best words."
+      },
+      "ai_guide": {
+        "az": "Şagirddən o yerdə dayandığını təsəvvür etməsini və hər hissi təsvir etməsini istə. 'Gözəl' və ya 'böyük' kimi solğun sözlər işlədəndə iki canlı söz təklif et, seçimi ona burax. Kartı yeniləməyə davam et: Yer və zaman, Gördüklərim, Eşitdiklərim, Qoxular, Hiss etdiklərim, Gizli guşə, Əhval-ruhiyyə.",
+        "en": "Ask the student to imagine standing in the place and describe each sense. Offer two vivid word choices when they use flat words like 'nice' or 'big', and let them choose. Keep the card updated with Place and time, I see, I hear, I smell, I feel, Secret spot, Mood."
+      },
+      "criteria": {
+        "az": "Məkan kartında yer və zaman, ən azı üç hiss üzrə detallar, gizli guşə və əhval-ruhiyyə var, şagird süni intellektin canlı sözlərindən bəzilərini seçib.",
+        "en": "The setting card has a place and time, details for at least three senses, a secret spot and a mood, and the student picked some of the AI's vivid words."
+      }
+    },
+    {
+      "emoji": "🌪️",
+      "output": "creation",
+      "title": {
+        "az": "Problem və dönüş",
+        "en": "Problem and Twist"
+      },
+      "intro": {
+        "az": "İndi ən həyəcanlı hissə: çətinlik! Və heç kimin gözləmədiyi dönüş.",
+        "en": "Now the exciting part: trouble! And a twist that nobody sees coming."
+      },
+      "task": {
+        "az": "Süjetini kartda planla: başlanğıc, böyük problem, onu həll etmək üçün üç cəhd (üçüncü işləyir!), gözlənilməz dönüş və son. Süni intellektdən beş dönüş ideyası istə, birini seç və hekayənə uyğun olması üçün dəyişdir.",
+        "en": "Plan your plot on a card: the beginning, the big problem, three tries to solve it (the third one works!), a surprising twist, and the ending. Ask the AI for five twist ideas, pick one and change it so it fits your story."
+      },
+      "ai_guide": {
+        "az": "'Üç cəhd'i sadə izah et: ilk ikisi fərqli yollarla alınmır. Beş dönüş ideyası ver, biri əyləncəli olsun, və şagirddən dönüşün əvvəlki hissələrlə hələ də məntiqli olub-olmadığını yoxlamağa kömək et. Süjeti şagirdin əvəzinə yazma, suallar ver. Kartı yeniləməyə davam et: Başlanğıc, Problem, 1-ci cəhd, 2-ci cəhd, 3-cü cəhd, Dönüş, Son.",
+        "en": "Explain 'three tries' simply: the first two fail in different ways. Give five twist ideas, one of them silly, and help the student check that the twist still makes sense with the earlier parts. Do not write the plot for the student; ask questions. Keep the card updated with Beginning, Problem, Try 1, Try 2, Try 3, Twist, Ending."
+      },
+      "criteria": {
+        "az": "Süjet kartında başlanğıc, problem, üç cəhd, dönüş və son var, dönüşü şagird seçib və uyğunlaşdırıb.",
+        "en": "The plot card has a beginning, a problem, three tries, a twist and an ending, and the twist was chosen and adapted by the student."
+      }
+    },
+    {
+      "emoji": "🎨",
+      "output": "chat",
+      "title": {
+        "az": "Sözlərlə rəsm çək",
+        "en": "Paint With Words"
+      },
+      "intro": {
+        "az": "Yaxşı yazıçı sözlərlə şəkil çəkir. Gəl, 'de yox, göstər' qaydasını məşq edək.",
+        "en": "A great writer paints pictures with words. Let's practise 'show, don't tell'."
+      },
+      "task": {
+        "az": "'Mağara qorxulu idi.' kimi solğun bir cümləni götür. Süni intellektdən onu görmə, səs və hisslərdən istifadə edərək üç fərqli yolla yenidən yazmasını istə. Sonra öz variantını yaz və süni intellektdən rəy istə. Eyni şeyi öz hekayəndəki bir cümlə ilə təkrar et.",
+        "en": "Take a flat sentence such as 'The cave was scary.' Ask the AI to show you three different ways to rewrite it using sights, sounds and feelings. Then write your own version and ask the AI for feedback. Do it again with a sentence from your own story."
+      },
+      "ai_guide": {
+        "az": "Fərqli hisslərdən istifadə edən üç qısa variant ver. Şagird öz variantını yazanda işləyən bir şeyi tərifləyin və bir kiçik təklif ver. Heç vaxt bütün cümləni onun əvəzinə yenidən yazma. Dili uşaqlara uyğun saxla.",
+        "en": "Give three short rewrites that use different senses. Then, when the student writes their own, praise one thing that works and offer one small suggestion. Never rewrite the whole thing for them. Keep the language right for children."
+      },
+      "criteria": {
+        "az": "Şagird solğun cümlə üçün bir neçə variant istədi, öz təkmilləşdirilmiş variantını yazdı və eyni şeyi öz hekayəsindən bir cümlə ilə etdi.",
+        "en": "The student asked for several rewrites of a flat sentence, wrote their own improved version, and did the same with a sentence from their own story."
+      }
+    },
+    {
+      "emoji": "📖",
+      "output": "creation",
+      "title": {
+        "az": "Hekayəni yaz",
+        "en": "Write the Story"
+      },
+      "intro": {
+        "az": "Personajların, məkanın, süjetin və dönüşün hazırdır. Vaxt gəldi onları bir yerə yığmağa.",
+        "en": "You have your characters, your place, your plot and your twist. Time to put them together."
+      },
+      "task": {
+        "az": "Süni intellektin köməyi ilə qısa hekayəni yaz (təxminən 150-250 söz). Hər hissədə nə baş verdiyini süni intellektə de və sözlərdə kömək etməsini istə, amma ideyalar sənin qalsın. İlk variantı oxu və onu daha yaxşı edən iki dəyişiklik istə. Hekayə kartında başlıq və qısa hissələr olsun.",
+        "en": "Write your short story with the AI's help (about 150 to 250 words). Tell the AI what happens in each part and ask it to help with the words, but keep the ideas your own. Read the first draft and ask for two changes that make it better. The story card should have a title and short parts."
+      },
+      "ai_guide": {
+        "az": "Şagirdə hekayəni kartlarından hissə-hissə qurmağa kömək et. Söz variantlarını yalnız şagird nə baş verdiyini dedikdən sonra təklif et. Hekayəni ideya kartında başlıq və qısa etiketli hissələr şəklində göstər (Başlanğıc, Problem, Dönüş, Son), hər biri bir neçə cümlə. Şagirdin ideyalarını tərifləyin. Dili sadə və uşaqlara uyğun saxla. Nağıl kitabı səviyyəsindən kənar qorxulu detallar olmasın. Yalnız uydurma adlar işlət, real insanları yox.",
+        "en": "Help the student build the story part by part from their cards. Offer wording only after the student says what happens. Show the full story in the creation card as a title and short labelled parts (Beginning, Problem, Twist, Ending), each a few sentences. Praise the student's ideas. Keep the language simple and fitted to children. No scary details beyond a gentle storybook level. Use made-up names only, never real people."
+      },
+      "criteria": {
+        "az": "Başlığı, başlanğıcı, problemi, dönüşü və sonu olan tam hekayə var, şagirdin öz ideyaları əsasında yazılıb və şagird ən azı iki yaxşılaşdırma istəyib.",
+        "en": "A complete story with a title, beginning, problem, twist and ending exists, based on the student's own ideas, and the student asked for at least two improvements."
+      }
+    },
+    {
+      "emoji": "🎮",
+      "output": "game",
+      "title": {
+        "az": "Yolunu seç",
+        "en": "Choose Your Path"
+      },
+      "intro": {
+        "az": "Bəs oxucu növbəti nə olacağını özü seçsə? Gəl, hekayəndən bir parçanı oyuna çevirək.",
+        "en": "What if the reader could choose what happens next? Let's turn a piece of your story into a game."
+      },
+      "task": {
+        "az": "Süni intellektdən hekayənin başlanğıcını ən azı iki seçimi və iki fərqli sonu olan 'özün seç' macəra oyununa çevirməsini istə. Oyna, sonra dəyişiklik istə, məsələn, yeni seçim və ya daha gülməli son.",
+        "en": "Ask the AI to turn the start of your story into a choose-your-own-adventure game with at least two choices and two different endings. Play it, then ask for a change, like a new choice or a funnier ending."
+      },
+      "ai_guide": {
+        "az": "Şagirddən hekayəsinin personajını, məkanını və problemini xatırlatmasını istə. 2 və ya 3 seçimi və 2 sonu olan qısa klik oyunu qur: böyük düymələr, iri oxunaqlı yazı, hamısı tək HTML faylında. Mehriban və uşaqlara uyğun saxla. Hər istəkdən sonra nəyi dəyişdiyini bir cümlə ilə izah et. Yalnız uydurma adlar işlət, real insanları yox.",
+        "en": "Ask the student to remind you of their story's character, place and problem. Build a short click-through story game with 2 or 3 choices and 2 endings, big buttons and large readable text, all inside one HTML file. Keep it gentle and child-friendly. Explain in one sentence what you changed after each request. Use made-up names only, never real people."
+      },
+      "criteria": {
+        "az": "Şagirdin hekayəsi əsasında ən azı iki seçimi və iki sonu olan işləyən macəra oyunu var və şagird dəyişiklik istəyib.",
+        "en": "A working choose-your-own-adventure game based on the student's story exists with at least two choices and two endings, and the student asked for a change."
+      }
+    },
+    {
+      "emoji": "🎤",
+      "output": "creation",
+      "title": {
+        "az": "Oxu günü",
+        "en": "Reading Day"
+      },
+      "intro": {
+        "az": "Oxu günüdür! Hekayə ucadan oxunanda canlanır.",
+        "en": "Reading Day! A story comes alive when you read it out loud."
+      },
+      "task": {
+        "az": "Hekayəni Qalereyada aç. Süni intellektlə oxu kartı hazırla: hansı üç cümləni ən dramatik oxuyacaqsan, harada fasilə verəcəksən, hər personajın səsi necə olacaq və sonda sinfə verəcəyin bir sual. Açılış cümləni süni intellektlə məşq et, sonra hekayəni sinfə oxu.",
+        "en": "Open your story in the Gallery. Make a reading card with the AI: which three sentences you will read with the most drama, where you will pause, what voice each character has, and one question to ask the class at the end. Practise your opening line with the AI, then read your story to the class."
+      },
+      "ai_guide": {
+        "az": "Şagirdə hekayəsini Qalereyadan aça biləcəyini xatırlat. Vurğulamaq üçün üç cümlə seçməyə, fasilələri qeyd etməyə və hər personaj üçün səs seçməyə (yavaş, ciyiltili, pıçıltı) kömək et. Açılış cümləsini yazmasını istə və bir mehriban oxu məsləhəti ver. Kart bunları ehtiva etsin: Başlıq, Üç böyük cümlə, Fasilələr, Personaj səsləri, Sinfə sual, Mənim açılış cümləm. Onu ruhlandır.",
+        "en": "Remind the student they can open their story from the Gallery. Help them choose three sentences to emphasise, mark pauses, and decide a voice for each character (slow, squeaky, whisper). Ask them to type their opening line and give one friendly performance tip. The card should have Title, Three big sentences, Pauses, Character voices, Question for the class, My opening line. Cheer them on."
+      },
+      "criteria": {
+        "az": "Oxu kartında başlıq, üç seçilmiş cümlə, fasilələr, hər personaj üçün səs, sinfə sual və şagirdin məşq etdiyi açılış cümləsi var.",
+        "en": "The reading card has a title, three chosen sentences, pauses, a voice for each character, a question for the class and an opening line the student practised."
+      }
+    }
+  ]
+}

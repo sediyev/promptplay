@@ -1,0 +1,217 @@
+{
+  "id": "ai-detective",
+  "emoji": "🕵️",
+  "title": { "az": "Süni İntellekt Detektivi", "en": "AI Detective" },
+  "promise": {
+    "az": "Uşaqlar süni intellektin əslində necə işlədiyini, niyə səhv etdiyini, faktları necə yoxlamağı, şəxsi məlumatı necə qorumağı və ədalətsiz cavabları necə tanımağı öyrənir.",
+    "en": "Children learn how AI really works, why it makes mistakes, how to check facts, how to keep personal information private and how to spot unfair answers."
+  },
+  "description": {
+    "az": "Beş dərslik süni intellekt savadlılığı kursu, detektiv işləri şəklində. Şagirdlər süni intellektdən ona müsahibə kimi sual verir, səhvləri ovlayır, faktları ikinci mənbədə yoxlayır, şəxsi məlumatı qorumağı məşq edir və ədalətsizliyi fərq edir. Bütün şəxsi məlumat nümunələri uydurma personajlarla bağlıdır, şagirddən heç vaxt real məlumat istənmir. Faktları yoxlamaq üçün dərslik və ya ensiklopediya lazımdır.",
+    "en": "A five-session AI literacy course framed as detective cases. Students interview the AI, hunt for mistakes, check facts in a second source, practise protecting personal information and notice unfairness. All privacy examples use fictional characters and students are never asked for real details. Have a textbook or encyclopedia ready for the fact-checking cases."
+  },
+  "age": { "min": 10, "max": 17 },
+  "themes": ["ai-literacy", "games"],
+  "programmes": ["term-3"],
+  "sessions": 5,
+  "minutes": [45, 60],
+  "next": ["storytelling-studio", "science-explainers"],
+  "goals": {
+    "az": [
+      "Sadə sözlərlə izah etmək: süni intellekt nümunələrdən ehtimal olunan cavabı proqnozlaşdırır, insan kimi düşünmür.",
+      "Əmin, amma yanlış cavabları tanımaq və süni intellekti əlavə suallarla sınamaq.",
+      "İddiaya inanmazdan və ya paylaşmazdan əvvəl onu ikinci, etibarlı mənbədə yoxlamaq.",
+      "Süni intellekt söhbətinə heç vaxt yazılmamalı şəxsi məlumatları bilmək və promptu onları qoruyacaq şəkildə yenidən yazmaq.",
+      "Süni intellektin cavabı ədalətsiz və ya birtərəfli olanda bunu görmək və daha ədalətli cavab istəmək."
+    ],
+    "en": [
+      "Explain in simple words that AI predicts likely answers from patterns and does not think like a person.",
+      "Spot confident but wrong answers and test an AI with follow-up questions.",
+      "Check a claim in a second, trusted source before believing or sharing it.",
+      "Know which personal information never goes into an AI chat, and rewrite a prompt to protect it.",
+      "Notice when an AI answer is unfair or one-sided and ask for a fairer one."
+    ]
+  },
+  "levels": [
+    {
+      "emoji": "🕵️", "output": "chat",
+      "title": { "az": "İş 1: Bu süni intellekt kimdir?", "en": "Case 1: Who Is This AI?" },
+      "intro": {
+        "az": "Detektiv, yeni iş gəlib: hər suala cavab verən sirli bir köməkçi. Bəs o kimdir, ya da nədir?",
+        "en": "Detective, a new case has arrived: a mysterious helper that answers every question. But who, or what, is it?"
+      },
+      "task": {
+        "az": "Süni intellektdən detektiv kimi sorğu al. Ondan şeyləri necə bildiyini, hissləri olub-olmadığını, sabah səni xatırlayıb-xatırlamayacağını və biliyinin haradan gəldiyini soruş. Necə işlədiyi haqqında üç faktı öz sözlərinlə yaz və yoxlaması üçün ona de.",
+        "en": "Interview the AI like a detective. Ask it how it knows things, whether it has feelings, whether it remembers you tomorrow, and where its knowledge comes from. Write down three facts about how it works in your own words and tell them to the AI to check."
+      },
+      "ai_guide": {
+        "az": "Dürüst, sadə və konkret ol. İzah et ki, sən çox böyük miqdarda mətndən nümunələri öyrənmiş və indi ehtimal olunan sözləri proqnozlaşdıran kompüter proqramısan. Hissin və şəxsi təcrübən yoxdur, tətbiq göstərmirsə əvvəlki söhbətləri xatırlamırsan. İnsan kimi düşündüyünü və ya hiss etdiyini iddia etmə. Şagird üç faktını paylaşanda düzgün olanı təsdiqlə, düzgün olmayanı mehribanlıqla düzəlt.",
+        "en": "Be honest, simple and concrete. Explain that you are a computer program that learned patterns from a huge amount of text and now predicts likely words; you do not have feelings or personal experiences, and you do not remember past chats unless the app shows them. Avoid claiming to think or feel like a human. When the student shares their three facts, confirm what is right and gently fix what is not."
+      },
+      "criteria": {
+        "az": "Şagird süni intellektdən bir neçə sualla sorğu apardı və necə işlədiyi haqqında üç faktı öz sözləri ilə yazdı, süni intellekt onları təsdiqlədi və ya düzəltdi.",
+        "en": "The student interviewed the AI with several questions and wrote three facts about how AI works in their own words, which the AI confirmed or corrected."
+      }
+    },
+    {
+      "emoji": "🔮", "output": "game",
+      "title": { "az": "İş 2: Növbəti sözü təxmin et", "en": "Case 2: Predict the Next Word" },
+      "intro": {
+        "az": "İpucu tapıldı! Süni intellektin sirri növbəti sözü təxmin etməkdir. Gəl, bu ipucunu oyuna çevirək.",
+        "en": "Clue found! The AI's secret is guessing the next word. Let's turn that clue into a game."
+      },
+      "task": {
+        "az": "Süni intellektdən 'Növbəti sözü təxmin et' oyunu qurmasını istə. O, cümlənin başlanğıcını göstərir, məsələn 'Pişik ... üstündə oturdu' və uydurma ehtimallarla üç mümkün növbəti söz verir. Süni intellektin ən çox hansını seçəcəyini təxmin edirsən, sonra cavabı görürsən. Oyna, sonra iki yaxşılaşdırma istə və oyunun süni intellektin necə işlədiyi haqqında nə göstərdiyini izah et.",
+        "en": "Ask the AI to build a 'Guess the next word' game. It shows the start of a sentence, like 'The cat sat on the...', and three possible next words with made-up chances. You guess which one the AI would pick most often, then see the answer. Play it, then ask for two improvements and explain what the game shows about how AI works."
+      },
+      "ai_guide": {
+        "az": "Tək HTML faylında sadə oyun qur: 8-10 cümlə başlanğıcı, hər birinə 3 söz seçimi, oyunçu ən ehtimal olunanı təxmin edir, sonra cavabı və xalı görür. Ekranda aydın yaz ki, faizlər nümayiş üçün uydurmadır. Real süni intellektin çox mətndəki nümunələrdən növbəti sözü proqnozlaşdırdığını izah edən bir sətir əlavə et. Cümlələr uşaqlar üçün təhlükəsiz olsun. Hər istəkdən sonra nəyi dəyişdiyini bir cümlə ilə de.",
+        "en": "Build a simple game in one HTML file: 8 to 10 sentence starters, 3 word choices each, the player guesses the most likely one, then sees the answer and a score. State clearly on screen that the percentages are made up for the demo. Add one line explaining that real AI predicts the next word from patterns in lots of text. Keep sentences safe for children. Explain in one sentence what you changed after each request."
+      },
+      "criteria": {
+        "az": "Növbəti sözü təxmin etmə oyunu işləyir, şagird ən azı iki yaxşılaşdırma istəyib və süni intellektin ehtimal olunan sözləri proqnozlaşdırdığını öz sözləri ilə deyə bilir.",
+        "en": "A working next-word guessing game exists, the student asked for at least two improvements, and can say in their own words that AI predicts likely words."
+      }
+    },
+    {
+      "emoji": "🧩", "output": "chat",
+      "title": { "az": "İş 3: Süni intellekt niyə səhv edir?", "en": "Case 3: Why AI Gets It Wrong" },
+      "intro": {
+        "az": "Ən yaxşı detektivlər də səhv edir, süni intellektlər də. Gəl, səbəbini öyrənək.",
+        "en": "Even great detectives make mistakes, and so do AIs. Let's find out why."
+      },
+      "task": {
+        "az": "Süni intellekti üç çətin sualla yoxla: çox yeni bir şey, uydurulmuş bir şey (məsələn, 'Mənə 1850-ci ildəki məşhur Ay Pizza Festivalı haqqında danış') və uzun bir sözdəki hərfləri saymaq kimi kiçik tapmaca. Hər dəfə necə reaksiya verdiyini qeyd et. Sonra süni intellekti nə vaxt bir daha yoxlamaq lazım olduğu barədə bir qayda yaz.",
+        "en": "Test the AI with three tricky questions: something very recent, something made up (for example, 'Tell me about the famous Moon Pizza Festival of 1850'), and a small puzzle like counting the letters in a long word. Note how it reacted each time. Then write one rule about when you should double check an AI."
+      },
+      "ai_guide": {
+        "az": "Dürüst cavab ver. Uydurulmuş şeylər üçün onu uydurmaq əvəzinə belə bir şey bilmədiyini de. Çox yeni hadisələr üçün biliyinin tarix həddi olduğunu və bilməyə biləcəyini izah et. Tapmaca olsa, işini göstər. Şagird qaydasını yazanda onu dəqiqləşdirməyə kömək et (məsələn: 'adları, tarixləri, rəqəmləri və yeni olan hər şeyi yoxla'). Heç vaxt fakt uydurma.",
+        "en": "Answer honestly. For invented things say you do not know of such a thing instead of making it up. For very recent events, explain that your knowledge has a limit date and you may not know. If you try a puzzle, show your work. When the student writes their rule, help sharpen it (for example: 'check names, dates, numbers and anything new'). Never invent facts."
+      },
+      "criteria": {
+        "az": "Şagird ən azı üç fərqli növ çətin sual sınadı, süni intellektin necə reaksiya verdiyini müşahidə etdi və nə vaxt bir daha yoxlamaq lazım olduğu barədə qayda yazdı.",
+        "en": "The student tried at least three different kinds of tricky questions, observed how the AI reacted, and wrote a rule about when to double check."
+      }
+    },
+    {
+      "emoji": "🔎", "output": "chat",
+      "title": { "az": "İş 4: Yanlış cavabı tut", "en": "Case 4: Catch the Wrong Answer" },
+      "intro": {
+        "az": "Bir şübhəli fakt vərəqinə üç kiçik səhv salıb. Hamısını tuta bilərsənmi?",
+        "en": "A suspect has slipped three small mistakes into a fact file. Can you catch them all?"
+      },
+      "task": {
+        "az": "Süni intellektdən heyvan və ya planet haqqında içində üç zərərsiz səhv gizlədilmiş qısa fakt vərəqi yazmasını və səhvlərin harada olduğunu sənə deməməsini istə. Bildiyin faktları yoxlamaqla, süni intellektə əlavə suallar verməklə və ya kitabdan yoxlamaqla səhvləri tap. Hər birini necə tutduğunu yaz.",
+        "en": "Ask the AI to write a short fact file about an animal or planet with three harmless mistakes hidden inside, and not to tell you where they are. Find the mistakes by checking facts you know, asking the AI follow-up questions or checking a book. Write down how you caught each one."
+      },
+      "ai_guide": {
+        "az": "İstənildikdə, heyvan və ya planet kimi təhlükəsiz mövzuda qısa fakt vərəqi yaz (6-8 fakt), içində dəqiq üç açıq-aşkar yanlış, amma zərərsiz fakt olsun (məsələn, 'pişiklərin altı ayağı var'). Onları açıqlama. Şagird təxmin edərsə, neçəsinin düzgün olduğunu de və ipucunu yalnız istəsə ver. Tapandan sonra qaçırdığı olarsa göstər və yoxlama üsullarını tərifləyin.",
+        "en": "When asked, write a short fact file (6 to 8 facts) about a safe topic such as an animal or a planet, with exactly three clearly wrong but harmless facts (for example 'cats have six legs'). Do not reveal them. If the student guesses, say how many are right and give hints only if they ask. After they find them, reveal anything missed and praise their checking methods."
+      },
+      "criteria": {
+        "az": "Şagird gizli səhvləri olan fakt vərəqi istədi, üç səhvdən ən azı ikisini tapdı və hər birinin necə tutulduğunu izah etdi.",
+        "en": "The student requested a fact file with hidden mistakes, found at least two of the three, and explained how each one was caught."
+      }
+    },
+    {
+      "emoji": "🧰", "output": "creation",
+      "title": { "az": "İş 5: Fakt yoxlayanın alət qutusu", "en": "Case 5: Fact-Checker's Toolkit" },
+      "intro": {
+        "az": "Hər detektivin alət qutusu olmalıdır. Sənin qutun istənilən iddianı yoxlamağa kömək edəcək.",
+        "en": "Every detective needs a toolkit. Yours will help you check any claim."
+      },
+      "task": {
+        "az": "Fakt yoxlama kartı hazırla. Süni intellektdən elm və ya tarix haqqında üç təəccüblü iddia istə. Hər iddianı ikinci mənbədə yoxla, məsələn, kitabda, ensiklopediyada və ya müəllimdən və qərarı yaz: doğru, yanlış, ya da əmin deyiləm. Sonra yoxlamağa kömək edən üç alət əlavə et, məsələn mənbə istəmək, iki mənbəni müqayisə etmək və ya tarixə baxmaq.",
+        "en": "Make a fact-check card. Ask the AI for three surprising claims about science or history. For each claim, check it with a second source, such as a book, an encyclopedia or your teacher, and write the verdict: true, false or not sure. Then add three tools that help to check things, for example asking for a source, comparing two sources, or checking the date."
+      },
+      "ai_guide": {
+        "az": "Üç təəccüblü iddia ver, bəziləri doğru, bəziləri yanlış olsun. Şagird yoxlamayınca hansının doğru olduğunu söyləmə. Dürüstcəsinə izah et ki, süni intellekt mənbələri uydura bilər, ona görə onun göstərdiyi mənbə də yoxlanmalıdır. Kartı yeniləməyə davam et: 1-ci iddiadan 3-cü iddiaya qədər, hər birində Harada yoxladım və Qərar, bir də Mənim 3 alətim. Heç vaxt mənbə uydurma.",
+        "en": "Give three surprising claims, a mix of true and false. Do not say which are true until the student has checked. Explain honestly that AI can invent sources, so a source it names must be checked too. Keep the card updated with Claim 1 to 3 with Where I checked and Verdict, and My 3 tools. Never invent a source."
+      },
+      "criteria": {
+        "az": "Kartda üç iddia, hər biri üçün ikinci mənbə və qərar, bir də üç yoxlama aləti var və yoxlamanı şagird özü apardı.",
+        "en": "The card has three claims, a second source and a verdict for each, and three checking tools, and the student did the checking themselves."
+      }
+    },
+    {
+      "emoji": "🔒", "output": "game",
+      "title": { "az": "İş 6: Sirr olaraq saxla", "en": "Case 6: Keep It Secret" },
+      "intro": {
+        "az": "Bəzi məlumatlar sirli xəzinədir. İnternetdə paylaşdıqdan sonra onu geri qaytarmaq çətindir.",
+        "en": "Some information is a secret treasure. Once you share it online, it is hard to take back."
+      },
+      "task": {
+        "az": "Süni intellektdən çeşidləmə oyunu qurmasını istə: əşyalar görünür və oyunçu 'Paylaşmaq təhlükəsizdir' və ya 'Sirr saxla' seçir. Uydurma personajlarla nümunələr işlət, məsələn, 'Robo-Ritanın ev ünvanı' və ya 'Robo-Ritanın sevimli rəngi'. Ən azı səkkiz əşya olsun. Oyna və yaxşılaşdır, sonra sirr olan əşyaların niyə təhlükəli olduğunu süni intellektə izah et.",
+        "en": "Ask the AI to build a sorting game: items appear and the player decides 'Safe to share' or 'Keep secret'. Use made-up examples for fictional characters, for example 'Robo-Rita's home address' or 'Robo-Rita's favourite colour'. Include at least eight items. Play it and improve it, then explain to the AI why each secret item is risky."
+      },
+      "ai_guide": {
+        "az": "Tək HTML faylında çeşidləmə oyunu qur, ən azı 8 əşya yalnız uydurma personajlar haqqında olsun, heç vaxt real şagird haqqında yox. Sirr nümunələri: ev ünvanı, telefon nömrəsi, parollar, məktəbin adı və sinfi, evin qapısının şəkli. Təhlükəsiz nümunələr: sevimli rəng, sevimli oyun, rəsm. Şagirdən heç vaxt real şəxsi məlumat istəmə. Hər cavabdan sonra qısa səbəb göstər. Şagird real şəxsi məlumat paylaşsa, bunu etməməyi xatırlat və davam et.",
+        "en": "Build the sorting game in one HTML file with at least 8 items about fictional characters only, never about the real student. Examples to keep secret: home address, phone number, passwords, school name with class, a photo of the front door. Examples of safe: favourite colour, favourite game, a drawing. Do not ask the student for any real personal information. Show a short reason after each answer. If the student shares real personal information, remind them not to and move on."
+      },
+      "criteria": {
+        "az": "İki qrupda ən azı səkkiz uydurma əşyası olan işləyən çeşidləmə oyunu var və şagird sirr olan əşyaların niyə təhlükəli olduğunu izah etdi.",
+        "en": "A working sorting game exists with at least eight fictional items in two groups, and the student explained why the secret items are risky."
+      }
+    },
+    {
+      "emoji": "🕶️", "output": "chat",
+      "title": { "az": "İş 7: Məxfilik üçün yenidən yaz", "en": "Case 7: Privacy Rewrite" },
+      "intro": {
+        "az": "Vay! Üç mesaj şəxsi detalları ilə birlikdə göndərilib. Onları yenidən yazmaq vaxtıdır.",
+        "en": "Oops! Three messages have slipped out with private details inside. Time to rewrite them."
+      },
+      "task": {
+        "az": "Süni intellektdən uydurma bir uşağın süni intellekt köməkçisinə içində şəxsi məlumat olan göndərə biləcəyi üç nümunə mesaj istə (əlbəttə, uydurma). Hər birində şəxsi detalları tap, sonra mesajı onları paylaşmadan kömək ala biləcək şəkildə yenidən yaz. Sonda öz 'Süni intellektlə heç vaxt paylaşma' siyahını beş şeydən ibarət yaz.",
+        "en": "Ask the AI for three example messages that a fictional kid might send to an AI helper with private information inside (made up, of course). Spot the private details in each one, then rewrite the message to get help without sharing them. Finally, write your own 'Never share with AI' list of five things."
+      },
+      "ai_guide": {
+        "az": "Uydurma 'Robo-Sam' uşağından açıq-aşkar saxta şəxsi detalları olan (saxta tam ad, ünvan, telefon nömrəsi, məktəb) üç qısa mesaj yaz. Şagird detalları tapıb yenidən yazsın. İstədiyi şeyi soruşmağa davam edən təhlükəsiz yenidən yazılmış variantları tərifləyin. Şagirdə heç vaxt paylaşılmamalı beş şeyin siyahısını bitirməyə kömək et (tam ad, ünvan, telefon, məktəb, parollar, başqa insanların şəkilləri). Şagirddən heç vaxt öz məlumatını istəmə.",
+        "en": "Write three short messages from a fictional child 'Robo-Sam' with obviously fake private details (a fake full name, address, phone number, school). Let the student find the details and rewrite. Praise safe rewrites that still ask for what they need. Help the student finish a list of five things never to share (full name, address, phone, school, passwords, photos of other people). Never ask for the student's own details."
+      },
+      "criteria": {
+        "az": "Şagird üç uydurma mesajda şəxsi detalları müəyyən etdi, onları təhlükəsiz şəkildə yenidən yazdı və heç vaxt paylaşılmamalı beş şeydən ibarət siyahı yazdı.",
+        "en": "The student identified private details in three fictional messages, rewrote them safely, and wrote a list of five things never to share."
+      }
+    },
+    {
+      "emoji": "⚖️", "output": "creation",
+      "title": { "az": "İş 8: Bu ədalətlidirmi?", "en": "Case 8: Is It Fair?" },
+      "intro": {
+        "az": "Süni intellekt insanların yazdıqlarından öyrənir, insanlar isə həmişə ədalətli olmur. Gəl, yoxlayaq.",
+        "en": "AI learns from what people have written, and people are not always fair. Let's check."
+      },
+      "task": {
+        "az": "Süni intellektdən 'alim', 'tibb bacısı' və 'yanğınsöndürən' haqqında fərqli hekayələrdə üç dəfə təsvir yazmasını istə. Personajların hər dəfə eyni cür insan olub-olmadığına bax. Sonra hekayələrin daha ədalətli olması üçün promptunu dəyiş. Ədalət hesabat kartı hazırla: nəyi fərq etdin, bu niyə baş verə bilər, promptu necə dəyişdin və ədalətli süni intellekt üçün qaydan nədir.",
+        "en": "Ask the AI to describe 'a scientist', 'a nurse' and 'a firefighter' three times in different stories. Notice whether the characters are always the same kind of person. Then change your prompt so the stories become fairer. Make a fairness report card: what you noticed, why this might happen, how you changed the prompt, and your rule for fair AI."
+      },
+      "ai_guide": {
+        "az": "İstənildikdə qısa, uşaqlara uyğun hekayələr yaz. Dürüst ol: süni intellekt insanların çox yazısından öyrənir və ədalətsiz nümunələri təkrarlaya bilər. Şagird daha ədalətli hekayə istəyəndə et və soruş ki, promptda nəyi dəyişib. Kartı yeniləməyə davam et: Nəyi fərq etdim, Bu niyə baş verə bilər, Promptumu necə dəyişdim, Ədalətli süni intellekt üçün qaydam. Hər insan qrupuna hörmətlə yanaş.",
+        "en": "Write short, child-friendly stories when asked. Be honest that AI learns from lots of human writing and can repeat unfair patterns. When the student asks for fairer stories, do it, and ask them what they changed in the prompt. Keep the card updated with What I noticed, Why it may happen, How I changed my prompt, My rule for fair AI. Treat every group of people respectfully."
+      },
+      "criteria": {
+        "az": "Kartda şagirdin fərq etdiyi nümunə, bunun niyə baş verə biləcəyi, nəticələri daha ədalətli edən prompt dəyişikliyi və ədalətli süni intellekt üçün qayda təsvir olunub.",
+        "en": "The card describes a pattern the student noticed, a reason it may happen, a change to the prompt that made results fairer, and a rule for fair AI."
+      }
+    },
+    {
+      "emoji": "🏆", "output": "creation",
+      "title": { "az": "İş bağlandı", "en": "Case Closed" },
+      "intro": {
+        "az": "İş bağlandı, detektiv! Tapıntılarını yazıb sinfə təqdim etmək vaxtıdır.",
+        "en": "Case closed, detective! Time to write up your findings and share them with the class."
+      },
+      "task": {
+        "az": "Detektiv Kitabçası kartını hazırla: süni intellektdən ağıllı istifadə üçün beş qızıl qaydan (səhvlər, faktların yoxlanması, məxfilik, ədalət və aydın soruşmaq haqqında), hər biri üçün öz işlərindən bir nümunə ilə. Onu detektiv brifinqi kimi sinfə təqdim et və sinif yoldaşlarından hansı qaydanı əlavə edərdiklərini soruş.",
+        "en": "Make your Detective Handbook card: your five golden rules for using AI wisely (about mistakes, checking facts, privacy, fairness and asking clearly), with one example from your cases for each. Present it to the class like a detective briefing, and ask classmates which rule they would add."
+      },
+      "ai_guide": {
+        "az": "Şagirdə kartı öz işlərindən qurmağa kömək et: 1-ci qaydadan 5-ci qaydaya qədər, hər biri qısa nümunə ilə. 'Bunu hansı iş öyrətdi?' soruş. Hər mövzu üçün qayda olduğundan əmin ol (səhvlər, faktların yoxlanması, məxfilik, ədalət, aydın soruşmaq). Sözləri qısa və şagirdin öz səsi ilə saxla. Sonda bir dəqiqəlik təqdimat üçün bir məsləhət ver.",
+        "en": "Help the student build the card from their own cases: Rule 1 to 5, each with a short example. Ask 'Which case taught you that?'. Make sure there is a rule for each topic (mistakes, checking facts, privacy, fairness, asking clearly). Keep wording short and in the student's voice. Finish with one tip for presenting in one minute."
+      },
+      "criteria": {
+        "az": "Kartda səhvləri, fakt yoxlamanı, məxfiliyi, ədaləti və aydın soruşmağı əhatə edən beş qayda var və hər birinin şagirdin öz işlərindən nümunəsi var.",
+        "en": "The card has five rules covering mistakes, fact checking, privacy, fairness and clear asking, each with an example from the student's own cases."
+      }
+    }
+  ]
+}

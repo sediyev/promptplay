@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="az"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PromptPlay – Course library</title><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/library.css"></head>
+<body>
+<div class="top"><a id="back" href="/teacher.html" data-t="back"></a><b class="logo">🎮 PromptPlay</b><span class="pill" data-t="lib_h"></span><span class="grow"></span><button class="ghost" id="lang"></button></div>
+<main class="lib" id="main"></main>
+<script type="module">
+import { api, t, getLang, applyI18n, toggleLang, esc, $, toast } from '/common.js';
+import { fmt } from '/library-i18n.js';
+applyI18n(); $('#lang').textContent = t('lang'); $('#lang').onclick = toggleLang;
+let me;
+try { me = await api('/api/me'); } catch { location = '/join#teacher'; await new Promise(() => {}); } // leaving: do not run the rest of the page
+const admin = me.role === 'admin', main = $('#main');
+$('#back').href = admin ? '/admin.html' : '/teacher.html';
+
+// The language of the course content is chosen separately from the language of the app: a teacher may run an English course in an Azerbaijani app.
+let cl = getLang();
+try { const s = localStorage.getItem('courseLang'); if (s === 'az' || s === 'en') cl = s; } catch {}
+const pick = (v) => (v && (v[cl] || v[cl === 'az' ? 'en' : 'az'])) || '';
+const lengthOf = (c) => (c.sessions <= 1 ? 'one' : c.sessions <= 4 ? 'short' : 'long');
+const AGES = ['8-11', '12-17'], LENGTHS = ['one', 'short', 'long'], THEMES = ['starter', 'stories', 'science', 'ai-literacy', 'games', 'trial'], PROGRAMMES = ['trial', 'term-1', 'term-2', 'term-3', 'holiday'];
+const filters = { age: '', theme: '', length: '', programme: '', q: '' };
+let facets = null;
+
+const metaPills = (c) => [
+  `<span class="pill">${esc(fmt(t('lib_agesFmt'), { a: c.age.min, b: c.age.max }))}</span>`,
+  `<span class="pill soft">${esc(c.sessions === 1 ? t('len_one') : fmt(t('lib_sessionsN'), { n: c.sessions }))}</span>`,
+  `<span class="pill soft">${esc(c.minutes[0] === c.minutes[1] ? fmt(t('lib_mins'), { a: c.minutes[0], b: c.minutes[0] }) : fmt(t('lib_mins'), { a: c.minutes[0], b: c.minutes[1] }))}</span>`,
+  `<span class="pill soft">${c.levels?.length ?? c.levels} ${esc(t('levelsN'))}</span>`,
+  ...c.programmes.map((p) => `<span class="pill soft">${esc(t('pr_' + p))}</span>`),
+  ...(admin && c.hidden ? [`<span class="pill warn">${esc(t('lib_hidden'))}</span>`] : []),
+  ...(admin && !c.az_reviewed ? [`<span class="pill warn">${esc(t('lib_reviewAz'))}</span>`] : []),
+].join('');
+
+// ---------- list ----------
+async function list() {
+  if (!facets) {
+    const everything = (await api('/api/library')).courses;
+    facets = { themes: new Set(everything.flatMap((c) => c.themes)), programmes: new Set(everything.flatMap((c) => c.programmes)), lengths: new Set(everything.map(lengthOf)) };
+  }
+  main.innerHTML = `<h1>${t('lib_h')}</h1><p class="lead">${t('lib_lead')}</p>
+    <div class="card filters"><div id="chips"></div>
+      <div class="frow"><b>${t('lib_search')}</b><input type="search" id="q" maxlength="60" value="${esc(filters.q)}" aria-label="${t('lib_search')}">
+        <b style="min-width:0;margin-left:auto">${t('lib_courseLang')}</b>
+        <select id="cl" aria-label="${t('lib_courseLang')}"><option value="az">Azərbaycanca</option><option value="en">English</option></select></div></div>
+    <div class="libgrid" id="grid" aria-live="polite"></div>`;
+  $('#cl').value = cl;
+  $('#cl').onchange = (e) => { cl = e.target.value; try { localStorage.setItem('courseLang', cl); } catch {} grid(); };
+  let timer;
+  $('#q').oninput = (e) => { clearTimeout(timer); timer = setTimeout(() => { filters.q = e.target.value.trim(); grid(); }, 250); };
+  chips(); await grid();
+}
+function chips() {
+  const row = (key, label, values, labelOf) => `<div class="frow" role="group" aria-label="${esc(label)}"><b>${esc(label)}</b>` +
+    [['', t('lib_all')], ...values.map((v) => [v, labelOf(v)])].map(([v, l]) =>
+      `<button type="button" class="chipb" data-k="${key}" data-v="${esc(v)}" aria-pressed="${filters[key] === v}">${esc(l)}</button>`).join('') + '</div>';
+  $('#chips').innerHTML = row('age', t('lib_age'), AGES, (v) => t('lib_age_' + v))
+    + row('theme', t('lib_theme'), THEMES.filter((x) => facets.themes.has(x)), (v) => t('th_' + v))
+    + row('length', t('lib_length'), LENGTHS.filter((x) => facets.lengths.has(x)), (v) => t('len_' + v))
+    + row('programme', t('lib_prog'), PROGRAMMES.filter((x) => facets.programmes.has(x)), (v) => t('pr_' + v));
+  $('#chips').querySelectorAll('.chipb').forEach((b) => (b.onclick = () => { filters[b.dataset.k] = b.dataset.v; chips(); grid(); }));
+}
+async function grid() {
+  const qs = new URLSearchParams(Object.entries(filters).filter(([, v]) => v));
+  const { courses } = await api('/api/library?' + qs);
+  $('#grid').innerHTML = courses.map((c) => `<a class="libcard" href="#${esc(c.id)}">
+      <div class="lc-top"><span class="lc-emoji" aria-hidden="true">${esc(c.emoji)}</span><div><b>${esc(pick(c.title))}</b><span class="muted">${esc(pick(c.promise))}</span></div></div>
+      <div class="metas">${metaPills(c)}</div></a>`).join('') || `<p class="muted">${t('lib_none')}</p>`;
+}
+
+// ---------- one course ----------
+async function detail(id) {
+  let d;
+  try { d = await api('/api/library/' + encodeURIComponent(id)); } catch { location.hash = ''; return; }
+  const c = d.course, other = cl === 'az' ? 'en' : 'az', goals = c.goals[cl] || c.goals[other] || [];
+  const summaryText = [pick(c.title), pick(c.promise), [fmt(t('lib_agesFmt'), { a: c.age.min, b: c.age.max }), c.sessions === 1 ? t('len_one') : fmt(t('lib_sessionsN'), { n: c.sessions }),
+    fmt(t('lib_mins'), { a: c.minutes[0], b: c.minutes[1] })].join(' · '), '', t('lib_parentGoals'), ...goals.map((g) => '- ' + g)].join('\n');
+  document.title = pick(c.title) + ' – PromptPlay';
+  main.innerHTML = `<div class="libdetail"><a href="#" id="toList">${t('lib_back')}</a>
+    <h1><span aria-hidden="true">${esc(c.emoji)}</span> ${esc(pick(c.title))}</h1>
+    <p class="promise">${esc(pick(c.promise))}</p>
+    <div class="metas">${metaPills({ ...c, hidden: d.hidden })}</div>
+    ${d.languages.includes(cl) ? '' : `<p class="note">${t('lib_partial')}</p>`}
+    <div class="libcols"><div>
+      <div class="card"><h2>${t('lib_learn')}</h2><ul class="goals">${goals.map((g) => `<li>${esc(g)}</li>`).join('')}</ul>
+        ${pick(c.description) ? `<p class="muted" style="margin-bottom:0">${esc(pick(c.description))}</p>` : ''}</div>
+      <div class="row" style="margin:18px 0 8px"><h2 class="grow" style="margin:0">${t('lib_levels')}</h2><button class="ghost" id="tg">${t('lib_expand')}</button></div>
+      <div id="lvs">${c.levels.map((l, i) => `<details class="lvprev"><summary><span class="lvn">${i + 1}</span><span aria-hidden="true">${esc(l.emoji)}</span><b class="grow">${esc(pick(l.title))}</b>
+          <span class="pill soft">${t('out_' + l.output)}</span></summary><div class="lvbody">
+          ${pick(l.intro) ? `<h4>${t('lib_story')}</h4><p>${esc(pick(l.intro))}</p>` : ''}
+          <h4>${t('lib_task')}</h4><p>${esc(pick(l.task))}</p>
+          ${pick(l.criteria) ? `<h4>${t('lib_done')}</h4><p>${esc(pick(l.criteria))}</p>` : ''}
+          ${pick(l.ai_guide) ? `<h4>${t('lib_ai')}</h4><p class="ai">${esc(pick(l.ai_guide))}</p>` : ''}</div></details>`).join('')}</div>
+    </div><aside class="card actions"><h3 style="margin:0">${t('lib_actions')}</h3>
+      ${admin ? `<p class="muted help">${t('lib_adminView')}</p>` : `<p class="muted help">${t('lib_roomHelp')}</p>
+        <button id="openRoom" aria-expanded="false">${t('lib_openRoom')}</button>
+        <form class="roomform" id="roomForm" hidden>
+          <label for="rn">${t('roomName')}</label><input id="rn" maxlength="60" value="${esc(pick(c.title).slice(0, 60))}" required>
+          <label for="ap">${t('approvalMode')}</label><select id="ap"><option value="ai">${t('approval_ai')}</option><option value="teacher">${t('approval_teacher')}</option></select>
+          <label for="dl">${t('dailyLimit')}</label><input id="dl" type="number" min="1" value="30">
+          <label style="display:flex;gap:.5rem;align-items:flex-start;color:inherit"><input type="checkbox" id="cc" style="width:auto;margin-top:.3rem">${t('consent')}</label>
+          <p class="err" id="err" role="alert"></p><button id="mk">${t('create')}</button></form>
+        <p class="muted help" style="margin-top:.6rem">${t('lib_copyHelp')}</p><button class="ghost" id="copy">${t('lib_copy')}</button>`}
+      <button class="ghost" id="parent">${t('lib_parent')}</button>
+      ${d.next.length ? `<div class="nextlist"><h3 style="margin:.8rem 0 .2rem">${t('lib_next')}</h3>${d.next.map((n) => `<a class="btnlink" href="#${esc(n.id)}"><span aria-hidden="true">${esc(n.emoji)}</span> ${esc(pick(n.title))}</a>`).join('')}</div>` : ''}
+    </aside></div></div>`;
+  $('#toList').onclick = (e) => { e.preventDefault(); history.pushState(null, '', location.pathname); route(); };
+  $('#tg').onclick = () => { const open = $('#tg').dataset.open !== '1'; $('#tg').dataset.open = open ? '1' : ''; $('#tg').textContent = open ? t('lib_collapse') : t('lib_expand'); $('#lvs').querySelectorAll('details').forEach((x) => (x.open = open)); };
+  $('#parent').onclick = async () => {
+    try { await navigator.clipboard.writeText(summaryText); } catch { const ta = Object.assign(document.createElement('textarea'), { value: summaryText }); document.body.append(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+    toast(t('lib_parentCopied'), 'ok');
+  };
+  if (admin) return;
+  $('#openRoom').onclick = () => { $('#roomForm').hidden = !$('#roomForm').hidden; $('#openRoom').setAttribute('aria-expanded', String(!$('#roomForm').hidden)); if (!$('#roomForm').hidden) $('#rn').focus(); };
+  $('#roomForm').onsubmit = async (e) => {
+    e.preventDefault();
+    if (!$('#cc').checked) return ($('#err').textContent = t('consentNeeded'));
+    try {
+      const r = await api(`/api/library/${encodeURIComponent(c.id)}/room`, 'POST', { lang: cl, name: $('#rn').value, consent: true, daily_limit: +$('#dl').value, approval: $('#ap').value });
+      location = '/teacher.html?class=' + r.id;
+    } catch (x) { $('#err').textContent = x.code === 'name' ? t('roomName') : t(x.code); }
+  };
+  $('#copy').onclick = async () => {
+    try { const r = await api(`/api/library/${encodeURIComponent(c.id)}/copy`, 'POST', { lang: cl }); location = '/course.html?id=' + r.id; } catch (x) { toast(t(x.code), 'bad'); }
+  };
+}
+
+function route() {
+  document.title = 'PromptPlay – ' + t('lib_h');
+  const id = decodeURIComponent(location.hash.slice(1));
+  id ? detail(id) : list();
+  window.scrollTo(0, 0);
+}
+addEventListener('hashchange', route);
+route();
+</script></body></html>

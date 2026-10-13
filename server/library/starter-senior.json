@@ -1,0 +1,239 @@
+{
+  "id": "starter-senior",
+  "emoji": "🛠️",
+  "title": { "az": "Süni intellekt macərası: gənc ustalar", "en": "AI Adventure: Senior Makers" },
+  "promise": {
+    "az": "Yeniyetmələr süni intellekti dəqiq idarə etməyi, ilk sınaqlardan öz cilalanmış oyunlarına qədər irəliləməyi və aldıqları cavabı qiymətləndirməyi öyrənir.",
+    "en": "Teens learn to direct AI with precision, from first experiments to a polished game of their own, and to judge what the AI gives back."
+  },
+  "description": {
+    "az": "Başlanğıc kursun 12-17 yaş üçün variantı: eyni səyahət, amma daha açıq və tələbkar tapşırıqlarla. Şagirdlər tək bir şeyi dəyişib nəticəni müqayisə edir, ilk ideyanı rədd edir, oyun dizayn sənədi yazır və layihələrini təqdim edir. Hər dərsdə təxminən iki səviyyə keçmək olar.",
+    "en": "The starter course for ages 12 to 17: the same journey with more open and demanding tasks. Students change one thing at a time and compare results, reject the first idea, write a game design document and present their project. Plan about two levels per session."
+  },
+  "age": { "min": 12, "max": 17 },
+  "themes": ["starter", "games"],
+  "programmes": ["term-1"],
+  "sessions": 5,
+  "minutes": [45, 60],
+  "next": ["ai-detective", "science-explainers", "storytelling-studio"],
+  "goals": {
+    "az": [
+      "Dəqiq istək yazmaq: məqsəd, auditoriya, format və məhdudiyyətlər.",
+      "Eyni anda yalnız bir şeyi dəyişmək, nəticəni yoxlamaq və sonra nə sınayacağını qərara almaq.",
+      "Süni intellektin ilk, açıq-aşkar ideyalarından kənara çıxıb orijinal personaj, canlı və dünya düşünmək.",
+      "Oyunu kağız üzərində dizayn etmək (əsas dövrə, qaydalar, çətinlik), sonra istəmək, sınamaq və təkmilləşdirmək.",
+      "Problemi aydın bildirmək: nə baş verdi, nə gözlənilirdi və necə təkrar etmək olar.",
+      "İşini təqdim etmək və seçimlərinin arxasındakı düşüncəni izah etmək."
+    ],
+    "en": [
+      "Write precise requests: goal, audience, format and limits.",
+      "Change one thing at a time, test the result and decide what to try next.",
+      "Push past the AI's first, obvious ideas to reach original characters, creatures and worlds.",
+      "Design a game on paper (core loop, rules, difficulty) before asking for it, then playtest and refine.",
+      "Report a problem clearly: what happened, what was expected and how to repeat it.",
+      "Present their work and explain the thinking behind their choices."
+    ]
+  },
+  "levels": [
+    {
+      "emoji": "🔍", "output": "chat",
+      "title": { "az": "İlk təmas", "en": "First Contact" },
+      "intro": {
+        "az": "Laboratoriyaya xoş gəldin. Bir şey qurmazdan əvvəl öyrənəcəksən ki, istəyini necə yazdığın süni intellektin cavabını necə dəyişir.",
+        "en": "Welcome to the lab. Before building anything, you will see how this AI reacts when you change the way you ask."
+      },
+      "task": {
+        "az": "Kiçik təcrübə apar. Gündəlik bir mövzu seç (məsələn, imtahana necə hazırlaşmaq). Süni intellektdən bu mövzu haqqında üç cür soruş: qeyri-dəqiq bir cümlə, ətraflı bir istək və süni intellektə rol və auditoriya verən bir istək. Üç cavabı müqayisə et və bir-iki cümlə ilə nəyin dəyişdiyini, sənin fikrincə isə niyə dəyişdiyini yaz.",
+        "en": "Run a small experiment. Pick one everyday topic (for example, how to prepare for a test). Ask the AI about it three ways: a vague one-liner, a detailed request, and a request that gives the AI a role and an audience. Compare the three answers and tell the AI in a sentence or two what changed and why you think it changed."
+      },
+      "ai_guide": {
+        "az": "Hər variantı adi qaydada cavabla, necə yaxşılaşdırmaq lazım olduğuna eyham vurma. Üçüncü cavabdan sonra şagirddən hansı fərqləri gördüyünü soruş və NİYƏ olduğunu izah etməyə çağır (daha çox detal, rol, auditoriya, format). Onunla bacarıqlı yeniyetmə kimi danış: qısa, uşaq dili olmadan. Dürüst ol: istək qeyri-dəqiq olanda səhv edə və ya ümumi cavab verə bilərsən.",
+        "en": "Answer each version normally, without hinting at how to improve it. After the third answer, ask the student what differences they noticed and challenge them to explain WHY (more detail, role, audience, format). Treat them like a capable teenager: concise, no baby talk. Be honest that you can be wrong or generic when the request is vague."
+      },
+      "criteria": {
+        "az": "Şagird bir mövzu haqqında ən azı üç aydın şəkildə fərqli üsulla soruşdu (qeyri-dəqiq, ətraflı, rol və auditoriya ilə) və cavabların necə və niyə fərqləndiyini yazdı.",
+        "en": "The student asked about one topic in at least three clearly different ways (vague, detailed, with a role and audience) and wrote an observation about how and why the answers differed."
+      }
+    },
+    {
+      "emoji": "✍️", "output": "chat",
+      "title": { "az": "Prompt sənəti", "en": "Prompt Craft" },
+      "intro": {
+        "az": "Yaxşı prompt kiçik bir dizayndır. Onu alətin simlərini köklədiyin kimi köklə: hər dəfə bir sim.",
+        "en": "A good prompt is a small design. Tune it like an instrument: one string at a time."
+      },
+      "task": {
+        "az": "Süni intellektdən real məqsəd üçün qısa mətn istə, məsələn, kiçik şagirdlərə hobbin haqqında bir dəqiqəlik çıxış. Promptunu üç dəfə yaxşılaşdır, amma hər dəfə YALNIZ BİR şeyi dəyiş (auditoriya, ton, uzunluq, format və ya nümunə). Hər variantdan sonra həmin tək dəyişikliyin nə etdiyini qeyd et.",
+        "en": "Ask the AI for a short text for a real purpose, such as a one-minute speech about a hobby for younger students. Improve your prompt three times, but change only ONE thing each time (audience, tone, length, format or an example). After each version note what that single change did."
+      },
+      "ai_guide": {
+        "az": "Hər dəfə mətni yaz. Hər variantdan sonra şagirddən nəyi dəyişdiyini və nə təsir etdiyini soruş. Eyni anda bir neçə şeyi dəyişibsə, bunu qeyd et və tək elementi ayırmağı təklif et. Şagirdə məqsəd, auditoriya, ton, format, uzunluq və nümunə anlayışlarını öyrət. Promptunu onun əvəzinə yenidən yazma, nə sınaya biləcəyini təklif et.",
+        "en": "Produce the text each time. After each version, ask the student what they changed and what effect it had; if they changed several things at once, point it out and suggest isolating one. Give the student the vocabulary of goal, audience, tone, format, length and example. Do not rewrite their prompt for them; suggest what to try."
+      },
+      "criteria": {
+        "az": "Şagird bir promptun ən azı üç variantını yazdı, hər dəfə yalnız bir elementi dəyişdi və hər dəyişikliyin təsirini təsvir etdi.",
+        "en": "The student made at least three versions of one prompt, changed a single element each time and described the effect of each change."
+      }
+    },
+    {
+      "emoji": "🦸", "output": "creation",
+      "title": { "az": "Orijinal qəhrəman", "en": "Original Hero" },
+      "intro": {
+        "az": "İlk ağla gələn ideya adətən ən məlum olanıdır. Əsl dizaynerlər daha da irəli gedir.",
+        "en": "The first idea is usually the obvious one. Real designers push further."
+      },
+      "task": {
+        "az": "Əvvəllər heç kimin görmədiyi bir qəhrəman dizayn et. Süni intellektdən ideya istə, sonra klişeləri rədd et və daha təzə bir şey tələb et. Qəhrəman kartında uydurma ad, mənşə, real məhdudiyyəti və ya qiyməti olan qüvvə, qüsur, məqsəd və rəqib olsun. Son seçimlərinin niyə süni intellektin ilk təkliflərindən yaxşı olduğunu ona izah et.",
+        "en": "Design a hero nobody has seen before. Ask the AI for ideas, then reject the clichés and push for something fresher. Your hero card must have a made-up name, an origin, a power with a real limit or cost, a flaw, a goal and a rival. Explain to the AI why your final choices are better than its first suggestions."
+      },
+      "ai_guide": {
+        "az": "Əvvəlcə qəsdən ən məlum üç ideyanı təklif et, sonra şagirdin etirazına cavab olaraq daha təzə ideyalar ver. Çətin dizayn sualları ver: Qüvvənin qiyməti nədir? Qəhrəman niyə qalib gəlməlidir? Kartı yeniləməyə davam et: Ad, Mənşə, Qüvvə, Məhdudiyyət, Qüsur, Məqsəd, Rəqib. Yalnız uydurma adlar işlət. Mövcud film və oyun seriyalarını köçürmə.",
+        "en": "First offer the three most obvious ideas on purpose, then respond to the student's pushback with fresher ones. Ask hard design questions: What does the power cost? Why does the hero need to win? Keep the card updated with Name, Origin, Power, Limit, Flaw, Goal, Rival. Use made-up names only. Never copy existing franchises."
+      },
+      "criteria": {
+        "az": "Kartda ad, mənşə, məhdudiyyəti və ya qiyməti olan qüvvə, qüsur, məqsəd və rəqib var. Şagird süni intellektin ilk ideyalarından ən azı birini rədd etdi və ya dəyişdi, səbəbini də dedi.",
+        "en": "The card has a name, origin, a power with a limit or cost, a flaw, a goal and a rival. The student rejected or changed at least one of the AI's first ideas and gave a reason."
+      }
+    },
+    {
+      "emoji": "🧬", "output": "creation",
+      "title": { "az": "Sağ qalmaq üçün qurulub", "en": "Built to Survive" },
+      "intro": {
+        "az": "Təkamül həm amansız, həm də ağıllıdır. Ağlına gələn ən sərt yerdə həqiqətən yaşaya bilən canlı dizayn et.",
+        "en": "Evolution is brutal and clever. Design a creature that could really live in the harshest place you can think of."
+      },
+      "task": {
+        "az": "Ekstremal yaşayış mühiti seç (dərin okean, səhra gecəsi, buz mağarası, vulkan yamacı və ya öz variantın). Orada sağ qala biləcək canlı dizayn et. Kartda mühit, üç uyğunlaşma və hər birinin hansı problemi həll etdiyi, qidalanma, düşmənlər və ya rəqiblər, bir də zəif cəhət olsun. Süni intellektdən dizaynına etiraz etməsini və zəif yerləri düzəltməyə kömək etməsini istə.",
+        "en": "Choose an extreme habitat (deep ocean, desert night, ice cave, volcano slope, or your own). Design a creature that could survive there. The card needs its habitat, three adaptations and what each one solves, its diet, its predators or rivals, and one weakness. Ask the AI to challenge your design and help fix the weak points."
+      },
+      "ai_guide": {
+        "az": "Mehriban biologiya rəyçisi rolunu oyna. Hər uyğunlaşma üçün 'Bu hansı problemi həll edir?' soruş. Ziddiyyətləri göstər (məsələn, yeməyin az olduğu yerdə nəhəng ölçü) və şagird özü düzəltsin. Elmi iddiaları dəqiq və yaşa uyğun saxla. Kartı yeniləməyə davam et: Mühit, Uyğunlaşmalar, Qida, Təhlükələr, Zəif cəhət.",
+        "en": "Act as a friendly biology reviewer. For each adaptation ask 'What problem does this solve?'. Point out contradictions (for example huge size in a place with little food) and let the student fix them. Keep scientific claims accurate and age appropriate. Keep the card updated with Habitat, Adaptations, Diet, Threats, Weakness."
+      },
+      "criteria": {
+        "az": "Kartda mühit, hər biri həll etdiyi problemlə birlikdə ən azı üç uyğunlaşma, qida, təhlükələr və zəif cəhət var. Şagird süni intellektin etirazından sonra dizaynı yaxşılaşdırdı.",
+        "en": "The card includes a habitat, at least three adaptations with the problem each solves, diet, threats and a weakness, and the student improved the design after a challenge from the AI."
+      }
+    },
+    {
+      "emoji": "🗺️", "output": "creation",
+      "title": { "az": "Qaydaları olan dünya", "en": "World With Rules" },
+      "intro": {
+        "az": "Dünya o zaman real hiss olunur ki, onun qaydaları, gərginliyi və xəritəsi olsun.",
+        "en": "A world feels real when it has rules, tension and a map."
+      },
+      "task": {
+        "az": "Bir dünya qur: adı, dörd vacib yer və onların bir-biri ilə necə bağlandığı, nəyəsə görə razılaşmayan iki qrup, dünyanın necə işlədiyi haqqında bir qayda (və onun qiyməti) və bir sirr. Süni intellektdən dünyanda bir ziddiyyət tapmasını istə və birlikdə düzəldin.",
+        "en": "Build a world with a name, four important places and how they connect, two groups that disagree about something, one rule of how the world works (and what it costs), and one mystery. Ask the AI to find a contradiction in your world and fix it together."
+      },
+      "ai_guide": {
+        "az": "Şagird istəsə, dünyanı onun əvvəlki qəhrəmanı və ya canlısı ilə əlaqələndirməyə kömək et. Nəticələr haqqında soruş: bu qayda kimə təsir edər? Sonra bir real ziddiyyəti göstər və necə düzəltmək barədə qərarı şagirdə burax. Kartı yeniləməyə davam et: Dünya, Yerlər, Qruplar və münaqişə, Qayda və qiyməti, Sirr.",
+        "en": "Help the student connect the world to their earlier hero or creature if they like. Ask about consequences: who would be affected by this rule? Then point out one real inconsistency and let the student decide how to fix it. Keep the card updated with World, Places, Groups and conflict, Rule and cost, Mystery."
+      },
+      "criteria": {
+        "az": "Kartda ad, dörd yer, ziddiyyətdə olan iki qrup, qiyməti olan qayda və sirr var. Bir ziddiyyət tapıldı və düzəldildi.",
+        "en": "The card has a name, four places, two conflicting groups, a rule with a cost and a mystery, and one contradiction was found and fixed."
+      }
+    },
+    {
+      "emoji": "🕹️", "output": "game",
+      "title": { "az": "İlk quruluş", "en": "First Build" },
+      "intro": {
+        "az": "Qurmaq vaxtıdır. Oyun bir cümlədən başlayır, ona görə həmin cümləni yaxşı yaz.",
+        "en": "Time to build. A game starts as a sentence, so make that sentence good."
+      },
+      "task": {
+        "az": "Oyunu BİR promptla təsvir et: oyunçu nə edir, məqsəd nədir, necə uduzur və zamanla oyunu çətinləşdirən bir qayda nədir. Nəticəni oyna. Sonra iki dəqiq dəyişiklik et və hər biri üçün nə gördüyünü və əvəzinə nə istədiyini yaz.",
+        "en": "Describe a game in ONE prompt that includes what the player does, the goal, how they lose, and one rule that makes it harder over time. Play the result. Then make two targeted changes, and for each say what you saw and what you want instead."
+      },
+      "ai_guide": {
+        "az": "Promptda təsvir olunanı dəqiq qur, sadə və xətasız saxla. Vacib bir şey çatışmırsa (məqsəd, uduzma, çətinliyin artması), qurmazdan əvvəl bir sual ver. Hər dəyişiklikdən sonra nəyi dəyişdiyini bir cümlə ilə de. Qeyri-dəqiq rəydən ('daha yaxşı et') çox, konkret rəyi ('10 xaldan sonra ulduzlar çox yavaş düşür') təşviq et.",
+        "en": "Build exactly what the prompt describes, keep it simple and bug-free. If something important is missing (goal, fail state, difficulty change), ask one question before building. After each change, say in one sentence what you changed. Encourage specific feedback ('the stars fall too slowly after 10 points') over vague ('make it better')."
+      },
+      "criteria": {
+        "az": "Bir prompt hərəkəti, məqsədi, uduzma yolunu və çətinlik artımını təsvir etdi, işləyən oyun hazırlandı və şagird oynadıqdan sonra iki konkret dəyişiklik istədi.",
+        "en": "One prompt described the action, goal, a way to lose and a difficulty change, a working game was built, and the student made two specific changes based on playing it."
+      }
+    },
+    {
+      "emoji": "📐", "output": "game",
+      "title": { "az": "Dizayn sənədi", "en": "Design Document" },
+      "intro": {
+        "az": "Studiyalar kod yazmazdan əvvəl dizayn sənədi hazırlayır. Sənin sənədin bir karta sığır.",
+        "en": "Studios write a design document before they write code. Yours fits on one card."
+      },
+      "task": {
+        "az": "Yeni oyun üçün mini dizayn sənədi yaz: əsas dövrə (dönə-dönə nə edirsən), idarəetmə, qələbə və məğlubiyyət şərtləri, çətinliyin artması və bir sürpriz. Süni intellektdən plandakı problemləri tapmasını istə, planı düzəlt, sonra oyunu qurdur. Sınaqdan keçir və bir dəfə yaxşılaşdır.",
+        "en": "Write a mini design document for a new game: the core loop (what you do again and again), controls, win and lose conditions, a difficulty ramp and one surprise. Ask the AI to find problems in the plan, fix the plan, then have it built. Playtest and improve it once."
+      },
+      "ai_guide": {
+        "az": "Plan əsas dövrə, idarəetmə, qələbə və uduzma, çətinlik artımı və sürprizi ehtiva etməyincə kod yazma. Planı dizayn rəhbəri kimi nəzərdən keçir: bir mümkün problemi göstər (çox asan, ədalətsiz, bir dəqiqədən sonra darıxdırıcı) və planı şagird düzəltsin. Sonra qur. Qurulandan sonra soruş ki, dostu ilə nəyi sınaqdan keçirərdi.",
+        "en": "Do not write code until the plan contains a core loop, controls, win and lose, a difficulty ramp and a surprise. Review the plan like a design lead: name one possible problem (too easy, unfair, boring after a minute) and let the student fix the plan. Then build it. After the build ask what they would test with a friend."
+      },
+      "criteria": {
+        "az": "Şagird beş hissəli plan yazdı, rəydən sonra onu yenilədi, oyun həmin plandan quruldu və şagird oynadıqdan sonra oyunu ən azı bir dəfə yaxşılaşdırdı.",
+        "en": "The student wrote a plan with all five parts, revised it after feedback, the game was built from it, and the student improved the game at least once after playing."
+      }
+    },
+    {
+      "emoji": "🐞", "output": "game",
+      "title": { "az": "Peşəkar kimi xəta tap", "en": "Debug Like a Pro" },
+      "intro": {
+        "az": "Xəta hesabatı böyük bacarıqdır. Yaxşı hesabat bir cəhddə düzəldilir.",
+        "en": "Bug reports are a superpower. A good one gets fixed in one try."
+      },
+      "task": {
+        "az": "Süni intellektdən içində İKİ gizli xətası olan kiçik oyun istə. Oyna və onları tap. Hər xəta üçün dəqiq hesabat yaz: nə etdin, nə baş verdi, nə gözləyirdin. Hər düzəlişin həqiqətən işlədiyini yoxla.",
+        "en": "Ask the AI for a small game with TWO bugs hidden in it. Play it and find them. For each bug write a precise report: what you did, what happened, what you expected. Check that each fix really works."
+      },
+      "ai_guide": {
+        "az": "İstənildikdə, dəqiq iki aydın və zərərsiz xətası olan kiçik oyun qur və onları açıqlama. Xətanı yalnız şagird nə etdiyini, nə baş verdiyini və nə gözlədiyini yazanda düzəlt, əks halda çatışan hissəni soruş. Düzəlişdən sonra şagirddən onun işlədiyini necə yoxlayacağını soruş.",
+        "en": "When asked, make a small game with exactly two clear, harmless bugs and do not reveal them. Fix a bug only when the student gives a report with what they did, what happened and what they expected; otherwise ask for the missing part. After the fix, ask the student how they will check that it works."
+      },
+      "criteria": {
+        "az": "Şagird iki xətanı tapdı, hərəkəti, faktiki nəticəni və gözlənilən nəticəni əhatə edən hesabatlar yazdı və düzəlişləri yoxladı.",
+        "en": "The student found two bugs, wrote reports containing the action, the actual result and the expected result, and verified the fixes."
+      }
+    },
+    {
+      "emoji": "⚡", "output": "game",
+      "title": { "az": "İmza oyunu", "en": "Signature Game" },
+      "intro": {
+        "az": "İndi hər şeyi birləşdir: qəhrəmanını, dünyanı, qaydalarını.",
+        "en": "Now bring everything together: your hero, your world, your rules."
+      },
+      "task": {
+        "az": "Öz qəhrəmanından, canlısından və ya dünyandan istifadə edən, onun qüvvəsini əsas mexanika edən imza oyunu qur. Sonra özünün seçdiyi üç təkmilləşdirmə ilə cilala, məsələn, xal qazananda daha yaxşı əks-əlaqə, təlimatlı giriş ekranı, səviyyələr və ya oyun zamanı rekord.",
+        "en": "Build a signature game that uses your own hero, creature or world and makes their power the main mechanic. Then polish it with three upgrades chosen by you, such as better feedback when you score, a title screen with instructions, levels, or a high score during play."
+      },
+      "ai_guide": {
+        "az": "Şagirddən qəhrəmanı və ya dünyanı (uydurma adlar) və qüvvəni xatırlatmasını istə. Yoxdursa, bir neçə sürətli sualla icad etməyə kömək et. Qüvvəni əsas mexanikaya çevir. Hər təkmilləşdirmə üçün oyunçunun nə hiss etməli olduğunu soruş, sonra qur. Bütün oyunu tək, müstəqil HTML faylında saxla.",
+        "en": "Ask the student to remind you of the hero or world (made-up names) and the power; if they have none, help invent them with a few quick questions. Turn the power into the core mechanic. For each upgrade, ask what the player should feel, then build it. Keep the whole game in one self-contained HTML file."
+      },
+      "criteria": {
+        "az": "Şagirdin icad etdiyi personaj və ya dünya ətrafında işləyən oyun var, personajın qüvvəsi əsas mexanikadır və şagird ən azı üç cilalama təkmilləşdirməsi istədi.",
+        "en": "A working game is built around a character or world invented by the student, the character's power is the main mechanic, and the student requested at least three polish upgrades."
+      }
+    },
+    {
+      "emoji": "🏆", "output": "creation",
+      "title": { "az": "Təqdimat günü", "en": "Demo Day" },
+      "intro": {
+        "az": "Təqdimat günüdür. İşi tamamla, göstər və arxasındakı düşüncəni izah et.",
+        "en": "Demo Day. Ship it, show it, explain the thinking behind it."
+      },
+      "task": {
+        "az": "Ən yaxşı layihən üçün təqdimat kartı hazırla: adı, bir cümləlik təqdimat, sənə ən çox kömək edən üç prompt strategiyası, səndən nəsə öyrədən bir səhv və növbəti nə düzəldəcəyin. Sonra onu sinfə bir dəqiqədə təqdim et.",
+        "en": "Make a pitch card for your best project: its name, a one-line pitch, the three prompting strategies that helped you most, one mistake that taught you something, and what you would build next. Then present it to the class in one minute."
+      },
+      "ai_guide": {
+        "az": "Şagirdə ən yaxşı layihəsini seçməyə və təqdimat kartını bu başlıqlarla hazırlamağa kömək et: Layihə, Bir cümləlik təqdimat, Ən yaxşı 3 prompt strategiyam, Məni öyrədən səhv, Növbəti layihə. Konkretlik tələb et: bu strategiya nə vaxt işlədildi və nə dəyişdi? Cümlələri yığcamlaşdır, amma şagirdin öz səsini saxla. Sonda bir dəqiqəlik təqdimat üçün qısa məsləhət ver.",
+        "en": "Help the student pick their best project and shape a pitch card with: Project, One-line pitch, My 3 best prompting strategies, A mistake that taught me, Next build. Press for specifics: when was that strategy used and what changed? Tighten wording, but keep the student's own voice. Finish with one short tip for a one-minute presentation."
+      },
+      "criteria": {
+        "az": "Kartda layihənin adı, bir cümləlik təqdimat, nümunələrlə üç konkret prompt strategiyası, səhvdən öyrənilən dərs və növbəti addım var.",
+        "en": "The card names the project and has a one-line pitch, three specific prompting strategies with examples, a lesson from a mistake and a next step."
+      }
+    }
+  ]
+}

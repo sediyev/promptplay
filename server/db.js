@@ -24,6 +24,8 @@ CREATE TABLE IF NOT EXISTS levels (id INTEGER PRIMARY KEY, course_id INTEGER, po
 CREATE INDEX IF NOT EXISTS level_course ON levels(course_id, position);
 CREATE TABLE IF NOT EXISTS progress (student_id INTEGER, level_id INTEGER, status TEXT, stars INTEGER DEFAULT 0, feedback TEXT, output_id INTEGER, created INTEGER,
   PRIMARY KEY(student_id, level_id));
+CREATE TABLE IF NOT EXISTS library_courses (slug TEXT PRIMARY KEY, data TEXT NOT NULL, created INTEGER);
+CREATE TABLE IF NOT EXISTS library_hidden (slug TEXT PRIMARY KEY);
 `);
 
 // ---------- migrations (columns added after the pilot) ----------
@@ -39,6 +41,11 @@ addCol('students', 'avatar', "TEXT DEFAULT '🙂'");
 addCol('messages', 'level_id', 'INTEGER');
 addCol('games', 'level_id', 'INTEGER');
 addCol('games', 'kind', "TEXT DEFAULT 'game'"); // 'game' (html) or 'creation' (text card); content lives in games.html
+// A teacher's course made from the course library remembers where it came from (for "pristine copy" reuse and the "next adventure" hint).
+addCol('courses', 'library_slug', 'TEXT');
+addCol('courses', 'library_lang', 'TEXT');
+addCol('courses', 'library_hash', 'TEXT'); // hash of the library content the copy was made from
+addCol('courses', 'edited', 'INTEGER DEFAULT 0'); // 1 once the teacher changed the copy
 db.exec('CREATE UNIQUE INDEX IF NOT EXISTS class_invite ON classes(invite)');
 
 export const now = () => Date.now();

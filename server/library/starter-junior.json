@@ -1,0 +1,239 @@
+{
+  "id": "starter-junior",
+  "emoji": "🚀",
+  "title": { "az": "Süni intellekt macərası: kiçik kəşfçilər", "en": "AI Adventure: Junior Explorers" },
+  "promise": {
+    "az": "Övladınız qəhrəmanlar, canlılar və dünyalar icad edərək süni intellektə nə istədiyini aydın deməyi öyrənir, sonra isə özü oynaya biləcəyi oyunlar düzəldir.",
+    "en": "Your child learns to ask AI clearly while inventing heroes, creatures and worlds, then builds games they can play and share."
+  },
+  "description": {
+    "az": "Başlanğıc kursun 8-11 yaş üçün uyğunlaşdırılmış variantı. Sadə sözlər, qısa tapşırıqlar və üç sehrli söz (KİM? NƏ? NECƏ?) üzərində qurulub. Hər dərsdə təxminən iki səviyyə keçmək olar. Oxumaqda çətinlik çəkən uşaqlara tapşırığı ucadan oxuyun.",
+    "en": "The starter course adapted for ages 8 to 11. It uses simple words, short tasks and three magic words (WHO? WHAT? HOW?) as the core idea. Plan about two levels per session. Read a task aloud for children who find reading hard."
+  },
+  "age": { "min": 8, "max": 11 },
+  "themes": ["starter", "games"],
+  "programmes": ["term-1"],
+  "sessions": 6,
+  "minutes": [45, 60],
+  "next": ["storytelling-studio", "science-explainers"],
+  "goals": {
+    "az": [
+      "Süni intellektə nə istədiyini aydın demək: kim, nə və necə.",
+      "İlk cəhddən sonra imtina etmək əvəzinə istəyi addım-addım yaxşılaşdırmaq.",
+      "Təsvir edən sözlərdən istifadə edərək özünün qəhrəmanını, canlısını və dünyasını icad etmək.",
+      "Sadə oyun planı qurmaq (məqsəd, qələbə, uduzma, idarəetmə) və onu öz sözləri ilə istəmək.",
+      "Süni intellektin cavabı səhv və ya istədiyin kimi olmayanda nəyi düzəltmək lazım olduğunu izah etmək.",
+      "Düzəltdiyi işi başqalarına özünəinamla göstərmək."
+    ],
+    "en": [
+      "Say clearly what they want from an AI: who, what and how.",
+      "Improve a request step by step instead of giving up after the first try.",
+      "Invent their own hero, creature and world using describing words.",
+      "Plan a simple game (goal, winning, losing, controls) and ask for it in their own words.",
+      "Explain what to fix when the AI's answer is wrong or not what they meant.",
+      "Show their work to others with confidence."
+    ]
+  },
+  "levels": [
+    {
+      "emoji": "👋", "output": "chat",
+      "title": { "az": "Salam, süni intellekt!", "en": "Hello, AI!" },
+      "intro": {
+        "az": "Xoş gəldin, kəşfçi! Süni intellekt köməkçin xəritənin başlanğıcında səni gözləyir. Gəl görək o nələr bacarır.",
+        "en": "Welcome, explorer! Your AI helper is waiting at the start of the map. Let's find out what it can do."
+      },
+      "task": {
+        "az": "Köməkçiyə salam ver. Sonra ondan özü haqqında üç sual soruş. Məsələn, nələr edə bildiyini və nələri bacarmadığını soruş. Axırda ondan bəzən nəyi səhv etdiyini deməsini istə.",
+        "en": "Say hello to the AI. Then ask it three questions about itself, for example what it can do and what it cannot do. At the end, ask it to tell you one thing it sometimes gets wrong."
+      },
+      "ai_guide": {
+        "az": "Çox qısa, mehriban cümlələrlə və sadə sözlərlə danış. Dürüst cavab ver: sən süni intellekt köməkçisisən, səhv edə bilərsən və aydın suallara daha yaxşı cavab verirsən. Uşaqdan adını soruşma. Söhbət davam etsin deyə hər cavabdan sonra uşağa bir kiçik sual ver. Yaxşı sualın aydın olduğunu bir cümlə ilə qeyd et.",
+        "en": "Use very short, friendly sentences and simple words. Answer honestly: you are an AI helper, you can make mistakes, and clear questions get better answers. Do not ask for the child's name. After each answer, ask the child one small question to keep the chat going. Say in one sentence that a good question is a clear question."
+      },
+      "criteria": {
+        "az": "Uşaq salam verdi və süni intellekt haqqında ən azı üç fərqli sual verdi. Bunlardan biri onun bacarmadıqları və ya səhvləri haqqında idi.",
+        "en": "The child said hello and asked at least three different questions about the AI, including one about what it cannot do or its mistakes."
+      }
+    },
+    {
+      "emoji": "🎯", "output": "chat",
+      "title": { "az": "Üç sehrli söz", "en": "Three Magic Words" },
+      "intro": {
+        "az": "Yolu dumanlı bir körpü kəsib! Ondan yalnız aydın istək keçə bilər. Üç sehrli sözü yadda saxla: KİM? NƏ? NECƏ?",
+        "en": "A foggy bridge blocks the path! Only a clear request can cross it. Remember the three magic words: WHO? WHAT? HOW?"
+      },
+      "task": {
+        "az": "Süni intellektdən heyvan haqqında qısa hekayə istə. Sonra istəyini iki dəfə yaxşılaşdır. Əvvəlcə hekayənin KİM haqqında olduğunu yaz. Sonra NƏ baş verdiyini və hekayənin NECƏ olmasını (gülməli, həyəcanlı, isti-doğma) əlavə et. Hekayənin necə dəyişdiyinə bax!",
+        "en": "Ask the AI for a short story about an animal. Then make your request better two times. First add WHO the story is about. Then add WHAT happens and HOW it should feel (funny, exciting, cosy). Watch how the story changes!"
+      },
+      "ai_guide": {
+        "az": "Hər istəkdən sonra çox qısa hekayə yaz (3 və ya 4 cümlə). Sonra bir məsləhət ver: üç sehrli sözdən hansı hələ çatışmır (kim, nə, necə). İstək aydınlaşdıqca hekayənin necə yaxşılaşdığını göstər. Uşağın istedadını yox, istəyin yaxşılaşmasını tərifləyin.",
+        "en": "After each request, write a very short story (3 or 4 sentences). Then give one tip: which magic word (who, what or how) is still missing. Show how the story got better when the request got clearer. Praise the improvement in the request, not the child's talent."
+      },
+      "criteria": {
+        "az": "Uşaq istəyin ən azı üç variantını yazdı və sonrakı variantlarda kim, nə və ya necə aydın şəkildə əlavə olunub.",
+        "en": "The child wrote at least three versions of the request, and the later ones clearly add who, what or how."
+      }
+    },
+    {
+      "emoji": "🦸", "output": "creation",
+      "title": { "az": "Super qəhrəman icad et", "en": "Invent a Superhero" },
+      "intro": {
+        "az": "Promptopolis şəhərinin yepyeni bir qəhrəmana ehtiyacı var. Heç kim sənin qəhrəmanın kimisini görməyib!",
+        "en": "The city of Promptopolis needs a brand new hero. Nobody has ever seen one like yours!"
+      },
+      "task": {
+        "az": "Süni intellektlə birlikdə bir super qəhrəman icad et. Uydurma ad, super qüvvə, gülməli zəif cəhət, geyimin rəngləri və köməkçi dost seç. Seçimləri sən edirsən, süni intellekt kömək edir. Sonra qəhrəmanını daha da yaxşı etmək üçün ondan bir şeyi dəyişməsini istə.",
+        "en": "Invent a superhero with the AI. Choose a made-up name, a power, a funny weakness, the colours of the costume and a sidekick. You make the choices, the AI helps. Then ask the AI to change one thing to make your hero even better."
+      },
+      "ai_guide": {
+        "az": "Eyni anda bir sual ver. Uşaq çətinlik çəkəndə iki-üç əyləncəli ideya təklif et, qərarı uşaq versin. Film və oyunlardakı qəhrəmanları yox, orijinal ideyaları təşviq et. Yalnız uydurma ad işlət, heç vaxt real insanın adını yox. Kartı yeniləməyə davam et: Ad, Qüvvə, Zəif cəhət, Geyim, Köməkçi dost.",
+        "en": "Ask one question at a time and offer two or three fun ideas when the child is stuck. Let the child decide. Encourage original ideas, not heroes from films or games. Use made-up names only, never a real person's name. Keep the creation card updated with Name, Power, Weakness, Costume, Sidekick."
+      },
+      "criteria": {
+        "az": "Kartda ad, super qüvvə, zəif cəhət, geyim və köməkçi dost var. Uşaq seçimlərin çoxunu özü etdi və ən azı bir dəyişiklik istədi.",
+        "en": "The card has a name, a power, a weakness, a costume and a sidekick. The child made most of the choices and asked for at least one change."
+      }
+    },
+    {
+      "emoji": "🐉", "output": "creation",
+      "title": { "az": "Qəribə canlı", "en": "Design a Creature" },
+      "intro": {
+        "az": "Prompt Meşəsinin dərinliyində heç bir alimin hələ tapmadığı bir canlı yaşayır. Onu təsvir edə bilərsənmi?",
+        "en": "Deep in the Prompt Forest lives a creature that no scientist has found yet. Can you describe it?"
+      },
+      "task": {
+        "az": "Mövcud olmayan bir canlını təsvir et: harada yaşayır, nə yeyir, necə hərəkət edir, təəccüblü bacarığı nədir və maraqlı faktı nədir. Rəng, ölçü və səs bildirən sözlərdən istifadə et. Sonra süni intellektdən təsvirini daha rəngarəng etməsini istə.",
+        "en": "Describe a creature that does not exist: where it lives, what it eats, how it moves, a surprising ability and a fun fact. Use describing words like colours, sizes and sounds. Then ask the AI to make your description even more colourful."
+      },
+      "ai_guide": {
+        "az": "Uşağa təsvir edən sözlər tapmaqda kömək et: necə görünür, necə səslənir, toxunanda necədir? Uşaq çətinlik çəkəndə iki seçim təklif et. Kartı yeniləməyə davam et: Evi, Yeməyi, Hərəkəti, Xüsusi bacarığı, Maraqlı fakt. Gözəl təsvir sözlərini tərifləyin.",
+        "en": "Help the child find describing words: ask what it looks like, sounds like and feels like. Offer two choices when the child is stuck. Keep the creation card updated with Home, Food, Moves, Special ability, Fun fact. Praise good describing words."
+      },
+      "criteria": {
+        "az": "Canlı kartında yaşayış yeri, yemək, hərəkət, bacarıq və maraqlı fakt var, təsvir sözlərini uşaq özü seçib.",
+        "en": "The creature card has a home, food, movement, an ability and a fun fact, with describing words chosen by the child."
+      }
+    },
+    {
+      "emoji": "🗺️", "output": "creation",
+      "title": { "az": "Öz dünyanı qur", "en": "Build a World" },
+      "intro": {
+        "az": "Hər qəhrəmanın və hər canlının bir evi olmalıdır. Bu gün dünya quran ustasan!",
+        "en": "Every hero and every creature needs a home. Today you become a world builder!"
+      },
+      "task": {
+        "az": "Qəhrəmanın və ya canlın üçün bir dünya qur: adı, havası, getmək üçün üç yer, orada kimlərin yaşadığı və bizim dünyadan fərqli bir gülməli qayda (məsələn, orada limonad yağışı yağır). Sonra süni intellektdən bir sürpriz əlavə etməsini istə.",
+        "en": "Build a world for your hero or creature: a name, the weather, three places to visit, who lives there and one silly rule that is different from our world (for example, it rains lemonade). Then ask the AI to add one surprise."
+      },
+      "ai_guide": {
+        "az": "Uşaq xatırlayırsa, dünyanı onun əvvəlki qəhrəmanı və ya canlısı ilə əlaqələndir. Eyni anda bir şey soruş. Kartı yeniləməyə davam et: Dünyanın adı, Hava, Yerlər, Kimlər yaşayır, Xüsusi qayda, Sürpriz.",
+        "en": "Connect the world to the child's earlier hero or creature if they remember it. Ask about one thing at a time. Keep the creation card updated with World name, Weather, Places, Who lives there, Special rule, Surprise."
+      },
+      "criteria": {
+        "az": "Dünya kartında ad, hava, üç yer, sakinlər və xüsusi qayda var, uşaq isə bir dəyişiklik və ya sürpriz istədi.",
+        "en": "The world card has a name, weather, three places, inhabitants and a special rule, and the child asked for one change or surprise."
+      }
+    },
+    {
+      "emoji": "🕹️", "output": "game",
+      "title": { "az": "İlk oyunun", "en": "Your First Game" },
+      "intro": {
+        "az": "Oyun emalatxanası qapılarını açır. Bu gün həqiqətən oynaya biləcəyin bir şey düzəldəcəksən!",
+        "en": "The Game Workshop opens its doors. Today you make something you can really play!"
+      },
+      "task": {
+        "az": "Süni intellektdən sadə bir klik oyunu istə: klik edilən bir şey, xal və məqsəd olsun. Oyna. Sonra iki dəyişiklik istə, məsələn yeni rəng, yeni emoji və ya daha sürətli oyun.",
+        "en": "Ask the AI for a simple clicker game: something to click, a score and a goal. Play it. Then ask for two changes, for example a new colour, a new emoji or a faster speed."
+      },
+      "ai_guide": {
+        "az": "Çox sadə başla: klik edilən bir şey, xal və aydın məqsəd. Uşaq dəyişiklik istəyəndə nəyi dəyişdiyini bir qısa cümlə ilə de. Uşaq nəyi dəyişəcəyini bilmirsə, iki seçim təklif et (rəng, emoji, sürət, məqsəd). Oyunu təxminən 100 sətirdən qısa saxla.",
+        "en": "Start very simple: one thing to click, a score and a clear goal. When the child asks for a change, say in one short sentence what you changed. If the child does not know what to change, offer two choices (colour, emoji, speed, goal). Keep the game under about 100 lines."
+      },
+      "criteria": {
+        "az": "İşləyən klik oyunu var və uşaq ən azı iki dəyişikliyi özü istəyib.",
+        "en": "A working clicker game exists and the child asked for at least two changes of their own."
+      }
+    },
+    {
+      "emoji": "🎨", "output": "game",
+      "title": { "az": "Oyun planı", "en": "Game Plan" },
+      "intro": {
+        "az": "Əsl oyun düzəldənlər əvvəlcə plan qurur. Bu gün plan sənin işindir.",
+        "en": "Real game makers plan first. Today you are the boss of the plan."
+      },
+      "task": {
+        "az": "Kod istəməzdən əvvəl süni intellektə planını de: kim oynayır, məqsəd nədir, necə qalib gəlinir, necə uduzulur və nəyə basılır və ya nəyi klikləmək lazımdır. Sonra oyunu birlikdə qurun və iki dəfə yaxşılaşdırın.",
+        "en": "Before asking for code, tell the AI your plan: who plays, what the goal is, how you win, how you lose and what you press or click. Then build the game together and improve it two times."
+      },
+      "ai_guide": {
+        "az": "Uşaq plansız kod istəsə, çatışmayan hissələri (oyunçu, məqsəd, qələbə, uduzma, idarəetmə) sadə nümunələrlə bir-bir soruş. Sonra uşağın planladığı oyunu dəqiq qur. Dəyişiklik istəyəndə nəyi dəyişdiyini bir cümlə ilə izah et.",
+        "en": "If the child asks for code without a plan, ask for the missing plan parts one by one (player, goal, win, lose, controls) with simple examples. Then build exactly what the child planned. When they ask for changes, explain in one sentence what you changed."
+      },
+      "criteria": {
+        "az": "Uşaq oyun qurulmazdan əvvəl məqsəd, qalib gəlmə yolu, uduzma yolu və idarəetməni əhatə edən plan yazdı və ən azı iki yaxşılaşdırma istədi.",
+        "en": "The child described a plan with a goal, a way to win, a way to lose and the controls before the game was built, and asked for at least two improvements."
+      }
+    },
+    {
+      "emoji": "🐞", "output": "game",
+      "title": { "az": "Xəta ovçusu", "en": "Bug Hunter" },
+      "intro": {
+        "az": "Vay! Emalatxanada kiçik bir xəta gizlənib. Onu tuta bilərsənmi?",
+        "en": "Uh oh! A little bug is hiding in the workshop. Can you catch it?"
+      },
+      "task": {
+        "az": "Süni intellektdən içində qəsdən gizlədilmiş BİR xətası olan kiçik oyun istə. Oyna və xətanı tap. Sonra nəyin səhv getdiyini və əslində nə olmalı olduğunu dəqiq yaz ki, o xətanı düzəltsin.",
+        "en": "Ask the AI for a small game with ONE bug hidden on purpose. Play it and find the bug. Then tell the AI exactly what went wrong and what should happen instead, so it can fix it."
+      },
+      "ai_guide": {
+        "az": "İstənildikdə, içində bir aydın və zərərsiz xətası olan kiçik oyun qur (məsələn, xal artmaq əvəzinə azalır). Xətanın harada olduğunu uşağa demə. Uşaq təsvir edəndə aydın xəta hesabatlarını tərifləyin və düzəlt. Hesabat qeyri-aydındırsa soruş: 'Nəyi kliklədin? Nə baş verdi? Nə olmasını gözləyirdin?'",
+        "en": "When asked, make a small game with one obvious, harmless bug (for example the score goes down instead of up). Do not tell the child where the bug is. When the child describes it, praise clear bug reports and fix it. If the report is unclear, ask: 'What did you click? What happened? What did you expect?'"
+      },
+      "criteria": {
+        "az": "Uşaq xətanı tapdı, nə baş verdiyini və əvəzinə nə olmalı olduğunu yazdı və düzəldilmiş oyun hazırlandı.",
+        "en": "The child found the bug, said what happened and what should happen instead, and a fixed game was made."
+      }
+    },
+    {
+      "emoji": "⚡", "output": "game",
+      "title": { "az": "Qəhrəmanın oyunu", "en": "Hero Game" },
+      "intro": {
+        "az": "Promptopolisdən olan qəhrəmanın bir oyunun ulduzu olmaq istəyir!",
+        "en": "Your hero from Promptopolis wants to be the star of a game!"
+      },
+      "task": {
+        "az": "İcad etdiyin qəhrəmanın və ya canlının baş rolda olduğu oyun düzəlt. Onun super qüvvəsini oyunun əsas ideyası et. Oyna, sonra oyunu daha əyləncəli etmək üçün bir dəyişiklik istə.",
+        "en": "Make a game starring a hero or creature that you invented. Use their power as the main idea of the game. Play it, then ask for one change to make the game more fun."
+      },
+      "ai_guide": {
+        "az": "Uşaqdan qəhrəmanını və ya canlısını xatırlatmasını istə: uydurma adı və super qüvvəsi. Yadında deyilsə, iki sürətli sualla yenisini icad etməyə kömək et. Qüvvəni sadə oyunun əsas hərəkətinə çevir. Oyunu qısa və əyləncəli saxla.",
+        "en": "Ask the child to remind you of their hero or creature: the made-up name and the power. If they do not have one, help them invent one with two quick questions. Turn the power into the main action of a simple game. Keep it short and fun."
+      },
+      "criteria": {
+        "az": "İşləyən oyunda uşağın icad etdiyi personaj baş roldadır və onun qüvvəsi oyunun necə oynanmasının bir hissəsidir.",
+        "en": "A working game stars a character invented by the child, and the character's power is part of how the game is played."
+      }
+    },
+    {
+      "emoji": "🏆", "output": "creation",
+      "title": { "az": "Nümayiş vaxtı", "en": "Show Time" },
+      "intro": {
+        "az": "Final mərhələ! Hər yaxşı ustanın düzəltdiyi işi göstərir və öyrəndiklərini paylaşır.",
+        "en": "The final stage! Every great maker shows their work and shares what they learned."
+      },
+      "task": {
+        "az": "Bu kursda düzəltdiyin ən sevdiyin iş haqqında 'Nümayiş kartı' hazırla. Onun nə olduğunu, niyə sevdiyini və süni intellektlə danışmaq üçün ən yaxşı üç məsləhətini yaz. Sonra kartı sinfə göstər və öz sözlərinlə danış.",
+        "en": "Make a Show Time card about your favourite thing you made in this course. Write what it is, why you like it and your three best tips for talking to AI. Then show your card to the class and tell them about it in your own words."
+      },
+      "ai_guide": {
+        "az": "Uşağa ən sevdiyi işi seçməyə kömək et və kartı bu başlıqlarla hazırla: Adı, Nə düzəltdim, Niyə sevirəm, Süni intellektlə danışmaq üçün 3 ən yaxşı məsləhətim. Hər məsləhət üçün 'Bu məsləhət niyə işləyir?' soruş ki, uşaq öz sözləri ilə izah etsin. Uşağı alqışla. Sonda əyləncəli növbəti çağırış təklif et.",
+        "en": "Help the child choose their favourite work and put it on a card with: Name, What I made, Why I like it, My 3 best tips for talking to AI. Ask 'Why does this tip work?' for each tip, so the child explains in their own words. Cheer the child on. Suggest one fun next challenge at the end."
+      },
+      "criteria": {
+        "az": "Kartda uşağın düzəltdiyi bir iş adlandırılıb, niyə sevdiyi yazılıb və öz sözləri ilə üç prompt məsləhəti sadalanıb.",
+        "en": "The card names something the child made, says why they like it and lists three prompting tips in the child's own words."
+      }
+    }
+  ]
+}
