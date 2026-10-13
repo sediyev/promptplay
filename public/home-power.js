@@ -1,16 +1,19 @@
 // Prompt Power-Up: the core skill in ten seconds. Everything is scripted, no AI calls.
-// "Watch" mode: three prompts (plain, better, super) type themselves and the result card streams in with a star meter.
-// "Your turn" mode: pick a power, a weakness and a sidekick; the prompt and the card assemble live.
+// "Watch" mode: three prompts (plain, better, super) type themselves and the game card upgrades with each one:
+// a grey square becomes a star catching game, then a space game with golden stars, a timer and rising speed.
+// "Your turn" mode: pick a world, something to catch and a twist; the prompt and the running game assemble live.
 // The first time the section is seen it plays as a short trailer, until the visitor touches anything.
 import { t } from '/common.js';
 import { $, $$, reduced, sleep, say, typeTo, burst, tilt } from '/home-fx.js';
+import { mini } from '/home-mini.js';
 
 const STEPS = [
-  { p: 'pu_p1', n: 'c1n', pic: '🦸', rows: [['p', 'c1p']] },
-  { p: 'pu_p2', n: 'c2n', pic: '🌦️', rows: [['p', 'c2p'], ['c', 'c2c']] },
-  { p: 'pu_p3', n: 'c3n', pic: '⛈️', rows: [['p', 'c3p'], ['w', 'c3w'], ['c', 'c3c'], ['s', 'c3s']] },
+  { p: 'pu_p1', n: 'g1n', pic: '🎮', rows: [['g', 'g1g']], game: { theme: 'plain', square: true } },
+  { p: 'pu_p2', n: 'g2n', pic: '⭐', rows: [['g', 'g2g'], ['w', 'g2w']], game: { theme: 'sky' } },
+  { p: 'pu_p3', n: 'g3n', pic: '🚀', rows: [['g', 'g3g'], ['w', 'g3w'], ['t', 'g3t']], game: { theme: 'space', gold: true, ramp: true, timer: true } },
 ];
-const MINE_PICS = ['🌈', '🦘', '🌱'];
+const WORLDS = ['space', 'ocean', 'jungle'], WORLD_PICS = ['🌌', '🌊', '🌴'], ITEMS = ['⭐', '🍎', '💎'];
+const TWISTS = [{ ramp: true }, { gold: true }, { bombs: true }];
 
 export function initPower() {
   const box = $('.pu-box'); if (!box) return;
@@ -23,11 +26,13 @@ export function initPower() {
   meter.removeAttribute('data-aria');
   box.classList.add('live');
   tilt(card);
+  const game = mini($('#puMini'), STEPS[2].game);
 
   let mode = 'watch', step = 3, token = 0, auto = !reduced(), wasComplete = false;
   const dd = (k) => $('dd', rows[k]);
+  const LABEL = { g: 'lb_gg', w: 'lb_gw', c: 'lb_gc', t: 'lb_gt' };
 
-  const labels = () => { for (const k of ['p', 'w', 'c', 's']) $('dt', rows[k]).textContent = t('lb_' + k); };
+  const labels = () => { for (const k in LABEL) $('dt', rows[k]).textContent = t(LABEL[k]); };
   function setStars(n, animate, stop) {
     const items = [...meter.children];
     items.forEach((s) => (s.className = 'o'));
@@ -58,7 +63,7 @@ export function initPower() {
     if (fresh) { text.textContent = ''; emptyCard(1); }
     const target = t(S.p), nameText = t(S.n);
     if (instant) text.textContent = target; else { await typeTo(text, target, { ms: Math.min(40, 1100 / target.length), stop }); if (stop()) return; text.classList.remove('caret'); await sleep(250); if (stop()) return; }
-    emptyCard(n); pic.textContent = S.pic;
+    emptyCard(n); pic.textContent = S.pic; game.set(S.game, { fresh: !instant });
     const used = Object.fromEntries(S.rows);
     for (const k in rows) rows[k].hidden = !used[k];
     if (instant) {
@@ -79,17 +84,17 @@ export function initPower() {
 
   // ----- your turn -----
   const val = (g) => +($(`input[name=y${g}]:checked`, minePanel)?.value || 0);
-  const list = (a) => (a.length > 1 ? a.slice(0, -1).join(', ') + ' ' + t('yt_and') + ' ' + a[a.length - 1] : a[0]);
   async function renderMine({ instant = false, quiet = false } = {}) {
     const my = ++token, stop = () => my !== token;
-    const pick = { p: val('p'), w: val('w'), s: val('s') }, n = Object.values(pick).filter(Boolean).length;
-    const frags = ['p', 'w', 's'].filter((g) => pick[g]).map((g) => t(`y${g}${pick[g]}f`));
-    const prompt = frags.length ? t('yt_base').replace('{}', list(frags)) : t('pu_p1');
+    const pick = { w: val('w'), c: val('c'), x: val('x') }, n = Object.values(pick).filter(Boolean).length;
+    let i = 0; const parts = ['w', 'c', 'x'].map((g) => (pick[g] ? t(`y${g}${pick[g]}f`) : '…'));
+    const prompt = n ? t('yt_base').replace(/\{\}/g, () => parts[i++]) : t('pu_p1');
     card.dataset.lv = Math.max(1, n); labels();
-    name.textContent = pick.p ? t(`yp${pick.p}n`) : t('yt_n0');
-    pic.textContent = pick.p ? MINE_PICS[pick.p - 1] : '🦸';
-    for (const k in rows) { const on = k !== 'c'; rows[k].hidden = !on; rows[k].classList.toggle('show', on); }
-    for (const g of ['p', 'w', 's']) { const e = dd(g); e.textContent = pick[g] ? t(`y${g}${pick[g]}l`) : '?'; e.classList.toggle('empty', !pick[g]); }
+    name.textContent = pick.c ? t(`yc${pick.c}n`) : pick.w ? t(`yw${pick.w}n`) : t('yt_n0');
+    pic.textContent = pick.w ? WORLD_PICS[pick.w - 1] : pick.c ? ITEMS[pick.c - 1] : '🎮';
+    for (const k in rows) { const on = k !== 'g'; rows[k].hidden = !on; rows[k].classList.toggle('show', on); }
+    for (const [g, k] of [['w', 'w'], ['c', 'c'], ['x', 't']]) { const e = dd(k); e.textContent = pick[g] ? t(`y${g}${pick[g]}l`) : '?'; e.classList.toggle('empty', !pick[g]); }
+    game.set(n ? { theme: pick.w ? WORLDS[pick.w - 1] : 'sky', item: ITEMS[(pick.c || 1) - 1], ...(pick.x ? TWISTS[pick.x - 1] : {}) } : STEPS[0].game, { fresh: true });
     const complete = n === 3;
     const stars = setStars(n, !instant, stop);
     if (instant) text.textContent = prompt; else await typeTo(text, prompt, { ms: 16, stop });
@@ -123,10 +128,10 @@ export function initPower() {
     for (const n of [1, 2, 3]) {
       if (!auto) return;
       await runStep(n, { fresh: n === 1 }); if (!auto) return;
-      if (n < 3) await sleep(1700);
+      if (n < 3) await sleep(2400);
     }
   }
   if (reduced()) { runStep(3, { instant: true, quiet: true }); return; }
-  step = 1; syncControls(); text.textContent = ''; emptyCard(1); // ready for the trailer (the section is still off screen)
+  step = 1; syncControls(); text.textContent = ''; emptyCard(1); game.set(STEPS[0].game); // ready for the trailer (the section is still off screen)
   new IntersectionObserver((es, io) => { if (es.some((e) => e.isIntersecting)) { io.disconnect(); if (auto) trailer(); else runStep(step, { instant: true, quiet: true }); } }, { threshold: 0.4 }).observe(box);
 }

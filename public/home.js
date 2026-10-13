@@ -58,6 +58,37 @@ else new IntersectionObserver(([e], io) => { if (e.isIntersecting) { shield.clas
 
 $$('[data-tilt]').forEach((e) => tilt(e));
 
+// ---------- motion extras (skipped entirely with reduced motion: the page is complete without them) ----------
+if (!reduced() && 'IntersectionObserver' in window) {
+  // scroll reveal: blocks rise in as they enter, siblings one after another
+  const groups = ['.sec-h', '.pu-box', '.tile', '.layers > li', '.checks > li', '.how-steps > li', '.qa', '.ex-card', '.final-card'];
+  const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -12% 0px' });
+  for (const sel of groups) $$(sel).forEach((el) => { el.classList.add('rv'); el.style.setProperty('--i', [...el.parentElement.children].indexOf(el) % 6); io.observe(el); });
+  io.observe($('.how-steps')); // its connecting line draws in
+  root.classList.add('rv-on');
+
+  // example prompts drift by in two rows; the copy that closes the loop is hidden from screen readers
+  const mq = $('.mq');
+  $$('.mq-row', mq).forEach((row) => { const copy = row.cloneNode(true); copy.setAttribute('aria-hidden', 'true'); $$('[data-t]', copy).forEach((e) => e.removeAttribute('data-t')); row.after(copy); });
+  const pause = Object.assign(document.createElement('button'), { type: 'button', className: 'mq-pause' });
+  const icon = (d) => (pause.innerHTML = `<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path fill="currentColor" d="${d}"/></svg>`);
+  const PAUSE = 'M2.5 1.5h2.5v9H2.5zM7 1.5h2.5v9H7z', PLAY = 'M3 1.5l7.5 4.5L3 10.5z';
+  icon(PAUSE);
+  const label = () => pause.setAttribute('aria-label', t('mq_pause'));
+  pause.setAttribute('aria-pressed', 'false'); label();
+  pause.onclick = () => { const on = mq.classList.toggle('paused'); pause.setAttribute('aria-pressed', String(on)); icon(on ? PLAY : PAUSE); };
+  const head = $('.mq-h', mq), top = Object.assign(document.createElement('div'), { className: 'mq-top' });
+  head.before(top); top.append(head, pause);
+  mq.classList.add('js');
+  addEventListener('homelang', () => { label(); $$('.mq-row[aria-hidden]', mq).forEach((copy) => { copy.innerHTML = copy.previousElementSibling.innerHTML; }); });
+
+  // skill tiles: a soft light follows the pointer
+  if (matchMedia('(hover:hover) and (pointer:fine)').matches) $$('.tile').forEach((el) => el.addEventListener('pointermove', (e) => {
+    const r = el.getBoundingClientRect();
+    el.style.setProperty('--mx', e.clientX - r.left + 'px'); el.style.setProperty('--my', e.clientY - r.top + 'px');
+  }));
+}
+
 // ---------- interactive sections load when they get close ----------
 const lazy = (sel, load, margin = '700px') => {
   const el = $(sel); if (!el) return;
