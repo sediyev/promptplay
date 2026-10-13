@@ -2,17 +2,17 @@
    Only a few helper tokens are added here, mainly AA-safe text shades (see test/home.test.js notes in README).
    Motion rule: animations and transitions touch transform and opacity only. */
 :root {
-  --star:#f5a623; --star-line:#b86e00;
-  --link:#5040cc; --muted-h:#5b6277; --ok-ink:#0b6e40;
-  --tg1:#5646d6; --tg2:#2f68d8;                                   /* gradient text (AA on --bg and --card) */
+  --star:#ffc93c; --star-line:#b86e00;
+  --link:#4a30d6; --muted-h:#5f5a7d; --ok-ink:#0b6e40;
+  --tg1:#5a3de6; --tg2:#2f68d8;                                   /* gradient text (AA on --bg and --card) */
   --g1:color-mix(in srgb,var(--brand) 88%,#000); --g2:color-mix(in srgb,var(--brand2) 74%,#000); /* brand gradient behind white text */
   --edge:color-mix(in srgb,var(--g1) 70%,#000);
   --sheet:color-mix(in srgb,var(--brand-soft) 72%,var(--bg));
-  --glow:rgba(92,78,196,.32); --ease:cubic-bezier(.22,.9,.3,1); --bar:56px;
+  --glow:rgba(84,56,222,.32); --ease:cubic-bezier(.22,.9,.3,1); --bar:56px;
 }
 @media (prefers-color-scheme:dark) { :root {
-  --link:#b3a9ff; --muted-h:var(--muted); --star-line:var(--star); --ok-ink:#5fd49a; --tg1:#b3a9ff; --tg2:#8fbaff;
-  --sheet:color-mix(in srgb,var(--brand-soft) 60%,var(--bg)); --glow:rgba(108,92,231,.38);
+  --link:#c4baff; --muted-h:var(--muted); --star-line:var(--star); --ok-ink:#5fd49a; --tg1:#c4baff; --tg2:#9cc4ff;
+  --sheet:color-mix(in srgb,var(--brand-soft) 60%,var(--bg)); --glow:rgba(106,76,255,.4);
 } }
 
 /* ---------- base ---------- */
