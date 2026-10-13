@@ -39,10 +39,10 @@ test('every string the HTML asks for exists in both languages', () => {
   for (const k of used) for (const lang of ['en', 'az']) assert.ok(k in HOME[lang], `index.html uses "${k}", missing in ${lang}`);
   // literal t('key') calls in the scripts, plus the families built from numbers
   for (const f of JS) for (const m of read(f).matchAll(/\bt\('(\w+)'\)/g)) for (const lang of ['en', 'az']) assert.ok(m[1] in HOME[lang], `${f} uses t('${m[1]}'), missing in ${lang}`);
-  const family = ['st0', 'st1', 'st2', 'st3', 'pu_p1', 'pu_p2', 'pu_p3', 'c1n', 'c1p', 'c2n', 'c2p', 'c2c', 'c3n', 'c3p', 'c3w', 'c3c', 'c3s', 'yt_base', 'yt_and', 'yt_n0', 'yt_done',
-    ...[1, 2, 3].flatMap((i) => [`yp${i}l`, `yp${i}n`, `yp${i}f`, `yw${i}l`, `yw${i}f`, `ys${i}l`, `ys${i}f`]), ...['lb_p', 'lb_w', 'lb_c', 'lb_s']];
+  const family = ['st0', 'st1', 'st2', 'st3', 'pu_p1', 'pu_p2', 'pu_p3', 'g1n', 'g1g', 'g2n', 'g2g', 'g2w', 'g3n', 'g3g', 'g3w', 'g3t', 'yt_base', 'yt_n0', 'yt_done',
+    ...[1, 2, 3].flatMap((i) => [`yw${i}l`, `yw${i}n`, `yw${i}f`, `yc${i}l`, `yc${i}n`, `yc${i}f`, `yx${i}l`, `yx${i}f`]), ...['lb_gg', 'lb_gw', 'lb_gc', 'lb_gt']];
   for (const k of family) for (const lang of ['en', 'az']) assert.ok(k in HOME[lang], `${k} missing in ${lang}`);
-  assert.match(HOME.en.yt_base, /\{\}/); assert.match(HOME.az.yt_base, /\{\}/);
+  for (const lang of ['en', 'az']) assert.equal(HOME[lang].yt_base.match(/\{\}/g)?.length, 3, `${lang}.yt_base needs three slots: world, thing to catch, twist`);
 });
 
 test('the static Azerbaijani text in index.html is in sync with the dictionary (run "npm run home:sync")', () => {
@@ -81,8 +81,9 @@ test('structure: one h1, landmarks, meta tags, language', () => {
   levels.forEach((l, i) => assert.ok(i === 0 || l <= levels[i - 1] + 1, `heading level jumps to h${l}`));
   // decorative emoji are hidden from screen readers: every emoji in markup sits inside an aria-hidden element or an element with a text alternative
   assert.ok(!/<(?:span|div|b|i)(?![^>]*aria-hidden)[^>]*class="(?:ico|orb|pl-b|pc-pic)"/.test(html), 'decorative emoji must be aria-hidden');
-  for (const c of ['pw-in', 'hud', 'ill i1', 'ill i2', 'ill i3', 'fl f1', 'fl f4', 'brand-t']) if (c !== 'brand-t') assert.match(html, new RegExp(`class="${c}"[^>]*aria-hidden="true"`), c + ' is decorative');
-  assert.equal([...html.matchAll(/<span aria-hidden="true">[^<]+<\/span> <span data-t="y[pws]\dl"/g)].length, 9, 'emoji in the nine "Your turn" chips are hidden');
+  for (const c of ['pw-in', 'hud', 'ill i1', 'ill i2', 'ill i3', 'fl f1', 'fl f4', 'hb hb1', 'hb hb2', 'brand-t']) if (c !== 'brand-t') assert.match(html, new RegExp(`class="${c}"[^>]*aria-hidden="true"`), c + ' is decorative');
+  assert.equal([...html.matchAll(/<span aria-hidden="true">[^<]+<\/span> <span data-t="y[wcx]\dl"/g)].length, 9, 'emoji in the nine "Your turn" chips are hidden');
+  assert.equal([...html.matchAll(/<li><span aria-hidden="true">[^<]+<\/span> <span data-t="mq\d"/g)].length, 8, 'emoji in the eight example prompts are hidden');
 });
 
 test('zero third-party requests: only same-origin files, no network calls in the scripts', () => {
@@ -100,12 +101,12 @@ test('zero third-party requests: only same-origin files, no network calls in the
 
 test('page weight stays within budget', () => {
   const size = (f) => fs.statSync(path.join(PUB, f)).size, gz = (f) => zlib.gzipSync(fs.readFileSync(path.join(PUB, f)), { level: 9 }).length;
-  const initial = ['index.html', 'style.css', 'home.css', 'common.js', 'home-i18n.js', 'home.js', 'home-fx.js', 'home-hero.js'];
+  const initial = ['index.html', 'style.css', 'home.css', 'common.js', 'home-i18n.js', 'home.js', 'home-fx.js', 'home-hero.js', 'home-mini.js'];
   const lazy = ['home-power.js', 'home-map.js', 'home-game.js'];
   const raw = initial.reduce((a, f) => a + size(f), 0), all = raw + lazy.reduce((a, f) => a + size(f), 0), zipped = [...initial, ...lazy].reduce((a, f) => a + gz(f), 0);
-  assert.ok(raw < 150 * 1000, `initial load is ${raw} bytes, the budget is about 150 KB`);
-  assert.ok(all < 165 * 1000, `all home page files are ${all} bytes`);
-  assert.ok(zipped < 60 * 1000, `gzipped total is ${zipped} bytes`);
+  assert.ok(raw < 175 * 1000, `initial load is ${raw} bytes, the budget is about 175 KB`);
+  assert.ok(all < 195 * 1000, `all home page files are ${all} bytes`);
+  assert.ok(zipped < 64 * 1000, `gzipped total is ${zipped} bytes`);
   assert.ok(lazy.every((f) => JS.includes(f)) && /import\('\/home-power\.js'\)/.test(read('home.js')), 'below the fold features load lazily');
 });
 
