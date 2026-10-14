@@ -450,7 +450,7 @@ app.post('/api/chat', needStudent, async (req, res) => {
   if (st.budget) return fail(res, 503, 'budget');
   const level = openLevel(stu, room.course_id, +req.body.level_id);
   if (!level) return fail(res, 403, 'locked');
-  const course = one('SELECT title FROM courses WHERE id=?', room.course_id);
+  const course = one('SELECT title,library_lang FROM courses WHERE id=?', room.course_id);
   const tch = `t:${room.id}`;
   const save = (role, content, flag) => run('INSERT INTO messages(class_id,student_id,level_id,role,content,flag,created) VALUES(?,?,?,?,?,?,?)',
     room.id, stu.id, level.id, role, content, flag || null, now());
