@@ -33,7 +33,13 @@ import { md } from '/md.js';
 import { api, t, getLang, applyI18n, toggleLang, esc, $, onEvents, extractGame, gameFrame, creationCard, stars, toast, langHtml } from '/common.js';
 applyI18n(); $('#lang').innerHTML = langHtml(); $('#lang').onclick = toggleLang;
 let me, level = null, current = null, busy = false;
+// "Student view": the teacher opens this page with ?student=<id> to see what the student sees, read-only.
+const viewId = +new URLSearchParams(location.search).get('student') || 0;
+const urls = viewId ? { me: `/api/students/${viewId}/view`, level: `/api/students/${viewId}/view/levels/`, games: `/api/students/${viewId}/view/games` }
+  : { me: '/api/student/me', level: '/api/student/levels/', games: '/api/games' };
+let stream = null; // the AI reply the teacher watches arrive in student view
 const ended = () => { // back to the room's invite page, so logging in again next session is one step
+  if (viewId) return (location = '/join#teacher');
   let inv = null; try { inv = localStorage.getItem('invite'); } catch {}
   location = (inv ? '/join/' + encodeURIComponent(inv) : '/join') + '?closed=1';
 };
@@ -63,13 +69,13 @@ function renderState() {
   const left = Math.max(0, me.limit - me.used); $('#left').textContent = `${left} ${t('left')}`;
   const msg = me.classPaused ? 'paused' : me.paused ? 'pausedYou' : left <= 0 ? 'limit' : me.budget ? 'budget' : null;
   $('#status').hidden = !msg; if (msg) $('#status').textContent = t(msg);
-  const off = !!msg || busy || !level; $('#text').disabled = off; $('#send').disabled = off;
+  const off = !!msg || busy || !level || !!viewId; $('#text').disabled = off; $('#send').disabled = off;
   const lv = level && me.levels.find((l) => l.id === level.id);
   $('#check').disabled = !!msg || busy || lv?.status === 'pending';
   $('#check').textContent = lv?.status === 'pending' ? '⏳ ' + t('pending') : t('checkWork');
   if (lv) $('#lvStars').textContent = lv.status === 'done' ? stars(lv.stars) : '';
 }
-async function refresh() { me = await api('/api/student/me'); renderState(); if (!$('#mapView').hidden) renderMap(); }
+async function refresh() { me = await api(urls.me); renderState(); if (!$('#mapView').hidden) renderMap(); }
 
 // Winding path: one node per level, the student's avatar sits on the current one.
 function renderMap() {
@@ -94,13 +100,13 @@ function renderMap() {
 
 async function openLevel(id) {
   let r; level = null; renderState(); // nothing can be sent to the previous level while this one loads
-  try { r = await api('/api/student/levels/' + id); } catch (x) { if (x.status === 401) return ended(); toast(t(x.code)); return (location.hash = ''); }
+  try { r = await api(urls.level + id); } catch (x) { if (x.status === 401) return ended(); toast(t(x.code)); return (location.hash = ''); }
   level = r.level;
   $('#mapView').hidden = true; $('#levelView').hidden = false;
   $('#lvEmoji').textContent = level.emoji; $('#lvTitle').textContent = `${t('level')} ${level.position}: ${level.title}`;
   $('#lvIntro').textContent = level.intro; $('#lvIntro').hidden = !level.intro; $('#lvTask').textContent = level.task;
   $('#outTitle').textContent = level.output === 'creation' ? t('yourCreation') : level.output === 'game' ? t('yourGame') : t('task');
-  $('#log').replaceChildren();
+  $('#log').replaceChildren(); stream = null;
   for (const m of r.messages) addMsg(m.role, m.role === 'assistant' ? display(m.content) : m.content);
   const last = [...r.messages].reverse().map((m) => m.role === 'assistant' && extractGame(m.content, tag(level.output))).find(Boolean);
   showOutput(level.output === 'chat' ? null : last); renderState(); $('#text').focus();
@@ -111,14 +117,14 @@ window.onhashchange = route;
 $('#toMap').onclick = () => (location.hash = '');
 
 async function loadGames() {
-  const gs = await api('/api/games');
+  const gs = await api(urls.games);
   $('#games').replaceChildren(...gs.map((g) => {
     const mine = g.nickname === me.nickname, c = document.createElement('div'); c.className = 'card gcard';
     c.innerHTML = `<b>${g.kind === 'creation' ? '✨' : '🎮'} ${esc(g.title)}</b> <span class="muted">${mine ? '' : t('by') + ' ' + esc(g.avatar) + ' ' + esc(g.nickname)}</span><div class="row wrapx"></div>`;
     const r = c.querySelector('.row');
     const btn = (label, fn, cls = 'ghost') => { const b = document.createElement('button'); b.className = cls; b.textContent = label; b.onclick = fn; r.append(b); };
     btn(t('play'), () => openModal(g));
-    if (mine) {
+    if (mine && !viewId) {
       btn(g.shared ? t('unshare') : t('share'), async () => { await api('/api/games/' + g.id, 'PATCH', { shared: !g.shared }); loadGames(); });
       btn(t('delete'), async () => { await api('/api/games/' + g.id, 'DELETE'); loadGames(); });
     }
@@ -154,10 +160,10 @@ $('#check').onclick = async () => {
 $('#rStay').onclick = () => ($('#result').hidden = true);
 
 let lastTyping = 0;
-$('#text').oninput = () => { if (Date.now() - lastTyping > 3000) { lastTyping = Date.now(); api('/api/student/typing', 'POST').catch(() => {}); } };
+$('#text').oninput = () => { if (viewId) return; if (Date.now() - lastTyping > 3000) { lastTyping = Date.now(); api('/api/student/typing', 'POST').catch(() => {}); } };
 $('#form').onsubmit = async (e) => {
   e.preventDefault();
-  const text = $('#text').value.trim(); if (!text || busy) return;
+  const text = $('#text').value.trim(); if (!text || busy || viewId) return;
   $('#text').value = ''; busy = true; renderState(); addMsg('user', text);
   const bubble = addMsg('assistant', t('thinking'));
   try {
@@ -182,18 +188,50 @@ $('#form').onsubmit = async (e) => {
 $('#text').onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#form').requestSubmit(); } };
 $('#mc').onclick = () => { $('#modal').hidden = true; $('#mb').replaceChildren(); };
 
-try { me = await api('/api/student/me'); } catch (x) { x.code === 'room_closed' ? ended() : (location = '/join'); await new Promise(() => {}); } // leaving: do not run the rest of the page
+try { me = await api(urls.me); } catch (x) { x.code === 'room_closed' || viewId ? ended() : (location = '/join'); await new Promise(() => {}); } // leaving: do not run the rest of the page
+if (viewId) {
+  // Read-only: nothing here acts as the student. The teacher lands on the level the student is working on.
+  document.title = `${me.avatar} ${me.nickname} · PromptPlay`;
+  $('#seen').innerHTML = `${t('watching')} <b>${esc(me.avatar)} ${esc(me.nickname)}</b> · <a href="/teacher.html?class=${me.class_id}">${t('toDashboard')}</a>`;
+  $('#check').hidden = true; $('#send').hidden = true; $('#save').style.display = 'none'; $('#text').placeholder = '';
+  const cur = !location.hash && me.levels.find((l) => l.status === 'current' || l.status === 'pending');
+  if (cur) history.replaceState(null, '', '#level=' + cur.id);
+}
 route(); loadGames();
-const es = onEvents('/api/student/events', async (ev) => {
-  if (ev.type === 'closed') { es.close(); return ended(); }
-  if (ev.type === 'state') refresh().catch(() => {});
-  if (ev.type === 'progress') {
-    toast(t('teacher_' + ev.action) + (ev.feedback ? ' ' + ev.feedback : ''), ev.action === 'pass' ? 'ok' : '');
-    await refresh().catch(() => {});
-    if (level?.id === ev.level_id && ev.action === 'reset') openLevel(level.id);
-  }
-  if (ev.type === 'showcase') openModal(ev.game, `${t('showcase')}: ${ev.game.title} (${ev.game.nickname})`);
-});
-// A closed EventSource after an error means the server refused us: the session is over.
-es.onerror = () => setTimeout(() => { if (es.readyState === EventSource.CLOSED) api('/api/student/me').catch((x) => x.status === 401 && ended()); }, 500);
+if (viewId) {
+  let rt, tt;
+  const soon = () => { clearTimeout(rt); rt = setTimeout(() => refresh().catch(() => {}), 300); };
+  onEvents(`/api/classes/${me.class_id}/events`, (ev) => {
+    if (ev.type === 'room') soon();
+    if ((ev.student_id ?? ev.message?.student_id) != viewId) return;
+    if (ev.type === 'usage' || ev.type === 'submit') { soon(); loadGames(); }
+    if (ev.type === 'typing') { $('#text').placeholder = t('typing'); clearTimeout(tt); tt = setTimeout(() => ($('#text').placeholder = ''), 4000); }
+    if (ev.type === 'delta' && level?.id === ev.level_id) {
+      if (!stream) { stream = addMsg('assistant', ''); stream.raw = ''; }
+      stream.raw += ev.text; setMsg(stream, display(stream.raw) || t('thinking')); $('#log').scrollTop = 1e9;
+    }
+    if (ev.type === 'delta_end') { stream?.remove(); stream = null; }
+    if (ev.type === 'message' && level?.id === ev.message.level_id) {
+      const m = ev.message;
+      if (m.role === 'assistant') {
+        stream?.remove(); stream = null; addMsg('assistant', display(m.content));
+        const out = level.output !== 'chat' && extractGame(m.content, tag(level.output)); if (out) showOutput(out);
+      } else if (m.role === 'user') addMsg('user', m.content);
+      else if (m.role === 'blocked') addMsg('note', `🚫 ${t('sc_' + m.flag)}: ${m.content}`);
+    }
+  });
+} else {
+  const es = onEvents('/api/student/events', async (ev) => {
+    if (ev.type === 'closed') { es.close(); return ended(); }
+    if (ev.type === 'state') refresh().catch(() => {});
+    if (ev.type === 'progress') {
+      toast(t('teacher_' + ev.action) + (ev.feedback ? ' ' + ev.feedback : ''), ev.action === 'pass' ? 'ok' : '');
+      await refresh().catch(() => {});
+      if (level?.id === ev.level_id && ev.action === 'reset') openLevel(level.id);
+    }
+    if (ev.type === 'showcase') openModal(ev.game, `${t('showcase')}: ${ev.game.title} (${ev.game.nickname})`);
+  });
+  // A closed EventSource after an error means the server refused us: the session is over.
+  es.onerror = () => setTimeout(() => { if (es.readyState === EventSource.CLOSED) api('/api/student/me').catch((x) => x.status === 401 && ended()); }, 500);
+}
 </script></body></html>

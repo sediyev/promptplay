@@ -111,9 +111,11 @@ async function roomPage(id) {
         <span class="dot ${s.online ? 'on' : ''}"></span><span class="grow">${s.paused ? '⏸️ ' : ''}${esc(s.avatar)} ${esc(s.nickname)}
         <span class="muted">${lvl(s)} · ★${s.stars}${s.pending ? ' · ⏳' : ''} · ${s.used}/${cls.daily_limit}</span>
         <span class="typing" id="ty${s.id}" ${typing.has(s.id) ? '' : 'hidden'}>${t('typing')}</span></span>
+        <button class="ghost" data-view="${s.id}" title="${t('openView')}">👁</button>
         <button class="ghost" data-p="${s.id}" data-v="${s.paused ? 0 : 1}" title="${s.paused ? t('resume') : t('pause')}">${s.paused ? '▶' : '⏸'}</button>
         <button class="ghost" data-pin="${s.id}">${t('resetPin')}</button><button class="ghost" data-k="${s.id}">✕</button></div>`).join('');
     $('#students').querySelectorAll('[data-s]').forEach((e) => (e.onclick = () => select(e.dataset.s)));
+    $('#students').querySelectorAll('[data-view]').forEach((e) => (e.onclick = (ev) => { ev.stopPropagation(); openView(e.dataset.view); }));
     $('#students').querySelectorAll('[data-p]').forEach((e) => (e.onclick = async (ev) => { ev.stopPropagation(); await api('/api/students/' + e.dataset.p, 'PATCH', { paused: +e.dataset.v === 1 }); refresh(); }));
     $('#students').querySelectorAll('[data-pin]').forEach((e) => (e.onclick = async (ev) => {
       ev.stopPropagation(); const r = await api('/api/students/' + e.dataset.pin, 'PATCH', { reset_pin: true });
@@ -125,6 +127,8 @@ async function roomPage(id) {
       await api('/api/students/' + e.dataset.k, 'DELETE'); if (sel == e.dataset.k) sel = ''; refresh(); loadFeed();
     }));
   }
+  // The student's own page, read-only, in its own tab (one tab per student), to see where they got stuck.
+  const openView = (sid) => window.open('/student.html?student=' + sid, 'pp-student-' + sid);
   // Each level is a column; students sit on the level they are working on.
   function renderMap() {
     const at = (lid) => cls.students.filter((s) => s.level === lid);
@@ -147,12 +151,13 @@ async function roomPage(id) {
   }
   function renderProgress() {
     const s = stu(sel); $('#progressCard').hidden = !s; if (!s) return;
-    $('#progressCard').innerHTML = `<h3>${esc(s.avatar)} ${esc(s.nickname)} · ${t('progressOf')}</h3>` + cls.levels.map((l) => {
+    $('#progressCard').innerHTML = `<div class="row wrapx"><h3 class="grow">${esc(s.avatar)} ${esc(s.nickname)} · ${t('progressOf')}</h3><button class="ghost" id="pv">${t('openView')}</button></div>` + cls.levels.map((l) => {
       const p = s.progress.find((x) => x.id === l.id) || { status: 'locked', stars: 0 };
       const icon = { done: '✅', pending: '⏳', current: '▶️', locked: '🔒' }[p.status];
       return `<div class="row lrow"><span class="grow">${icon} L${l.position} ${esc(l.title)} <span class="stars">${p.status === 'done' ? stars(p.stars) : ''}</span></span>
         ${p.status !== 'done' ? `<button class="ghost" data-pass="${l.id}">${t('passLevel')}</button>` : ''}${p.status === 'done' || p.status === 'pending' ? `<button class="ghost" data-reset="${l.id}">${t('resetLevel')}</button>` : ''}</div>`;
     }).join('');
+    $('#pv').onclick = () => openView(s.id);
     const act = (lid, action) => api(`/api/students/${s.id}/progress`, 'POST', { level_id: +lid, action }).then(refresh);
     $('#progressCard').querySelectorAll('[data-pass]').forEach((b) => (b.onclick = () => act(b.dataset.pass, 'pass')));
     $('#progressCard').querySelectorAll('[data-reset]').forEach((b) => (b.onclick = () => act(b.dataset.reset, 'reset')));
