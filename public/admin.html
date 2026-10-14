@@ -17,9 +17,9 @@
     <label class="ghost btnlike" style="margin:0"><span data-t="adm_upload"></span><input type="file" id="limp" accept=".json,application/json" hidden></label><p class="err" id="lerr"></p></div>
 </div>
 <script type="module">
-import { api, t, getLang, applyI18n, toggleLang, esc, $ } from '/common.js';
+import { api, t, getLang, applyI18n, toggleLang, esc, $, langHtml } from '/common.js';
 import '/library-i18n.js';
-applyI18n(); $('#lang').textContent = t('lang'); $('#lang').onclick = toggleLang;
+applyI18n(); $('#lang').innerHTML = langHtml(); $('#lang').onclick = toggleLang;
 $('#out').onclick = async () => { await api('/api/logout', 'POST'); location = '/join#teacher'; };
 const $$ = (n) => '$' + n.toFixed(3);
 async function load() {
