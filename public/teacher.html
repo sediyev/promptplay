@@ -1,12 +1,13 @@
 <!doctype html>
 <html lang="az"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PromptPlay – Teacher</title><link rel="stylesheet" href="/style.css"></head>
+<title>PromptPlay – Teacher</title><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/library.css"></head>
 <body>
 <div class="top"><b class="logo">🎮 PromptPlay</b><span class="grow"></span><button class="ghost" id="lang"></button><button class="ghost" id="out" data-t="logout"></button></div>
 <div id="root"></div>
 <div id="modal" class="modal" hidden><div><div class="row"><b class="grow" id="mt"></b><button class="ghost" id="mc" data-t="close"></button></div><div id="mb" class="pane grow"></div></div></div>
 <script type="module">
-import { api, t, applyI18n, toggleLang, esc, $, onEvents, gameFrame, creationCard, stars, toast } from '/common.js';
+import { api, t, getLang, applyI18n, toggleLang, esc, $, onEvents, gameFrame, creationCard, stars, toast } from '/common.js';
+import '/library-i18n.js';
 applyI18n(); $('#lang').textContent = t('lang'); $('#lang').onclick = toggleLang;
 $('#out').onclick = async () => { await api('/api/logout', 'POST'); location = '/join#teacher'; };
 $('#mc').onclick = () => { $('#modal').hidden = true; $('#mb').replaceChildren(); };
@@ -25,7 +26,8 @@ const outputEl = (g) => (g.kind === 'creation' ? creationCard(g.html) : Object.a
 async function listPage() {
   const [rooms, courses] = await Promise.all([api('/api/classes'), api('/api/courses')]);
   root.innerHTML = `<div class="layout">
-    <div><div class="card"><h2>${t('newRoom')}</h2>
+    <div><a class="card libcta" href="/library.html"><span class="lc-emoji" aria-hidden="true">📚</span><span><b>${t('lib_quick')}</b><br><span class="muted">${t('lib_quickSub')}</span></span></a>
+    <div class="card" style="margin-top:12px"><h2>${t('newRoom')}</h2>
       ${courses.length ? `<label>${t('roomName')}</label><input id="cn" maxlength="60">
       <label>${t('course')}</label><select id="co">${courses.map((c) => `<option value="${c.id}">${esc(c.title)} (${c.levels} ${t('levelsN')})</option>`).join('')}</select>
       <label>${t('approvalMode')}</label><select id="ap"><option value="ai">${t('approval_ai')}</option><option value="teacher">${t('approval_teacher')}</option></select>
@@ -36,7 +38,7 @@ async function listPage() {
       <div class="row wrapx" style="margin-bottom:.6rem"><a class="btnlink" href="/course.html">${t('newCourse')}</a><button class="ghost" id="st">${t('starter')}</button>
         <label class="ghost btnlike" style="margin:0">${t('importCourse')}<input type="file" id="imp" accept=".json,application/json" hidden></label></div>
       <p class="err" id="ierr"></p>
-      ${courses.map((c) => `<a class="classlink" href="/course.html?id=${c.id}"><span><b>${esc(c.title)}</b><br><span class="muted">${c.levels} ${t('levelsN')} · ${c.rooms} ${t('roomsN')}</span></span><span class="pill">${t('edit')}</span></a>`).join('') || `<p class="muted">${t('empty')}</p>`}
+      ${courses.map((c) => `<a class="classlink" href="/course.html?id=${c.id}"><span><b>${esc(c.title)}</b><br><span class="muted">${c.levels} ${t('levelsN')} · ${c.rooms} ${t('roomsN')}</span></span><span class="row">${c.library_slug ? `<span class="pill soft">📚 ${t('lib_made')}</span>` : ''}<span class="pill">${t('edit')}</span></span></a>`).join('') || `<p class="muted">${t('empty')}</p>`}
     </div></div>
     <div class="card"><h2>${t('rooms')}</h2>${rooms.map((c) => `<a class="classlink" href="?class=${c.id}"><span><b>${esc(c.name)}</b><br><span class="muted">${esc(c.course || '')} · ${c.students} ${t('studentsN')}</span></span>
       <span class="pill ${c.live ? 'live' : ''}">${c.live ? '● ' + t('liveNow') : t('closedRoom')}</span></a>`).join('') || `<p class="muted">${t('empty')}</p>`}</div></div>`;
@@ -75,7 +77,7 @@ async function roomPage(id) {
   function renderHead() {
     const open = $('.settings')?.open, dl = open && $('#dl').value; // live refreshes must not close the menu mid-edit
     const link = `${location.origin}/join/${cls.invite}`;
-    $('#head').innerHTML = `<a href="/teacher.html">${t('back')}</a><div><h2 style="margin:0">${esc(cls.name)}</h2><span class="muted">${esc(cls.course?.title || '')}</span></div>
+    $('#head').innerHTML = `<a href="/teacher.html">${t('back')}</a><div><h2 style="margin:0">${esc(cls.name)}</h2><span class="muted">${esc(cls.course?.title || '')}</span>${cls.next?.length ? `<br><span class="muted">${t('nextAdv')}: ${cls.next.map((n) => `<a href="/library.html#${esc(n.id)}">${esc(n.emoji)} ${esc(n.title[getLang()] || n.title.en || n.title.az)}</a>`).join(', ')}</span>` : ''}</div>
       <button id="lv" class="${cls.live ? 'bad' : 'ok'}">${cls.live ? t('endSession') : t('startSession')}</button>
       ${cls.live ? `<span class="pill live">● ${t('liveNow')}</span>` : ''}
       <span class="grow"></span>

@@ -12,9 +12,13 @@
   <div class="card"><h3 data-t="addTeacher"></h3>
     <label data-t="name"></label><input id="tn"><label data-t="email"></label><input id="te" type="email"><label data-t="password"></label><input id="tp" type="password">
     <p class="err" id="err"></p><button id="ta" data-t="create"></button><h3 data-t="teachers"></h3><div id="tl"></div></div>
+  <div class="card" style="grid-column:1/-1"><h3 data-t="adm_lib"></h3><p class="muted" data-t="adm_libHelp"></p><div style="overflow-x:auto"><table id="lt"></table></div>
+    <h3 data-t="adm_add"></h3><p class="muted" data-t="adm_addHelp"></p>
+    <label class="ghost btnlike" style="margin:0"><span data-t="adm_upload"></span><input type="file" id="limp" accept=".json,application/json" hidden></label><p class="err" id="lerr"></p></div>
 </div>
 <script type="module">
-import { api, t, applyI18n, toggleLang, esc, $ } from '/common.js';
+import { api, t, getLang, applyI18n, toggleLang, esc, $ } from '/common.js';
+import '/library-i18n.js';
 applyI18n(); $('#lang').textContent = t('lang'); $('#lang').onclick = toggleLang;
 $('#out').onclick = async () => { await api('/api/logout', 'POST'); location = '/join#teacher'; };
 const $$ = (n) => '$' + n.toFixed(3);
@@ -32,5 +36,28 @@ $('#ta').onclick = async () => {
   try { await api('/api/admin/teachers', 'POST', { name: $('#tn').value, email: $('#te').value, password: $('#tp').value }); $('#err').textContent = ''; ['#tn', '#te', '#tp'].forEach((s) => ($(s).value = '')); load(); }
   catch (x) { $('#err').textContent = t(x.code); }
 };
-load();
+
+// ---------- course library: who sees what, and the organisation's own courses ----------
+const name = (c) => c.title[getLang()] || c.title.en || c.title.az;
+async function loadLib() {
+  const { courses } = await api('/api/library');
+  $('#lt').innerHTML = `<tr><th>${t('course')}</th><th>${t('lib_age')}</th><th>${t('levelsTitle')}</th><th></th><th></th></tr>` + courses.map((c) => `<tr>
+    <td><span aria-hidden="true">${esc(c.emoji)}</span> <b>${esc(name(c))}</b><br><span class="muted">${esc(c.id)} · ${c.builtin ? t('adm_builtin') : t('adm_inhouse')}${c.az_reviewed ? '' : ' · ⚠ ' + t('lib_reviewAz')}</span></td>
+    <td style="white-space:nowrap">${c.age.min}-${c.age.max}</td><td>${c.levels}</td>
+    <td><button class="${c.hidden ? 'ghost' : 'ok'}" data-vis="${esc(c.id)}" data-show="${c.hidden ? 1 : 0}" aria-pressed="${!c.hidden}">${c.hidden ? t('adm_hiddenL') : t('adm_visible')}</button></td>
+    <td class="row"><a class="btnlink" href="/library.html#${esc(c.id)}">${t('adm_preview')}</a><button class="ghost" data-dl="${esc(c.id)}">${t('adm_download')}</button>${c.builtin ? '' : `<button class="ghost" data-rm="${esc(c.id)}">${t('adm_delete')}</button>`}</td></tr>`).join('');
+  $('#lt').querySelectorAll('[data-vis]').forEach((b) => (b.onclick = async () => { await api(`/api/admin/library/${encodeURIComponent(b.dataset.vis)}/visibility`, 'PUT', { visible: b.dataset.show === '1' }); loadLib(); }));
+  $('#lt').querySelectorAll('[data-rm]').forEach((b) => (b.onclick = async () => { if (confirm(t('adm_confirmDelete'))) { await api('/api/admin/library/' + encodeURIComponent(b.dataset.rm), 'DELETE'); loadLib(); } }));
+  $('#lt').querySelectorAll('[data-dl]').forEach((b) => (b.onclick = async () => { // the library JSON format, also a handy starting point for an in-house course
+    const { course } = await api('/api/library/' + encodeURIComponent(b.dataset.dl));
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([JSON.stringify(course, null, 2)], { type: 'application/json' })), download: course.id + '.json' });
+    a.click(); URL.revokeObjectURL(a.href);
+  }));
+}
+$('#limp').onchange = async (e) => {
+  try { await api('/api/admin/library', 'POST', JSON.parse(await e.target.files[0].text())); $('#lerr').textContent = ''; loadLib(); }
+  catch (x) { $('#lerr').textContent = x instanceof SyntaxError ? t('badFile') : x.code === 'exists' ? t('adm_exists') : `${t('adm_bad')} ${x.code}`; }
+  e.target.value = '';
+};
+load(); loadLib();
 </script></body></html>

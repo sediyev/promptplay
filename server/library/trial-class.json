@@ -1,0 +1,115 @@
+{
+  "id": "trial-class",
+  "emoji": "⭐",
+  "title": { "az": "Sınaq dərsi: süni intellektlə ilk oyununu düzəlt", "en": "Trial Class: Make Your First Game with AI" },
+  "promise": {
+    "az": "Bir əyləncəli dərsdə övladınız qəhrəman icad edir, süni intellektlə oyun düzəldir və onu oynayır, hər şeyin arxasındakı bacarığı öyrənir: aydın istək bildirməyi.",
+    "en": "In one fun session, your child invents a hero, builds a game with an AI helper and plays it, learning the one skill behind it all: asking clearly."
+  },
+  "description": {
+    "az": "Təxminən 45-60 dəqiqəlik tək dərs, dörd qısa səviyyə: aydın istək (8 dəq.), qəhrəman (12 dəq.), ilk oyun (15 dəq.), son çağırış və oyun (15 dəq.). Hər yaşda (8-17) işləyir: tapşırıqlar qısa və açıqdır, süni intellekt uşağın yazı tərzinə uyğunlaşır. Valideyn yanındadırsa, son səviyyədə oyunu birlikdə oynayın və 'İşimi yoxla' ilə ulduzların qazanılmasına baxın. Otağı 'Hər səviyyəni mən təsdiqləyirəm' rejimində yox, standart rejimdə açın ki, uşaq ulduzu dərhal görsün.",
+    "en": "A single session of about 45 to 60 minutes with four short levels: a clear request (8 min), a hero (12 min), a first game (15 min) and a final challenge with play (15 min). It works for any age from 8 to 17: tasks are short and open, and the AI adapts to how the child writes. If a parent is present, play the game together in the last level and watch the stars arrive after 'Check my work'. Open the room in the default mode rather than 'I approve each level', so the child sees their stars straight away."
+  },
+  "age": { "min": 8, "max": 17 },
+  "themes": ["trial", "games"],
+  "programmes": ["trial"],
+  "sessions": 1,
+  "minutes": [45, 60],
+  "next": ["starter-junior", "starter-senior"],
+  "goals": {
+    "az": [
+      "Görmək ki, istək aydın olanda süni intellekt daha yaxşı cavab verir.",
+      "Təsvir edən detallarla orijinal qəhrəman icad etmək.",
+      "Həqiqi oyun qurmaq, oynamaq və istədiyini deyərək onu dəyişmək.",
+      "Tam kursla öyrənməyi davam etdirməyə özünəinam qazanmaq."
+    ],
+    "en": [
+      "See that AI answers better when the request is clear.",
+      "Invent an original hero and describe it with details.",
+      "Build and play a real game, and change it by asking for what they want.",
+      "Feel confident to keep learning with a full course."
+    ]
+  },
+  "levels": [
+    {
+      "emoji": "🎤", "output": "chat",
+      "title": { "az": "Aydın de", "en": "Say It Clearly" },
+      "intro": {
+        "az": "Xoş gəldin! Bu gün süni intellekt köməkçi ilə tanış olacaq və öz oyununu düzəldəcəksən. Əvvəlcə kiçik sirr: aydın istəklər möhtəşəm nəticə verir.",
+        "en": "Welcome! Today you will meet an AI helper and make your very own game. First, a quick secret: clear requests get amazing results."
+      },
+      "task": {
+        "az": "Süni intellektdən heyvan haqqında hekayə istə, bacardığın ən qısa şəkildə. Sonra yenidən istə, amma bu dəfə hekayədə KİM olduğunu, NƏ baş verdiyini və NECƏ hiss etdirməsini yaz. Hansı hekayə sənə daha çox xoşdur?",
+        "en": "Ask the AI for a story about an animal, in the shortest way you can. Then ask again, but say WHO is in the story, WHAT happens, and HOW it should feel. Which story do you like more?"
+      },
+      "ai_guide": {
+        "az": "Sürətli və əyləncəli ol: bu sınaq dərsinin ilk dəqiqələridir, uşaqlar 8-17 yaşda və oxu səviyyələri fərqlidir. Dilini uşağın yazı tərzinə uyğunlaşdır. İlk qısa istəyə qısa, sadə hekayə ver (3 cümlə). Yaxşılaşdırılmış istəyə daha zəngin hekayə ver (5 cümlə). Sonra hansını daha çox bəyəndiyini soruş və aydın istəklərin niyə işlədiyini bir cümlə ilə de. İsti və həvəsləndirici ol.",
+        "en": "Keep it fast and fun; this is the first minutes of a trial class, with children aged 8 to 17 and different reading levels. Match your language to how the child writes. Give the first short request a short, plain story (3 sentences). Give the improved request a richer story (5 sentences). Then ask which they like more and say in one sentence why clear requests work. Be warm and encouraging."
+      },
+      "criteria": {
+        "az": "Uşaq əvvəlcə qısa istək, sonra kim, nə və ya necə olan daha aydın istək yazdı və iki cavabı müqayisə etdi.",
+        "en": "The child made a short request and then a clearer one with who, what or how, and compared the two answers."
+      }
+    },
+    {
+      "emoji": "🦸", "output": "creation",
+      "title": { "az": "Qəhrəmanını icad et", "en": "Invent Your Hero" },
+      "intro": {
+        "az": "Hər yaxşı oyuna yaxşı bir qəhrəman lazımdır. Sənin qəhrəmanını heç kim əvvəl görməyib!",
+        "en": "Every great game needs a great hero. Yours has never been seen before!"
+      },
+      "task": {
+        "az": "Süni intellektlə qəhrəman icad et: uydurma ad, super qüvvə, gülməli zəif cəhət və geyim. Qərarı sən verirsən, süni intellekt kömək edir. Sonra qəhrəmanını daha da möhtəşəm etmək üçün ondan bir şeyi dəyişməsini istə.",
+        "en": "Invent a hero with the AI: a made-up name, a super power, a funny weakness and a costume. You decide, the AI helps. Then ask the AI to change one thing to make your hero even cooler."
+      },
+      "ai_guide": {
+        "az": "Sürətli və oynaq ol. Eyni anda bir sual ver və seçmək üçün iki-üç əyləncəli ideya təklif et ki, utancaq və ya kiçik uşaq da bir neçə sözlə cavab verə bilsin. Böyük uşaqlardan daha orijinal ideya tələb et. Yalnız uydurma adlar işlət. Kartı yeniləməyə davam et: Ad, Qüvvə, Zəif cəhət, Geyim.",
+        "en": "Be quick and playful. Ask one question at a time with two or three fun ideas to pick from, so even a shy or younger child can answer in a few words. For older children, push for something more original. Use made-up names only. Keep the creation card updated with Name, Power, Weakness, Costume."
+      },
+      "criteria": {
+        "az": "Qəhrəman kartında ad, qüvvə, zəif cəhət və geyim var, detalların çoxunu uşaq seçib və bir dəyişiklik istəyib.",
+        "en": "The hero card has a name, a power, a weakness and a costume, the child chose most details and asked for one change."
+      }
+    },
+    {
+      "emoji": "🕹️", "output": "game",
+      "title": { "az": "Oynana bilən et", "en": "Make It Playable" },
+      "intro": {
+        "az": "Qəhrəmanın hazırdır. İndi onun qüvvəsini oynaya biləcəyin həqiqi oyuna çevirək!",
+        "en": "Your hero is ready. Now let's turn the power into a real game you can play!"
+      },
+      "task": {
+        "az": "Süni intellektdən qəhrəmanınla sadə oyun qurmasını istə: klikləmək və ya tutmaq üçün bir şey, xal və məqsəd. Oyna. Sonra onu özünkü etmək üçün iki dəyişiklik istə, məsələn, yeni rənglər, daha sürətli oyun və ya bir sürpriz.",
+        "en": "Ask the AI to build a simple game with your hero: something to click or catch, a score and a goal. Play it. Then ask for two changes to make it yours, like new colours, a faster speed or a surprise."
+      },
+      "ai_guide": {
+        "az": "Uşaq qəhrəmanını xatırlamırsa, adını və qüvvəsini soruş və ya iki sürətli sualla yenisini icad et. Tək kiçik HTML faylında çox sadə və xətasız oyun qur: iri hədəflər, xal, aydın məqsəd, siçan və ya toxunuşla işləsin. Hər dəyişiklikdən sonra nəyi dəyişdiyini bir cümlə ilə de. Uşaq ilişibsə, dəyişiklik üçün iki ideya təklif et.",
+        "en": "If the child does not remember their hero, ask for the name and power, or invent one with two quick questions. Build a very simple, bug-free game in one small HTML file: big targets, a score, a clear goal, works with mouse or touch. After each change say in one sentence what you changed. Offer two ideas for changes if the child is stuck."
+      },
+      "criteria": {
+        "az": "İşləyən oyunda uşağın qəhrəmanı və ya seçdiyi personaj baş roldadır və uşaq ən azı iki dəyişiklik istəyib.",
+        "en": "A working game stars the child's hero or a character they chose, and the child asked for at least two changes."
+      }
+    },
+    {
+      "emoji": "🏆", "output": "game",
+      "title": { "az": "Səviyyəni yüksəlt və oyna!", "en": "Level Up and Play!" },
+      "intro": {
+        "az": "Final çağırış! İndi sirri bilirsən: aydın istəklər qalib gəlir. Daha yaxşı oyun üçün bir möhtəşəm istək yaza bilərsən?",
+        "en": "Final challenge! Now you know the secret: clear requests win. Can you write one great request for an even better game?"
+      },
+      "task": {
+        "az": "Daha böyük oyun üçün BİR ətraflı istək yaz: kim oynayır, nə edir, necə qalib gəlir, necə uduzur və bir yenilik əlavə et (taymer, can və ya patron kimi). Oyununu oyna və həzz al. Ulduzlarını qazanmaq üçün 'İşimi yoxla' düyməsinə bas və oyununu müəllimə və ya valideynə göstər!",
+        "en": "Write ONE detailed request for a bigger game: say who plays, what they do, how they win, how they lose and add a twist (like a timer, lives or a boss). Play your game and enjoy it. Press 'Check my work' to earn your stars and show your game to your teacher or parent!"
+      },
+      "ai_guide": {
+        "az": "Oyunu bir ətraflı istəkdən qur. Əsas hissələr çatışmırsa (məqsəd, qələbə, uduzma), əvvəlcə bir qısa sual ver. Oyun siçan və ya toxunuşla işləsin, şən olsun, yalnız cizgi filmi səviyyəsində olsun (qorxulu və ya zorakı təsvirlər olmasın) və tək kiçik HTML faylında qalsın. Uşaq oynayıb bitirəndə onu təbrik et və növbəti nə düzəldə biləcəyi barədə bir əyləncəli ideya ver.",
+        "en": "Build the game from one detailed request. If key parts are missing (goal, win, lose), ask one short question first. The game should work with mouse or touch, be cheerful and cartoon-level only (no scary or violent imagery), and stay in one small HTML file. When the child is done playing, celebrate and suggest one fun idea for what they could build next."
+      },
+      "criteria": {
+        "az": "Oyun kim oynayır, məqsəd və bir yenilik daxil olan bir ətraflı istəkdən quruldu, işləyir və uşaq onu oynadı.",
+        "en": "A working game was built from one detailed request that includes who plays, the goal and a twist, and the child played it."
+      }
+    }
+  ]
+}

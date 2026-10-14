@@ -1,0 +1,217 @@
+{
+  "id": "science-explainers",
+  "emoji": "🔬",
+  "title": { "az": "Elm İzahçıları", "en": "Science Explainers" },
+  "promise": {
+    "az": "Uşaqlar bir elm ideyasını süni intellektin köməyi ilə öz sözləri ilə izah etməyi, faktları yoxlamağı və onu sinif yoldaşları üçün viktorina oyununa çevirməyi öyrənir.",
+    "en": "Children learn to explain a science idea in their own words with AI help, check the facts, and turn it into a quiz game for their classmates."
+  },
+  "description": {
+    "az": "Beş dərslik elm kursu. Şagird bir sirr seçir (məsələn, səma niyə mavidir, bitkilər suyu necə içir), onu izah edir, faktları yoxlayır, təhlükəsiz təcrübə planlayır, sadə interaktiv nümunə qurur və sonda sinif yoldaşları üçün viktorina oyunu hazırlayır. Faktları kitabla və ya müəllimlə yoxlamaq üçün dərsdə dərsliklər əlçatan olsun. Təcrübələr həmişə müəllim və ya böyüklərlə edilir.",
+    "en": "A five-session science course. Each student picks a mystery (for example why the sky is blue or how plants drink water), explains it, checks the facts, plans a safe experiment, builds a simple interactive demo and finishes by making a quiz game for classmates. Have textbooks at hand so students can check facts with a book or the teacher. Experiments are always done with a teacher or a grown-up."
+  },
+  "age": { "min": 9, "max": 15 },
+  "themes": ["science", "games"],
+  "programmes": ["term-2", "holiday"],
+  "sessions": 5,
+  "minutes": [45, 60],
+  "next": ["ai-detective", "storytelling-studio"],
+  "goals": {
+    "az": [
+      "Necə işlədiyini başa düşmək üçün daha yaxşı 'niyə' və 'necə' sualları vermək.",
+      "Elm ideyasını gündəlik nümunə və müqayisə ilə sadə şəkildə izah etmək.",
+      "Süni intellektin elm faktlarına kor-koranə inanmaq əvəzinə onları kitab və ya müəllimlə yoxlamaq.",
+      "Təhlükəsiz və sadə təcrübə planlamaq: sual, proqnoz, addımlar və müşahidələr.",
+      "Bilikləri ədalətli suallar və faydalı ipuçları olan viktorina oyununa çevirmək."
+    ],
+    "en": [
+      "Ask better 'why' and 'how' questions to understand how things work.",
+      "Explain a science idea simply, with an everyday example and a comparison.",
+      "Check an AI's science facts against a book or a teacher instead of trusting them blindly.",
+      "Plan a safe, simple experiment: question, prediction, steps and observations.",
+      "Turn knowledge into a quiz game with fair questions and helpful hints."
+    ]
+  },
+  "levels": [
+    {
+      "emoji": "🤔", "output": "chat",
+      "title": { "az": "Maraqlı suallar", "en": "Curious Questions" },
+      "intro": {
+        "az": "Alimlər sualla başlayır. Sual nə qədər yaxşıdırsa, kəşf də o qədər maraqlı olur!",
+        "en": "Scientists begin with a question. The better the question, the better the discovery!"
+      },
+      "task": {
+        "az": "Süni intellektdən təbiət haqqında üç 'niyə' və ya 'necə' sualı soruş, məsələn, yarpaqlar niyə tökülür və ya quşlar necə uçur. Birini daha yaxşı şəkildə yenidən soruş: nə bildiyini əlavə et və ya 'mənə 8 yaşlı uşağa danışdığın kimi izah et' de. Hansı cavabın daha çox kömək etdiyini süni intellektə yaz.",
+        "en": "Ask the AI three 'why' or 'how' questions about nature, like why leaves fall or how birds fly. Ask one of them again in a better way: add what you already know, or ask it to explain 'like I am 8'. Tell the AI which answer helped you understand more."
+      },
+      "ai_guide": {
+        "az": "Elm suallarına dəqiq və sadə cavab ver. Şagird qeyri-dəqiq soruşsa, qısa cavab ver və sualı necə dəqiqləşdirməyi təklif et (tam olaraq nəyi bilmək istəyirsən?). Şagird 'səkkiz yaşlı kimi izah et' deyəndə üslubu dəyiş. Nəyəsə əmin deyilsənsə, bunu dürüst söylə.",
+        "en": "Answer science questions accurately and simply. If the student asks vaguely, give a short answer and suggest how to ask a sharper question (what exactly do you want to know?). When the student asks 'explain like I'm 8', change the style. If you are not sure about something, say so honestly."
+      },
+      "criteria": {
+        "az": "Şagird ən azı üç elm sualı verdi, birini daha aydın və ya konkret şəkildə yenidən soruşdu və hansı cavabın ən çox kömək etdiyini dedi.",
+        "en": "The student asked at least three science questions, asked one again in a clearer or more specific way, and said which answer helped most."
+      }
+    },
+    {
+      "emoji": "🔭", "output": "chat",
+      "title": { "az": "Sirrini seç", "en": "Pick Your Mystery" },
+      "intro": {
+        "az": "Bu günün sirr lövhəsində beş böyük sual var. Hansını açacaqsan?",
+        "en": "Today's mystery board has five big questions. Which one will you solve?"
+      },
+      "task": {
+        "az": "Bir sirr seç: Səma niyə mavidir? Bitkilər suyu necə içir? Ay niyə şəklini dəyişir? Fəsillər niyə olur? Maqnitlər necə işləyir? (Və ya öz elm ideyanı seç.) Süni intellektdən onu üç addımda izah etməsini istə. Sonra eyni şeyi süni intellektə öz sözlərinlə izah et və nəyi düzgün dediyini, nəyi düzəltməli olduğunu soruş.",
+        "en": "Choose one mystery: Why is the sky blue? How do plants drink water? Why does the moon change shape? Why do we have seasons? How do magnets work? (Or pick your own science idea.) Ask the AI to explain it in three steps. Then explain it back to the AI in your own words and ask what you got right and what to fix."
+      },
+      "ai_guide": {
+        "az": "Seçilmiş ideyanı uşaq üçün üç qısa və dəqiq addımda izah et. Şagird geri izah edəndə mehriban məşqçi ol: nəyin düzgün olduğunu de, sonra bir-bir və yumşaq şəkildə düzəlt. Cəhd etməyincə tam cavabı yenidən vermə. Elmi cəhətdən dəqiq ol. Şagirdin fikri geniş yayılmış yanlış təsəvvürdürsə, onun niyə doğru kimi göründüyünü, amma niyə düz olmadığını izah et.",
+        "en": "Explain the chosen idea in three short, accurate steps for a child. When the student explains it back, be a kind coach: name what is right, then gently correct one thing at a time. Do not give the full answer again until they try. Keep it correct; if the student's idea is a common misconception, explain why it feels true but is not."
+      },
+      "criteria": {
+        "az": "Şagird elm ideyası seçdi, addım-addım izah aldı, onu öz sözləri ilə geri izah etdi və süni intellektin rəyinə cavab verdi.",
+        "en": "The student chose a science idea, got a step by step explanation, explained it back in their own words and responded to the AI's feedback."
+      }
+    },
+    {
+      "emoji": "🧪", "output": "creation",
+      "title": { "az": "İzah kartı", "en": "Explainer Card" },
+      "intro": {
+        "az": "Yaxşı izah edən çətin ideyanı asan göstərir.",
+        "en": "A great explainer makes a hard idea feel easy."
+      },
+      "task": {
+        "az": "Sirrin üçün izah kartı hazırla: böyük sual, iki cümləlik qısa cavab, gündəlik həyatdan nümunə, müqayisə (bu, ... kimidir) və üç açar söz. Süni intellektdən üç mümkün müqayisə istə, ən yaxşısını seç və ya dəyişdir.",
+        "en": "Make an explainer card for your mystery: the big question, a short answer in two sentences, an everyday example, a comparison (it is like...) and three key words. Ask the AI for three possible comparisons and choose or change the best one."
+      },
+      "ai_guide": {
+        "az": "İzahı dəqiq və qısa saxla. Şagird müqayisə istəyəndə üç variant ver və hər müqayisənin harada işlədiyini, harada işləmədiyini müzakirə et. Qərarı şagird verir. Kartı yeniləməyə davam et: Böyük sual, Qısa cavab, Gündəlik nümunə, Bu, ... kimidir, Açar sözlər.",
+        "en": "Keep the explainer accurate and short. When the student asks for comparisons, offer three and discuss where each comparison works and where it stops working. The student decides. Keep the card updated with Big question, Short answer, Everyday example, It is like..., Key words."
+      },
+      "criteria": {
+        "az": "Kartda böyük sual, qısa cavab, gündəlik nümunə, müqayisə və üç açar söz var, müqayisəni şagird seçib və yoxlayıb.",
+        "en": "The card has a big question, a short answer, an everyday example, a comparison and three key words, and the student chose and checked the comparison."
+      }
+    },
+    {
+      "emoji": "✅", "output": "chat",
+      "title": { "az": "Faktı yoxla", "en": "Fact Check" },
+      "intro": {
+        "az": "Ağıllı köməkçilər də səhv edə bilər. Alim həmişə yoxlayır.",
+        "en": "Even smart helpers can be wrong. A scientist always checks."
+      },
+      "task": {
+        "az": "Süni intellektdən sirrin haqqında beş fakt istə. Hər birini 'Bilirəm ki, doğrudur', 'Əmin deyiləm' və ya 'Səhv kimi gəlir' kimi qeyd et. Əmin olmadıqlarını dərslikdə yoxla və ya müəllimdən soruş. Sonra süni intellektdən nə qədər əmin olduğunu və nəyi bir daha yoxlamalı olduğunu soruş. Nə öyrəndiyini ona yaz.",
+        "en": "Ask the AI for five facts about your mystery. Mark each one as 'I know it's true', 'I'm not sure' or 'sounds wrong'. Check the unsure ones in a school book or ask your teacher. Then ask the AI how sure it is and what you should double check. Tell the AI what you found out."
+      },
+      "ai_guide": {
+        "az": "Şagirdin mövzusu haqqında beş qısa, dəqiq fakt ver və hansılarının sadələşdirildiyini dürüst qeyd et. Şagird səhv bildirsə, təşəkkür et və düzəlt. Nə qədər əmin olduğunu soruşanda dürüst ol: səhv edə bilərsən, kitablar və müəllimlər yoxlamaq üçün yaxşı yerlərdir. Nəyisə araşdırmış kimi davranma.",
+        "en": "Give five short facts about the student's topic, accurate but with honest notes on which ones are simplified. If the student reports a mistake, thank them and correct it. When asked how sure you are, be honest that you can make mistakes and that books and teachers are good places to check. Never pretend to have looked something up."
+      },
+      "criteria": {
+        "az": "Şagird beş fakt aldı, onları əminlik dərəcəsinə görə ayırdı, ən azı ikisini söhbətdən kənarda yoxladı və nə tapdığını bildirdi.",
+        "en": "The student got five facts, sorted them by how sure they were, checked at least two outside the chat and reported what they found."
+      }
+    },
+    {
+      "emoji": "🔬", "output": "creation",
+      "title": { "az": "Sınaqdan keçir", "en": "Try It Out" },
+      "intro": {
+        "az": "Elm təkcə oxumaq deyil. Elm təhlükəsiz şəkildə sınamaqdır!",
+        "en": "Science is not only reading. It is trying things out, safely!"
+      },
+      "task": {
+        "az": "Sirrin və ya xoşuna gələn istənilən elm ideyası üçün sadə və təhlükəsiz təcrübə planla. Kartda sual, proqnoz (nə olacağını düşünürsən), gündəlik təhlükəsiz materiallar, üç-beş addım və nəyi müşahidə etmək lazım olduğu olsun. Süni intellektdən təhlükəsizliyi yoxlamasını və təcrübəni ədalətli sınaq etmək üçün bir yol təklif etməsini istə.",
+        "en": "Design a simple and safe experiment for your mystery or for any science idea you like. The card needs a question, a prediction (what you think will happen), safe everyday materials, three to five steps and what to observe. Ask the AI to check that it is safe and to suggest one way to make it a fair test."
+      },
+      "ai_guide": {
+        "az": "Yalnız gündəlik materiallarla (su, kağız, fənər, maqnitlər, bitkilər, mətbəx əşyaları) çox təhlükəsiz təcrübələr təklif et və həmişə bunu müəllim və ya böyüklə etməyi söylə. Heç vaxt od, istilik, iti alətlər, kimyəvi maddələr və ya zərər verə biləcək hər hansı şey təklif etmə. 'Ədalətli sınaq' anlayışını izah et (yalnız bir şeyi dəyiş). Kartı yeniləməyə davam et: Sual, Proqnoz, Materiallar, Addımlar, Nəyi müşahidə edəcəyik, Təhlükəsizlik qeydi.",
+        "en": "Only suggest very safe experiments with everyday materials (water, paper, torch, magnets, plants, kitchen items) and always say to do it with a teacher or a grown-up. Never suggest fire, heat, sharp tools, chemicals or anything that could hurt. Explain 'fair test' (change one thing only). Keep the card updated with Question, Prediction, Materials, Steps, What to observe, Safety note."
+      },
+      "criteria": {
+        "az": "Kartda sual, proqnoz, təhlükəsiz materiallar, addımlar, müşahidə ediləcək şeylər və təhlükəsizlik qeydi var, şagird sınağı daha ədalətli etdi.",
+        "en": "The card has a question, a prediction, safe materials, steps, what to observe and a safety note, and the student made the test fairer."
+      }
+    },
+    {
+      "emoji": "🎨", "output": "game",
+      "title": { "az": "Kodla göstər", "en": "Show It in Code" },
+      "intro": {
+        "az": "Bəzi ideyalar onlarla oynaya biləndə daha asan başa düşülür.",
+        "en": "Some ideas are easier to understand when you can play with them."
+      },
+      "task": {
+        "az": "Süni intellektdən elm ideyan üçün kiçik interaktiv nümunə qurmasını istə: məsələn, klikləyəndə fəsillər dəyişən Günəş və Yer, ya da suvara biləcəyin bir bitki. Onunla oyna. Sonra ideyanı daha yaxşı izah etməsi üçün iki yaxşılaşdırma istə.",
+        "en": "Ask the AI to make a small interactive demo of your science idea: for example a sun and Earth you can click to change the seasons, or a plant that you can water. Play with it. Then ask for two improvements so it explains the idea even better."
+      },
+      "ai_guide": {
+        "az": "Şagirddən elm ideyasını xatırlatmasını istə. Böyük düymələri və ya sürüşdürücüləri, əsas fikri öyrədən qısa yazıları olan kiçik, aydın interaktiv nümunəni tək HTML faylında qur. Elmi məzmunu düzgün və sadə saxla. Hər dəyişiklikdən sonra nəyi dəyişdiyini bir cümlə ilə de.",
+        "en": "Ask the student to remind you of the science idea. Build a small, clear interactive demo in one HTML file with big buttons or sliders and short labels that teach the key idea. Keep the science correct and simple. After each change, say in one sentence what you changed."
+      },
+      "criteria": {
+        "az": "Elm ideyasının işləyən interaktiv nümunəsi var, göstərilən ideya düzgündür və şagird ən azı iki yaxşılaşdırma istəyib.",
+        "en": "A working interactive demo of a science idea exists, the idea shown is correct, and the student asked for at least two improvements."
+      }
+    },
+    {
+      "emoji": "📝", "output": "creation",
+      "title": { "az": "Viktorina planı", "en": "Quiz Plan" },
+      "intro": {
+        "az": "Viktorina aparıcısına ədalətli suallar lazımdır. Yaxşı viktorina həm yoxlayır, həm də öyrədir.",
+        "en": "Quiz masters need fair questions. A good quiz teaches while it tests."
+      },
+      "task": {
+        "az": "Mövzun haqqında beş suallıq viktorina planla. Hər sual üçün düzgün cavabı, iki səhv, amma inandırıcı cavabı və bir ipucunu yaz. Süni intellektdən suallarını yoxlamasını istə: aydındırmı, ədalətlidirmi, düzgündürmü? Ən azı bir sualı düzəlt.",
+        "en": "Plan a quiz of five questions about your topic. For each question write the right answer, two wrong but believable answers and a hint. Ask the AI to check your questions: are they clear, fair and correct? Fix at least one question."
+      },
+      "ai_guide": {
+        "az": "Şagirdə sualları özünün yazmasına kömək et, əvəzinə yazma: çətin səhv cavablar və ipucular üçün ideyalar təklif et. Hər sualı dəqiqlik və ədalət baxımından nəzərdən keçir (yalnız bir düzgün cavab, aldadıcı ifadə olmasın). Kartı yeniləməyə davam et: 1-ci sualdan 5-ci suala qədər, hər biri düzgün cavab, səhv cavablar və ipucu ilə.",
+        "en": "Help the student write the questions rather than writing them yourself: suggest ideas for tricky wrong answers and hints. Review each question for accuracy and fairness (only one right answer, no trick wording). Keep the card updated with Q1 to Q5, each with the right answer, wrong answers and a hint."
+      },
+      "criteria": {
+        "az": "Kartda düzgün cavabları, səhv cavabları və ipucuları olan beş sual var, şagird süni intellektin yoxlamasından sonra ən azı bir sualı yaxşılaşdırdı.",
+        "en": "The card contains five questions with right answers, wrong answers and hints, and the student improved at least one question after the AI's check."
+      }
+    },
+    {
+      "emoji": "🎮", "output": "game",
+      "title": { "az": "Viktorina oyunu", "en": "Quiz Game" },
+      "intro": {
+        "az": "Gəl, viktorinanı sinif yoldaşlarının oynamaq istəyəcəyi oyuna çevirək!",
+        "en": "Time to turn the quiz into a game that your classmates will want to play!"
+      },
+      "task": {
+        "az": "Süni intellektə beş sualını de (qısalda bilərsən) və xalı, ipucu düyməsi və sonda sevindirici mesajı olan viktorina oyunu istə. Oyna. Sonra iki dəyişiklik istə, məsələn, taymer, daha gözəl görünüş və ya sonda bayram effekti.",
+        "en": "Tell the AI your five questions (it is fine to shorten them) and ask for a quiz game with a score, a hint button and a happy message at the end. Play it. Then ask for two changes, like a timer, a celebration at the end or a better look."
+      },
+      "ai_guide": {
+        "az": "Şagirdin suallarından tək HTML faylında viktorina oyunu qur: iri cavab düymələri, xal, ipucu düyməsi, düzgün və səhv cavablar üçün mehriban rəy və nəticə ekranı. Şagirdin suallarında elmi səhv varsa, bunu mehribanlıqla de və düzəltməyə kömək et. Şən ol. Səs və xarici fayl olmasın.",
+        "en": "Build a quiz game in one HTML file with the student's questions: big answer buttons, a score, a hint button, friendly feedback for right and wrong answers and a result screen. If the student's questions are scientifically wrong, kindly say so and help fix them. Keep it cheerful. No sounds or external files."
+      },
+      "criteria": {
+        "az": "Şagirdin suallarından, xalı və ipucu funksiyası olan işləyən viktorina oyunu var və şagird ən azı iki yaxşılaşdırma istəyib.",
+        "en": "A working quiz game with the student's questions, a score and a hint feature exists, and the student asked for at least two improvements."
+      }
+    },
+    {
+      "emoji": "🏆", "output": "creation",
+      "title": { "az": "Elm sərgisi", "en": "Science Fair" },
+      "intro": {
+        "az": "Elm sərgisi günüdür! Kəşf etdiklərini paylaşmaq və dostlarının viktorinanı oynamasına imkan vermək vaxtıdır.",
+        "en": "Science Fair Day! Time to share what you discovered and let your friends play your quiz."
+      },
+      "task": {
+        "az": "Elm sərgisi üçün lövhəni kart şəklində hazırla: başlıq, böyük sual, öyrəndiyin üç şey, hələ də maraqlandığın bir şey və öyrəndiyin ən yaxşı prompt məsləhəti. Sonra viktorina oyununu sinifə göstər (Qalereyada 'Siniflə paylaş' düyməsindən istifadə et) və bir sinif yoldaşının oyununu oyna.",
+        "en": "Make your science fair poster as a card: the title, your big question, three things you learned, one thing you are still curious about, and the best prompt tip you learned. Then share your quiz game with the class (use 'Share with class' in the Gallery) and play a classmate's game."
+      },
+      "ai_guide": {
+        "az": "Şagirdə lövhə kartını bu başlıqlarla hazırlamağa kömək et: Başlıq, Böyük sual, Öyrəndiyim üç şey, Hələ də maraqlandığım, Ən yaxşı prompt məsləhətim. Öyrənilən hər şey üçün 'Bunu necə bilirsən?' soruş. Viktorina oyununu Qalereyadan paylaşmağı xatırlat. Onu ruhlandır.",
+        "en": "Help the student make the poster card with: Title, Big question, Three things I learned, Still curious about, My best prompt tip. Ask 'How do you know?' for each thing learned. Remind them to share their quiz game from the Gallery. Cheer them on."
+      },
+      "criteria": {
+        "az": "Lövhə kartında başlıq, böyük sual, öyrənilən üç şey, maraq və prompt məsləhəti var və hamısı şagirdin öz sözləri ilədir.",
+        "en": "The poster card has a title, a big question, three learned things, a curiosity and a prompt tip, all in the student's own words."
+      }
+    }
+  ]
+}

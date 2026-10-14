@@ -1,0 +1,45 @@
+/* Course library (library.html). Colours come from the tokens in style.css, so light and dark mode work as everywhere else. */
+.lib { max-width:1040px; margin:0 auto; padding:18px 16px 70px; }
+.lib h1 { font-size:1.7rem; margin:.1em 0 .2em; }
+.lib .lead { color:var(--muted); margin:0 0 1rem; max-width:46rem; }
+.filters { display:grid; gap:.7rem; }
+.frow { display:flex; flex-wrap:wrap; gap:.4rem; align-items:center; }
+.frow > b { min-width:6rem; font-size:.85rem; color:var(--muted); }
+.chipb { background:var(--card); color:var(--ink); border:1.5px solid var(--line); box-shadow:none; border-radius:999px; padding:.3em .9em; font-weight:500; font-size:.92rem; }
+.chipb:hover { background:var(--brand-soft); box-shadow:none; }
+.chipb[aria-pressed=true] { background:var(--brand-soft); border-color:var(--brand); font-weight:700; }
+.frow input[type=search] { max-width:16rem; } .frow select { width:auto; }
+.libgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px; margin-top:14px; }
+.libcard { display:flex; flex-direction:column; gap:.7rem; padding:1.1rem; color:var(--ink); background:var(--card); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow); }
+.libcard:hover { border-color:var(--brand); text-decoration:none; background:color-mix(in srgb,var(--brand-soft) 45%,var(--card)); }
+.libcard:focus-visible, .chipb:focus-visible { outline:3px solid var(--brand); outline-offset:2px; }
+.lc-top { display:flex; gap:.8rem; align-items:flex-start; }
+.lc-emoji { font-size:2.2rem; line-height:1; }
+.lc-top b { font-size:1.08rem; display:block; margin-bottom:.15rem; }
+.lc-top span.muted { display:block; }
+.metas { display:flex; flex-wrap:wrap; gap:.35rem; }
+.metas .pill { font-size:.8rem; padding:.15em .6em; } .pill.soft { background:var(--bg); color:var(--ink); border:1px solid var(--line); }
+.metas .pill.warn { background:var(--warn); color:var(--warn-ink); }
+.libdetail h1 { display:flex; gap:.6rem; align-items:center; }
+.libdetail .promise { font-size:1.1rem; margin:.2rem 0 .8rem; }
+.libcols { display:grid; grid-template-columns:1fr 340px; gap:16px; align-items:start; margin-top:14px; }
+@media (max-width:860px) { .libcols { grid-template-columns:1fr; } }
+.libdetail ul.goals { margin:.3rem 0 0; padding-left:1.2rem; } .libdetail ul.goals li { margin:.3rem 0; }
+.actions { display:grid; gap:.6rem; position:sticky; top:70px; }
+.actions button, .actions .btnlink { width:100%; text-align:center; }
+.actions .help { margin:0 0 .2rem; }
+.roomform { display:grid; gap:.1rem; padding:.2rem 0 0; }
+.lvprev { border:1px solid var(--line); border-radius:12px; margin-bottom:8px; background:var(--card); }
+.lvprev > summary { cursor:pointer; padding:.7rem .9rem; display:flex; gap:.6rem; align-items:center; list-style:none; }
+.lvprev > summary::-webkit-details-marker { display:none; }
+.lvprev[open] > summary { border-bottom:1px solid var(--line); background:var(--bg); border-radius:12px 12px 0 0; }
+.lvprev .lvbody { padding:.2rem 1rem 1rem; } .lvprev h4 { margin:.9rem 0 .2rem; font-size:.8rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+.lvprev p { margin:.1rem 0; white-space:pre-wrap; } .lvprev .ai { color:var(--muted); font-size:.92rem; }
+.lvn { width:1.9rem; height:1.9rem; border-radius:50%; background:var(--brand-soft); color:var(--ink); display:grid; place-items:center; font-weight:800; font-size:.85rem; flex:none; }
+.nextlist a { display:inline-block; margin:.2rem .4rem .2rem 0; }
+.note { padding:.6rem .9rem; border-radius:12px; background:var(--warn); color:var(--warn-ink); margin:.6rem 0; font-size:.92rem; }
+@media (prefers-reduced-motion:reduce) { .libcard { transition:none; } }
+
+/* teacher page: the card that leads to the library */
+.libcta { display:flex; gap:.9rem; align-items:center; color:var(--ink); background:linear-gradient(135deg,var(--brand-soft),var(--card)); border-color:var(--brand); }
+.libcta:hover { text-decoration:none; box-shadow:0 4px 18px rgba(108,92,231,.25); }

@@ -6,9 +6,11 @@ import { fileURLToPath } from 'node:url';
 import QRCode from 'qrcode';
 import { db, now, getSetting, setSetting, hashPassword, checkPassword, newToken, newInvite, dayStart, dayRange, newClassCode, purgeOld, migrateLessons } from './db.js';
 import { moderate, chat, evaluate, systemPrompt, costOf } from './ai.js';
+import { LANGS, loadBuiltin, sortCourses, validateCourse, summary, matches, flatten, contentHash, languages } from './library.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url)), PUBLIC = path.join(HERE, '..', 'public');
 const STARTER = JSON.parse(fs.readFileSync(path.join(HERE, 'starter-course.json'), 'utf8'));
+const BUILTIN_LIBRARY = loadBuiltin(path.join(HERE, 'library')); // ready-made courses shipped with the app
 // A live room closes this long after the teacher's dashboard disconnects (closed tab, sleeping laptop).
 const GRACE = +process.env.SESSION_GRACE_MS || 15 * 60000;
 const SUBMIT_COOLDOWN = +process.env.SUBMIT_COOLDOWN_MS || 15000; // between two "check my work" presses
@@ -131,17 +133,19 @@ function saveLevels(courseId, levels) {
   });
   for (const { id } of all('SELECT id FROM levels WHERE course_id=?', courseId)) if (!keep.has(id)) run('DELETE FROM levels WHERE id=?', id);
 }
-function createCourse(teacherId, body) {
+// meta ties a copy to the library course it came from: {slug, lang, hash}.
+function createCourse(teacherId, body, meta = {}) {
   const title = str(body.title, 100), levels = cleanLevels(body.levels ?? []);
   if (!title) return { error: 'title' };
   if (!levels) return { error: 'levels' };
-  const id = +run('INSERT INTO courses(teacher_id,title,description,created,updated) VALUES(?,?,?,?,?)', teacherId, title, str(body.description, 1000), now(), now()).lastInsertRowid;
+  const id = +run('INSERT INTO courses(teacher_id,title,description,library_slug,library_lang,library_hash,created,updated) VALUES(?,?,?,?,?,?,?,?)',
+    teacherId, title, str(body.description, 1000), meta.slug ?? null, meta.lang ?? null, meta.hash ?? null, now(), now()).lastInsertRowid;
   saveLevels(id, levels.map((l) => ({ ...l, id: null })));
   return { id };
 }
 const courseLevels = (courseId) => all('SELECT * FROM levels WHERE course_id=? ORDER BY position', courseId);
 
-app.get('/api/courses', needTeacher, (req, res) => res.json(all(`SELECT c.id,c.title,c.description,c.updated,
+app.get('/api/courses', needTeacher, (req, res) => res.json(all(`SELECT c.id,c.title,c.description,c.updated,c.library_slug,c.library_lang,c.edited,
     (SELECT COUNT(*) FROM levels l WHERE l.course_id=c.id) levels, (SELECT COUNT(*) FROM classes r WHERE r.course_id=c.id) rooms
   FROM courses c WHERE c.teacher_id=? ORDER BY c.id DESC`, req.user.id)));
 app.post('/api/courses', needTeacher, (req, res) => {
@@ -154,7 +158,7 @@ app.put('/api/courses/:id', needTeacher, ownCourse, (req, res) => {
   const title = str(req.body.title, 100), levels = cleanLevels(req.body.levels);
   if (!title) return fail(res, 400, 'title');
   if (!levels) return fail(res, 400, 'levels');
-  run('UPDATE courses SET title=?,description=?,updated=? WHERE id=?', title, str(req.body.description, 1000), now(), req.course.id);
+  run('UPDATE courses SET title=?,description=?,updated=?,edited=1 WHERE id=?', title, str(req.body.description, 1000), now(), req.course.id);
   saveLevels(req.course.id, levels);
   for (const { id } of all('SELECT id FROM classes WHERE course_id=?', req.course.id)) { publish(`s:${id}`, { type: 'state' }); publish(`t:${id}`, { type: 'room' }); }
   res.json({ ok: true });
@@ -164,6 +168,59 @@ app.delete('/api/courses/:id', needTeacher, ownCourse, (req, res) => {
   run('DELETE FROM levels WHERE course_id=?', req.course.id);
   run('DELETE FROM courses WHERE id=?', req.course.id);
   res.json({ ok: true });
+});
+
+// ---------- course library ----------
+// Built-in courses come from server/library/*.json; the admin can add in-house ones (stored in the database) and hide any of them from teachers.
+const needStaff = (req, res, next) => (req.user?.role === 'teacher' || req.user?.role === 'admin' ? next() : fail(res, 401, 'auth'));
+const hiddenSlugs = () => new Set(all('SELECT slug FROM library_hidden').map((r) => r.slug));
+const inhouseCourses = () => all('SELECT data FROM library_courses ORDER BY created, slug').map((r) => JSON.parse(r.data));
+const libraryCatalog = () => sortCourses([...BUILTIN_LIBRARY, ...inhouseCourses()]);
+const libraryCourse = (slug) => libraryCatalog().find((c) => c.id === slug);
+// What this user may see: teachers only the courses the admin left visible; the admin all of them, marked.
+function libraryFor(user, slug) {
+  const hidden = hiddenSlugs(), list = libraryCatalog().filter((c) => user.role === 'admin' || !hidden.has(c.id));
+  return { list, hidden, course: slug ? list.find((c) => c.id === slug) : undefined };
+}
+const publicCourse = ({ builtin, ...c }) => c; // the library JSON format, without server-side flags
+function visibleLibraryCourse(req, res, next) {
+  const { course, hidden } = libraryFor(req.user, req.params.id);
+  if (!course) return fail(res, 404, 'not_found');
+  req.lib = course; req.libHidden = hidden.has(course.id);
+  next();
+}
+// Suggested follow-ups of a library course that teachers can currently see.
+function nextAdventures(slug) {
+  const c = slug && libraryCourse(slug), hidden = hiddenSlugs();
+  return (c?.next || []).map(libraryCourse).filter((n) => n && !hidden.has(n.id)).map((n) => ({ id: n.id, emoji: n.emoji, title: n.title }));
+}
+// A teacher's own copy of a library course in one language. `fresh` always makes a new one (for editing);
+// otherwise an untouched copy of the same content is reused, so opening five rooms does not litter "My courses".
+function libraryCopy(userId, c, lang, fresh) {
+  const flat = flatten(c, lang), hash = contentHash(flat);
+  if (!fresh) {
+    const same = one('SELECT id FROM courses WHERE teacher_id=? AND library_slug=? AND library_lang=? AND library_hash=? AND edited=0 ORDER BY id DESC', userId, c.id, lang, hash);
+    if (same) return same.id;
+  }
+  return createCourse(userId, flat, { slug: c.id, lang, hash }).id;
+}
+const courseLang = (v) => (LANGS.includes(v) ? v : 'az');
+
+app.get('/api/library', needStaff, (req, res) => {
+  const { list, hidden } = libraryFor(req.user);
+  res.json({ courses: list.filter((c) => matches(c, req.query)).map((c) => summary(c, hidden.has(c.id))) });
+});
+app.get('/api/library/:id', needStaff, visibleLibraryCourse, (req, res) =>
+  res.json({ course: publicCourse(req.lib), languages: languages(req.lib), builtin: !!req.lib.builtin, hidden: req.libHidden, next: nextAdventures(req.lib.id) }));
+// "Make my own copy": a new course of the teacher's own to edit. The library course and everybody else's rooms are untouched.
+app.post('/api/library/:id/copy', needTeacher, visibleLibraryCourse, (req, res) =>
+  res.json({ id: libraryCopy(req.user.id, req.lib, courseLang(req.body?.lang), true) }));
+// "Open a room": the whole path in one request.
+app.post('/api/library/:id/room', needTeacher, visibleLibraryCourse, (req, res) => {
+  const f = roomFields(req.body);
+  if (f.error) return fail(res, 400, f.error);
+  const courseId = libraryCopy(req.user.id, req.lib, courseLang(req.body.lang), false);
+  res.json({ id: insertRoom(req.user.id, f, courseId), course_id: courseId });
 });
 
 // ---------- level progress ----------
@@ -200,15 +257,20 @@ app.get('/api/me', (req, res) => (req.user ? res.json(req.user) : fail(res, 401,
 
 // ---------- teacher: rooms ----------
 const APPROVAL = ['ai', 'teacher'];
+// Room settings shared by "new room" and "open a room from the library"; checked before anything is created.
+function roomFields(body) {
+  const { name, consent, daily_limit, approval } = body || {};
+  if (!String(name || '').trim()) return { error: 'name' };
+  if (consent !== true) return { error: 'consent' };
+  return { name: String(name).trim().slice(0, 60), daily_limit: Math.max(1, +daily_limit || 30), approval: APPROVAL.includes(approval) ? approval : 'ai' };
+}
+const insertRoom = (teacherId, f, courseId) => +run('INSERT INTO classes(teacher_id,name,code,consent_at,daily_limit,course_id,invite,approval,live,created) VALUES(?,?,?,?,?,?,?,?,0,?)',
+  teacherId, f.name, newClassCode(), now(), f.daily_limit, courseId, newInvite(), f.approval, now()).lastInsertRowid;
 app.post('/api/classes', needTeacher, (req, res) => {
-  const { name, consent, daily_limit, course_id, approval } = req.body;
-  if (!String(name || '').trim()) return fail(res, 400, 'name');
-  if (consent !== true) return fail(res, 400, 'consent');
-  if (!one('SELECT 1 FROM courses WHERE id=? AND teacher_id=?', +course_id, req.user.id)) return fail(res, 400, 'course');
-  const r = run('INSERT INTO classes(teacher_id,name,code,consent_at,daily_limit,course_id,invite,approval,live,created) VALUES(?,?,?,?,?,?,?,?,0,?)',
-    req.user.id, String(name).trim().slice(0, 60), newClassCode(), now(), Math.max(1, +daily_limit || 30), +course_id, newInvite(),
-    APPROVAL.includes(approval) ? approval : 'ai', now());
-  res.json({ id: +r.lastInsertRowid });
+  const f = roomFields(req.body);
+  if (f.error) return fail(res, 400, f.error);
+  if (!one('SELECT 1 FROM courses WHERE id=? AND teacher_id=?', +req.body.course_id, req.user.id)) return fail(res, 400, 'course');
+  res.json({ id: insertRoom(req.user.id, f, +req.body.course_id) });
 });
 app.get('/api/classes', needTeacher, (req, res) =>
   res.json(all(`SELECT c.id,c.name,c.code,c.paused,c.live,co.title course,(SELECT COUNT(*) FROM students s WHERE s.class_id=c.id) students
@@ -226,7 +288,8 @@ app.get('/api/classes/:id', needTeacher, ownClass, (req, res) => {
   });
   const pending = all(`SELECT p.student_id,p.level_id,p.stars,p.feedback,p.output_id,p.created,s.nickname,s.avatar,l.title,l.position FROM progress p
     JOIN students s ON s.id=p.student_id JOIN levels l ON l.id=p.level_id WHERE s.class_id=? AND p.status='pending' ORDER BY p.created`, req.cls.id);
-  res.json({ ...req.cls, course, levels, students, pending, teacherOnline: !!teacherConns.get(req.cls.id) });
+  const source = one('SELECT library_slug FROM courses WHERE id=?', req.cls.course_id)?.library_slug;
+  res.json({ ...req.cls, course, levels, students, pending, next: nextAdventures(source), teacherOnline: !!teacherConns.get(req.cls.id) });
 });
 app.patch('/api/classes/:id', needTeacher, ownClass, (req, res) => {
   const { paused, daily_limit, live, approval, regen_invite } = req.body;
@@ -349,8 +412,10 @@ app.get('/api/student/me', needStudent, (req, res) => {
   const stu = req.student, room = req.room;
   run('UPDATE students SET last_seen=? WHERE id=?', now(), stu.id);
   const levels = levelMap(stu, room.course_id).map(({ id, position, title, emoji, output, status, stars }) => ({ id, position, title, emoji, output, status, stars }));
-  res.json({ nickname: stu.nickname, avatar: stu.avatar, room: room.name, course: one('SELECT title FROM courses WHERE id=?', room.course_id)?.title,
-    approval: room.approval, levels, ...studentState(stu, room) });
+  const course = one('SELECT title,library_slug FROM courses WHERE id=?', room.course_id);
+  const finished = levels.length > 0 && levels.every((l) => l.status === 'done');
+  res.json({ nickname: stu.nickname, avatar: stu.avatar, room: room.name, course: course?.title, approval: room.approval, levels,
+    next: finished ? nextAdventures(course?.library_slug) : [], ...studentState(stu, room) });
 });
 app.get('/api/student/levels/:id', needStudent, (req, res) => {
   const l = openLevel(req.student, req.room.course_id, +req.params.id);
@@ -521,6 +586,28 @@ app.get('/api/admin/usage', needAdmin, (_req, res) => {
   }, {}));
   res.json({ total: spent(), cap: +getSetting('spend_cap', 0), retention_days: +getSetting('retention_days', 30), classes, teachers });
 });
+// Course library controls: which courses teachers see, and the admin's own in-house courses (same JSON format as the built-in ones).
+app.put('/api/admin/library/:id/visibility', needAdmin, (req, res) => {
+  if (!libraryCourse(req.params.id)) return fail(res, 404, 'not_found');
+  if (req.body.visible === false) run('INSERT OR IGNORE INTO library_hidden(slug) VALUES(?)', req.params.id);
+  else run('DELETE FROM library_hidden WHERE slug=?', req.params.id);
+  res.json({ ok: true });
+});
+app.post('/api/admin/library', needAdmin, (req, res) => {
+  const r = validateCourse(req.body);
+  if (r.error) return fail(res, 400, r.error);
+  if (BUILTIN_LIBRARY.some((c) => c.id === r.course.id)) return fail(res, 409, 'exists'); // built-in courses cannot be replaced
+  run('INSERT INTO library_courses(slug,data,created) VALUES(?,?,?) ON CONFLICT(slug) DO UPDATE SET data=excluded.data', r.course.id, JSON.stringify(r.course), now());
+  res.json({ id: r.course.id });
+});
+app.delete('/api/admin/library/:id', needAdmin, (req, res) => {
+  if (BUILTIN_LIBRARY.some((c) => c.id === req.params.id)) return fail(res, 403, 'builtin');
+  if (!one('SELECT 1 FROM library_courses WHERE slug=?', req.params.id)) return fail(res, 404, 'not_found');
+  run('DELETE FROM library_courses WHERE slug=?', req.params.id);
+  run('DELETE FROM library_hidden WHERE slug=?', req.params.id);
+  res.json({ ok: true });
+});
+
 app.put('/api/admin/settings', needAdmin, (req, res) => {
   if (req.body.spend_cap !== undefined) setSetting('spend_cap', Math.max(0, +req.body.spend_cap || 0));
   if (req.body.retention_days !== undefined) setSetting('retention_days', Math.max(1, Math.floor(+req.body.retention_days) || 30));

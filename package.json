@@ -8,7 +8,8 @@
     "start": "node --env-file-if-exists=.env server/index.js",
     "dev": "node --watch --env-file-if-exists=.env server/index.js",
     "test": "node --test",
-    "home:sync": "node scripts/sync-home.mjs"
+    "home:sync": "node scripts/sync-home.mjs",
+    "library:docs": "node scripts/sync-library-docs.mjs"
   },
   "engines": {
     "node": ">=22.5"
