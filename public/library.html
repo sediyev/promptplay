@@ -5,9 +5,9 @@
 <div class="top"><a id="back" href="/teacher.html" data-t="back"></a><b class="logo">🎮 PromptPlay</b><span class="pill" data-t="lib_h"></span><span class="grow"></span><button class="ghost" id="lang"></button></div>
 <main class="lib" id="main"></main>
 <script type="module">
-import { api, t, getLang, applyI18n, toggleLang, esc, $, toast } from '/common.js';
+import { api, t, getLang, applyI18n, toggleLang, esc, $, toast, langHtml } from '/common.js';
 import { fmt } from '/library-i18n.js';
-applyI18n(); $('#lang').textContent = t('lang'); $('#lang').onclick = toggleLang;
+applyI18n(); $('#lang').innerHTML = langHtml(); $('#lang').onclick = toggleLang;
 let me;
 try { me = await api('/api/me'); } catch { location = '/join#teacher'; await new Promise(() => {}); } // leaving: do not run the rest of the page
 const admin = me.role === 'admin', main = $('#main');
