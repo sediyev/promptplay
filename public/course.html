@@ -14,8 +14,8 @@
   <div class="row" style="margin:12px 0 40px"><button class="ghost" id="add" data-t="addLevel"></button><span class="grow"></span><button class="bad" id="del" data-t="deleteCourse" hidden></button></div>
 </div>
 <script type="module">
-import { api, t, applyI18n, toggleLang, esc, $ } from '/common.js';
-applyI18n(); $('#lang').textContent = t('lang'); $('#lang').onclick = toggleLang;
+import { api, t, applyI18n, toggleLang, esc, $, langHtml } from '/common.js';
+applyI18n(); $('#lang').innerHTML = langHtml(); $('#lang').onclick = toggleLang;
 try { await api('/api/me'); } catch { location = '/join#teacher'; await new Promise(() => {}); } // leaving: do not run the rest of the page
 let id = +new URLSearchParams(location.search).get('id') || null, levels = [], dirty = false;
 const FIELDS = ['title', 'emoji', 'output', 'intro', 'task', 'ai_guide', 'criteria'];

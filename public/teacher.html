@@ -6,10 +6,10 @@
 <div id="root"></div>
 <div id="modal" class="modal" hidden><div><div class="row"><b class="grow" id="mt"></b><button class="ghost" id="mc" data-t="close"></button></div><div id="mb" class="pane grow"></div></div></div>
 <script type="module">
-import { api, t, getLang, applyI18n, toggleLang, esc, $, onEvents, gameFrame, creationCard, stars, toast } from '/common.js';
+import { api, t, getLang, applyI18n, toggleLang, esc, $, onEvents, gameFrame, creationCard, stars, toast, langHtml } from '/common.js';
 import '/library-i18n.js';
 import { md } from '/md.js';
-applyI18n(); $('#lang').textContent = t('lang'); $('#lang').onclick = toggleLang;
+applyI18n(); $('#lang').innerHTML = langHtml(); $('#lang').onclick = toggleLang;
 $('#out').onclick = async () => { await api('/api/logout', 'POST'); location = '/join#teacher'; };
 $('#mc').onclick = () => { $('#modal').hidden = true; $('#mb').replaceChildren(); };
 const root = $('#root');

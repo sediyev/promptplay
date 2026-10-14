@@ -27,8 +27,8 @@
   <p style="text-align:center"><button class="ghost" id="lang"></button></p>
 </div></div>
 <script type="module">
-import { api, t, applyI18n, toggleLang, $ } from '/common.js';
-applyI18n(); $('#lang').textContent = t('lang'); $('#lang').onclick = toggleLang;
+import { api, t, applyI18n, toggleLang, $, langHtml } from '/common.js';
+applyI18n(); $('#lang').innerHTML = langHtml(); $('#lang').onclick = toggleLang;
 const tab = (st) => { $('#join').hidden = !st; $('#login').hidden = st; $('#tabS').classList.toggle('on', st); $('#tabT').classList.toggle('on', !st); };
 $('#tabS').onclick = () => tab(true); $('#tabT').onclick = () => tab(false);
 // /join#teacher opens the teacher tab (logout and expired logins land here)

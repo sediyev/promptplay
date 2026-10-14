@@ -126,7 +126,7 @@ export const HOME = {
     hb1: 'Hər mesaj yoxlanılır', hb2: 'Müəllim hər şeyi canlı görür', live: 'CANLI',
 
     sk_h: 'Oyundan kənarda da lazım olan bacarıqlar', sk_lead: 'Uşaqlar əyləncə üçün oynayır. Bu arada oyundan kənarda da lazım olan bacarıqları məşq edirlər.',
-    sk1t: 'Aydın ünsiyyət', sk2t: 'Yaradıcılıq', sk3t: 'Problem həlli', sk4t: 'Tənqidi düşüncə', sk5t: 'Təhlükəsiz onlayn vərdişlər', sk6t: 'Bacarığına inam',
+    sk1t: 'Aydın ünsiyyət', sk2t: 'Təxəyyül', sk3t: 'Problem həlli', sk4t: 'Tənqidi düşüncə', sk5t: 'Təhlükəsiz onlayn vərdişlər', sk6t: 'Bacarığına inam',
 
     fq_h: 'Valideynlərin sualları',
     q1: 'Övladımın kodlaşdırma bilməsi lazımdırmı?', a1: 'Xeyr. Oyun kodunu süni intellekt yazır. Uşaqlar ona yön verməyi, nəticəni sınamağı və xətaları düzəltdirməyi öyrənir.',

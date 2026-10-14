@@ -30,8 +30,8 @@
   <p id="rText"></p><div class="row" style="justify-content:center"><button class="ghost" id="rStay" data-t="keepGoing"></button><button id="rNext" data-t="nextLevel"></button></div></div></div>
 <script type="module">
 import { md } from '/md.js';
-import { api, t, getLang, applyI18n, toggleLang, esc, $, onEvents, extractGame, gameFrame, creationCard, stars, toast } from '/common.js';
-applyI18n(); $('#lang').textContent = t('lang'); $('#lang').onclick = toggleLang;
+import { api, t, getLang, applyI18n, toggleLang, esc, $, onEvents, extractGame, gameFrame, creationCard, stars, toast, langHtml } from '/common.js';
+applyI18n(); $('#lang').innerHTML = langHtml(); $('#lang').onclick = toggleLang;
 let me, level = null, current = null, busy = false;
 const ended = () => { // back to the room's invite page, so logging in again next session is one step
   let inv = null; try { inv = localStorage.getItem('invite'); } catch {}

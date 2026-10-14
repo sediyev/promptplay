@@ -58,11 +58,14 @@ a { color:var(--link); }
 .lang { display:inline-flex; align-items:center; height:40px; min-width:60px; padding:3px; border-radius:999px; background:var(--brand-soft); color:var(--muted-h); font-size:.75rem; font-weight:800;
   box-shadow:none; cursor:pointer; }
 .lang:hover { box-shadow:none; }
-.lang b { display:grid; place-items:center; min-width:27px; height:100%; padding:0 6px; border-radius:999px; }
+.lang b { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-width:27px; height:100%; padding:0 10px; border-radius:999px; }
+.lang b::before { content:""; width:20px; height:14px; }
+.lang b[lang=az]::before { background-image:var(--fa); } .lang b[lang=en]::before { background-image:var(--fe); }
 html[lang=az] .lang b:first-child, html[lang=en] .lang b:last-child { background:var(--card); color:var(--link); box-shadow:var(--shadow); }
 @media (max-width:719.98px) {
   .wide { display:none !important; }
   .bar-act { gap:6px; } .bar-act .btn.sm { padding-inline:.8em; font-size:.82rem; }
+  .lang b { padding:0 6px; gap:0; font-size:0; } /* flags only on phones */
 }
 @media (max-width:379.98px) { .brand-t { display:none; } }
 @media (prefers-reduced-motion:no-preference) and (min-width:720px) {
