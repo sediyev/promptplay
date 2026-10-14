@@ -17,9 +17,10 @@ try { await api('/api/me'); } catch { location = '/join#teacher'; await new Prom
 const classId = new URLSearchParams(location.search).get('class');
 classId ? roomPage(+classId) : listPage();
 
-function openModal(title, el, small) {
+function openModal(title, el, size) { // size: 'small' or 'wide'
   $('#mt').textContent = title; $('#mb').replaceChildren(el);
-  $('#modal').firstElementChild.classList.toggle('small', !!small); $('#modal').hidden = false;
+  for (const s of ['small', 'wide']) $('#modal').firstElementChild.classList.toggle(s, size === s);
+  $('#modal').hidden = false;
 }
 const outputEl = (g) => (g.kind === 'creation' ? creationCard(g.html) : Object.assign(gameFrame(g.html), { className: 'game' }));
 
@@ -120,15 +121,18 @@ async function roomPage(id) {
     $('#students').querySelectorAll('[data-pin]').forEach((e) => (e.onclick = async (ev) => {
       ev.stopPropagation(); const r = await api('/api/students/' + e.dataset.pin, 'PATCH', { reset_pin: true });
       const box = document.createElement('div'); box.className = 'qrbox'; box.innerHTML = `<p>${t('newPin')} <b>${esc(stu(e.dataset.pin).nickname)}</b></p><span class="code">${r.pin}</span>`;
-      openModal(t('resetPin'), box, true);
+      openModal(t('resetPin'), box, 'small');
     }));
     $('#students').querySelectorAll('[data-k]').forEach((e) => (e.onclick = async (ev) => {
       ev.stopPropagation(); if (!confirm(t('confirmRemove'))) return;
       await api('/api/students/' + e.dataset.k, 'DELETE'); if (sel == e.dataset.k) sel = ''; refresh(); loadFeed();
     }));
   }
-  // The student's own page, read-only, in its own tab (one tab per student), to see where they got stuck.
-  const openView = (sid) => window.open('/student.html?student=' + sid, 'pp-student-' + sid);
+  // The student's own page, read-only, in a popup over the dashboard, to see where they got stuck. Closing the popup drops it.
+  const openView = (sid) => {
+    const s = stu(sid), f = Object.assign(document.createElement('iframe'), { className: 'studentview', src: `/student.html?student=${sid}&embed=1` });
+    openModal(`${s ? `${s.avatar} ${s.nickname} · ` : ''}${t('studentView')}`, f, 'wide');
+  };
   // Each level is a column; students sit on the level they are working on.
   function renderMap() {
     const at = (lid) => cls.students.filter((s) => s.level === lid);

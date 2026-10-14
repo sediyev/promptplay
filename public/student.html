@@ -34,12 +34,12 @@ import { api, t, getLang, applyI18n, toggleLang, esc, $, onEvents, extractGame, 
 applyI18n(); $('#lang').innerHTML = langHtml(); $('#lang').onclick = toggleLang;
 let me, level = null, current = null, busy = false;
 // "Student view": the teacher opens this page with ?student=<id> to see what the student sees, read-only.
-const viewId = +new URLSearchParams(location.search).get('student') || 0;
+const params = new URLSearchParams(location.search), viewId = +params.get('student') || 0, embed = viewId && params.has('embed');
 const urls = viewId ? { me: `/api/students/${viewId}/view`, level: `/api/students/${viewId}/view/levels/`, games: `/api/students/${viewId}/view/games` }
   : { me: '/api/student/me', level: '/api/student/levels/', games: '/api/games' };
 let stream = null; // the AI reply the teacher watches arrive in student view
 const ended = () => { // back to the room's invite page, so logging in again next session is one step
-  if (viewId) return (location = '/join#teacher');
+  if (viewId) return (window.top.location = '/join#teacher');
   let inv = null; try { inv = localStorage.getItem('invite'); } catch {}
   location = (inv ? '/join/' + encodeURIComponent(inv) : '/join') + '?closed=1';
 };
@@ -192,7 +192,8 @@ try { me = await api(urls.me); } catch (x) { x.code === 'room_closed' || viewId 
 if (viewId) {
   // Read-only: nothing here acts as the student. The teacher lands on the level the student is working on.
   document.title = `${me.avatar} ${me.nickname} · PromptPlay`;
-  $('#seen').innerHTML = `${t('watching')} <b>${esc(me.avatar)} ${esc(me.nickname)}</b> · <a href="/teacher.html?class=${me.class_id}">${t('toDashboard')}</a>`;
+  $('#seen').innerHTML = `${t('watching')} <b>${esc(me.avatar)} ${esc(me.nickname)}</b>` + (embed ? '' : ` · <a href="/teacher.html?class=${me.class_id}">${t('toDashboard')}</a>`);
+  $('#lang').hidden = !!embed; // inside the dashboard popup the dashboard's own switcher applies
   $('#check').hidden = true; $('#send').hidden = true; $('#save').style.display = 'none'; $('#text').placeholder = '';
   const cur = !location.hash && me.levels.find((l) => l.status === 'current' || l.status === 'pending');
   if (cur) history.replaceState(null, '', '#level=' + cur.id);
