@@ -35,14 +35,17 @@ test('both languages have exactly the same strings, none empty', () => {
 
 test('every string the HTML asks for exists in both languages', () => {
   const used = [...new Set(keysUsedInHtml())];
-  assert.ok(used.length > 100, 'the page is expected to use well over 100 strings, found ' + used.length);
+  assert.ok(used.length > 80, 'the page is expected to use well over 80 strings, found ' + used.length);
   for (const k of used) for (const lang of ['en', 'az']) assert.ok(k in HOME[lang], `index.html uses "${k}", missing in ${lang}`);
   // literal t('key') calls in the scripts, plus the families built from numbers
   for (const f of JS) for (const m of read(f).matchAll(/\bt\('(\w+)'\)/g)) for (const lang of ['en', 'az']) assert.ok(m[1] in HOME[lang], `${f} uses t('${m[1]}'), missing in ${lang}`);
-  const family = ['st0', 'st1', 'st2', 'st3', 'pu_p1', 'pu_p2', 'pu_p3', 'g1n', 'g1g', 'g2n', 'g2g', 'g2w', 'g3n', 'g3g', 'g3w', 'g3t', 'yt_base', 'yt_n0', 'yt_done',
-    ...[1, 2, 3].flatMap((i) => [`yw${i}l`, `yw${i}n`, `yw${i}f`, `yc${i}l`, `yc${i}n`, `yc${i}f`, `yx${i}l`, `yx${i}f`]), ...['lb_gg', 'lb_gw', 'lb_gc', 'lb_gt']];
-  for (const k of family) for (const lang of ['en', 'az']) assert.ok(k in HOME[lang], `${k} missing in ${lang}`);
-  for (const lang of ['en', 'az']) assert.equal(HOME[lang].yt_base.match(/\{\}/g)?.length, 3, `${lang}.yt_base needs three slots: world, thing to catch, twist`);
+  // keys the story scenes type out by name (home-story.js)
+  const story = read('home-story.js');
+  for (const m of story.matchAll(/'((?:mq|pu_p|pw_[pr])\d)'/g)) for (const lang of ['en', 'az']) assert.ok(m[1] in HOME[lang], `home-story.js uses '${m[1]}', missing in ${lang}`);
+  // every chapter of the story has a heading and a text, and the stage has one scene per chapter
+  const chapters = [...html.matchAll(/<li class="step[^"]*">/g)].length, scenes = [...html.matchAll(/<div class="scene sc-/g)].length;
+  assert.equal(chapters, 5); assert.equal(scenes, chapters, 'one stage scene per chapter');
+  for (let i = 1; i <= chapters; i++) assert.match(html, new RegExp(`data-t="c${i}_h"[^]*data-t="c${i}_p"`), `chapter ${i}`);
 });
 
 test('the static Azerbaijani text in index.html is in sync with the dictionary (run "npm run home:sync")', () => {
@@ -54,6 +57,7 @@ test('the ten starter levels are exactly the ones in server/starter-course.json,
   const starter = JSON.parse(fs.readFileSync(path.join(ROOT, 'server', 'starter-course.json'), 'utf8')).levels;
   assert.equal(starter.length, 10);
   const nodes = [...html.matchAll(/<li class="lvl[^"]*"[^>]*><span class="orb"[^>]*>([^<]+)<\/span>.*?data-t="lv(\d+)t"/g)];
+  assert.deepEqual([...html.matchAll(/<ol class="path">([^]*?)<\/ol>/g)][0][1].match(/<li[^>]*>([^<]+)<\/li>/g).map((l) => l.replace(/<[^>]+>/g, '')), starter.map((l) => l.emoji), 'the stage path shows the same ten levels');
   assert.equal(nodes.length, 10);
   nodes.forEach(([, emoji, n], i) => {
     assert.equal(+n, i + 1);
@@ -81,9 +85,12 @@ test('structure: one h1, landmarks, meta tags, language', () => {
   levels.forEach((l, i) => assert.ok(i === 0 || l <= levels[i - 1] + 1, `heading level jumps to h${l}`));
   // decorative emoji are hidden from screen readers: every emoji in markup sits inside an aria-hidden element or an element with a text alternative
   assert.ok(!/<(?:span|div|b|i)(?![^>]*aria-hidden)[^>]*class="(?:ico|orb|pl-b|pc-pic)"/.test(html), 'decorative emoji must be aria-hidden');
-  for (const c of ['pw-in', 'hud', 'ill i1', 'ill i2', 'ill i3', 'fl f1', 'fl f4', 'hb hb1', 'hb hb2', 'brand-t']) if (c !== 'brand-t') assert.match(html, new RegExp(`class="${c}"[^>]*aria-hidden="true"`), c + ' is decorative');
-  assert.equal([...html.matchAll(/<span aria-hidden="true">[^<]+<\/span> <span data-t="y[wcx]\dl"/g)].length, 9, 'emoji in the nine "Your turn" chips are hidden');
-  assert.equal([...html.matchAll(/<li><span aria-hidden="true">[^<]+<\/span> <span data-t="mq\d"/g)].length, 8, 'emoji in the eight example prompts are hidden');
+  for (const c of ['hero-bg', 'stage', 'wave', 'final-e']) assert.match(html, new RegExp(`class="${c}"[^>]*aria-hidden="true"`), c + ' is decorative');
+  assert.equal([...html.matchAll(/<li><span aria-hidden="true">[^<]+<\/span> <span data-t="sk\dt"/g)].length, 6, 'emoji in the six skills are hidden');
+  // the welcome screen: one message, one primary button
+  const hero = html.match(/<section class="hero"[^]*?<\/section>/)[0];
+  assert.equal((hero.match(/data-cta/g) || []).length, 1, 'one button on the welcome screen');
+  assert.match(hero, /data-t="hr_hi"/);
 });
 
 test('zero third-party requests: only same-origin files, no network calls in the scripts', () => {
@@ -94,20 +101,15 @@ test('zero third-party requests: only same-origin files, no network calls in the
   assert.ok(!/@import|@font-face|url\(/.test(css), 'no imports, web fonts or images in home.css');
   assert.ok(!/<img|<link[^>]*rel="(?:preconnect|dns-prefetch)"|<script[^>]*src="(?!\/)/.test(html), 'no images, no external scripts');
   for (const f of JS) assert.ok(!/\bfetch\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon|navigator\.serviceWorker/.test(read(f)), `${f} makes a network call`);
-  // the playable example runs through gameFrame() (sandbox + CSP without network access)
-  assert.match(read('home-game.js'), /import \{[^}]*gameFrame[^}]*\} from '\/common\.js'/);
-  assert.match(fs.readFileSync(path.join(PUB, 'common.js'), 'utf8'), /default-src 'none'/);
 });
 
 test('page weight stays within budget', () => {
   const size = (f) => fs.statSync(path.join(PUB, f)).size, gz = (f) => zlib.gzipSync(fs.readFileSync(path.join(PUB, f)), { level: 9 }).length;
-  const initial = ['index.html', 'style.css', 'home.css', 'common.js', 'home-i18n.js', 'home.js', 'home-fx.js', 'home-hero.js', 'home-mini.js'];
-  const lazy = ['home-power.js', 'home-map.js', 'home-game.js'];
-  const raw = initial.reduce((a, f) => a + size(f), 0), all = raw + lazy.reduce((a, f) => a + size(f), 0), zipped = [...initial, ...lazy].reduce((a, f) => a + gz(f), 0);
-  assert.ok(raw < 175 * 1000, `initial load is ${raw} bytes, the budget is about 175 KB`);
-  assert.ok(all < 195 * 1000, `all home page files are ${all} bytes`);
-  assert.ok(zipped < 64 * 1000, `gzipped total is ${zipped} bytes`);
-  assert.ok(lazy.every((f) => JS.includes(f)) && /import\('\/home-power\.js'\)/.test(read('home.js')), 'below the fold features load lazily');
+  const files = ['index.html', 'style.css', 'home.css', 'common.js', 'home-i18n.js', 'home.js', 'home-fx.js', 'home-story.js', 'home-mini.js'];
+  assert.deepEqual(JS.sort(), files.filter((f) => f.startsWith('home') && f.endsWith('.js')).sort(), 'every home page script is counted');
+  const raw = files.reduce((a, f) => a + size(f), 0), zipped = files.reduce((a, f) => a + gz(f), 0);
+  assert.ok(raw < 130 * 1000, `the home page is ${raw} bytes, the budget is about 130 KB`);
+  assert.ok(zipped < 44 * 1000, `gzipped total is ${zipped} bytes`);
 });
 
 test('every redirect that used to go to "/" now goes to the join and login page', () => {

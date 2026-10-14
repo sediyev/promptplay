@@ -1,11 +1,11 @@
 // A living preview of a tiny game, the same kind kids build in class: things fall, the player slides over to catch them
-// and points pop up. Used by the hero window and by Prompt Power-Up, where each better prompt visibly makes a better game.
+// and points pop up. Used by two chapters of the home page story: each better prompt visibly makes a better game, and the AI builds one.
 // Plain DOM nodes that only move with transform and opacity. It runs only while on screen and the tab is visible;
 // with reduced motion (or before any script runs) the host shows a still frame drawn by the HTML and CSS.
 import { reduced } from '/home-fx.js';
 
 const N = 6, CYCLE = 20; // falling items at most, seconds in a round when the game has a timer
-const THEMES = ['plain', 'sky', 'space', 'ocean', 'jungle'];
+const THEMES = ['plain', 'sky', 'space'];
 
 // cfg: { theme, item, player, gold, bombs, ramp, timer, speed }
 export function mini(host, cfg = {}) {
@@ -17,7 +17,7 @@ export function mini(host, cfg = {}) {
   sc.className = 'mn-sc'; tm.className = 'mn-tm'; hud.append(sc, tm); pl.dataset.avatar = '';
   pl.textContent = document.querySelector('[data-avatar]')?.textContent || '🦊';
 
-  let W = 0, H = 0, S = 24, px = 0.5, score = 0, clock = 0, spawn = 0, pop = 0, last = 0, raf = 0, seen = false, c = {};
+  let W = 0, H = 0, S = 24, px = 0.5, score = 0, clock = 0, spawn = 0, pop = 0, last = 0, raf = 0, seen = false, off = false, c = {};
   const st = items.map(() => ({ on: false, x: 0, y: 0, v: 0, k: 'n' }));
   const show = (e, on) => (e.style.opacity = on ? '' : '0');
 
@@ -55,7 +55,7 @@ export function mini(host, cfg = {}) {
     paint(i); show(items[i], true); place(i);
   }
   function tick(now) {
-    raf = 0; if (!seen || document.hidden || c.square) return;
+    raf = 0; if (!seen || off || document.hidden || c.square) return;
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     clock += dt;
     if (c.timer && clock >= CYCLE) { clock = 0; score = 0; paintScore(); }
@@ -85,7 +85,7 @@ export function mini(host, cfg = {}) {
     if (!c.timer && score > 99) score = 0;
     raf = requestAnimationFrame(tick);
   }
-  const go = () => { if (!raf && seen && !document.hidden && !reduced() && !c.square) { last = performance.now(); raf = requestAnimationFrame(tick); } };
+  const go = () => { if (!raf && seen && !off && !document.hidden && !reduced() && !c.square) { last = performance.now(); raf = requestAnimationFrame(tick); } };
 
   // a new game: fresh starts at zero with the first items still above the screen
   function set(next, { fresh = false } = {}) {
@@ -99,10 +99,12 @@ export function mini(host, cfg = {}) {
   }
   // speed up the running game without starting a new round (the hero story's "make the stars fall faster")
   const tune = (more) => { c = { ...c, ...more }; st.forEach((o, i) => { if (o.on) paint(i); }); };
+  // the story stage stacks scenes: a scene out of sight pauses its game
+  const pause = (v) => { off = v; go(); };
 
   new ResizeObserver(() => { size(); if (!raf && !c.square) still(); placePl(); }).observe(host);
   new IntersectionObserver(([e]) => { seen = e.isIntersecting; go(); }, { threshold: 0.1 }).observe(host);
   document.addEventListener('visibilitychange', go);
   size(); set(cfg);
-  return { set, tune };
+  return { set, tune, pause };
 }
