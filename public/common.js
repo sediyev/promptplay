@@ -97,6 +97,7 @@ Object.assign(DICT.en, {
   editCourse: 'Edit course', useCourse: 'Rooms are live copies: changes apply to every room using this course.', share2: 'Students open this link:',
   confirmRemove: 'Remove this student and their progress?', levelsTitle: 'Levels', edit: 'Edit',
   nextAdv: 'Next adventure', askTeacher: 'Ask your teacher to open it!',
+  openView: '👁 Open their screen', studentView: 'their screen (view only)', watching: '👁 You are viewing this student\'s screen (view only):', toDashboard: '← Back to the dashboard',
 });
 Object.assign(DICT.az, {
   pin: 'Gizli PIN (4 rəqəm, yadda saxla!)', pickAvatar: 'Avatarını seç', invitedTo: 'Dəvət olundun:', haveCode: 'Sinif kodun var?',
@@ -130,6 +131,7 @@ Object.assign(DICT.az, {
   editCourse: 'Kursu redaktə et', useCourse: 'Otaqlar canlı nüsxədir: dəyişikliklər bu kursdan istifadə edən bütün otaqlara aiddir.', share2: 'Şagirdlər bu linki açır:',
   confirmRemove: 'Bu şagird və irəliləyişi silinsin?', levelsTitle: 'Səviyyələr', edit: 'Redaktə',
   nextAdv: 'Növbəti macəra', askTeacher: 'Müəllimindən onu açmasını istə!',
+  openView: '👁 Ekranına bax', studentView: 'ekranı (yalnız baxış)', watching: '👁 Şagirdin ekranına baxırsınız (yalnız baxış):', toDashboard: '← Panelə qayıt',
 });
 let lang = 'az';
 try { const saved = localStorage.getItem('lang'); if (DICT[saved]) lang = saved; } catch {}

@@ -165,6 +165,21 @@ test('courses, rooms, live sessions and levels', async () => {
   me = (await call('s', 'GET', '/api/student/me')).data;
   assert.deepEqual(me.levels.map((l) => l.status), ['current', 'done', 'locked'], 'reset level is played again');
 
+  // student view: the teacher reads the same page data the student sees, read-only, and only for their own students
+  const view = (await call('t', 'GET', `/api/students/${leyla}/view`)).data;
+  assert.equal(view.nickname, 'Leyla'); assert.equal(view.class_id, id);
+  assert.deepEqual(view.levels, me.levels, 'same level map as the student');
+  const vlv = (await call('t', 'GET', `/api/students/${leyla}/view/levels/${lv[0].id}`)).data;
+  assert.deepEqual(vlv, (await call('s', 'GET', '/api/student/levels/' + lv[0].id)).data, 'same chat as the student');
+  assert.ok(vlv.messages.some((m) => m.content === 'a hero who controls clouds'));
+  assert.equal((await call('t', 'GET', `/api/students/${leyla}/view/levels/${lv[2].id}`)).status, 403, 'locked level stays locked');
+  assert.ok((await call('t', 'GET', `/api/students/${leyla}/view/games`)).data.some((g) => g.title === 'Captain Cloud'));
+  assert.equal((await call('s', 'GET', `/api/students/${leyla}/view`)).status, 401, 'students cannot use it');
+  await call('adm', 'POST', '/api/admin/teachers', { name: 'T2', email: 't2@x.com', password: 'secret2' });
+  await call('t2', 'POST', '/api/login', { email: 't2@x.com', password: 'secret2' });
+  assert.equal((await call('t2', 'GET', `/api/students/${leyla}/view`)).status, 404, 'another teacher cannot open it');
+  assert.match(events.join(''), /"type":"delta","student_id":\d+,"level_id":\d+/, 'deltas say which level they belong to');
+
   // PIN reset by teacher
   const pin = (await call('t', 'PATCH', '/api/students/' + leyla, { reset_pin: true })).data.pin;
   assert.equal((await join('s4', 'Leyla', '1234')).data.error, 'bad_pin');

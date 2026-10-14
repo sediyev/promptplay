@@ -341,6 +341,15 @@ app.post('/api/students/:id/progress', needTeacher, ownStudent, (req, res) => {
   publish(`t:${room.id}`, { type: 'room' });
   res.json({ ok: true });
 });
+// "Student view": the teacher opens the page the student sees, read-only, to find where they got stuck (also after the session).
+const viewRoom = (stu) => one('SELECT * FROM classes WHERE id=?', stu.class_id);
+app.get('/api/students/:id/view', needTeacher, ownStudent, (req, res) =>
+  res.json({ ...studentPage(req.stu, viewRoom(req.stu)), student_id: req.stu.id, class_id: req.stu.class_id }));
+app.get('/api/students/:id/view/levels/:level', needTeacher, ownStudent, (req, res) => {
+  const r = studentLevel(req.stu, viewRoom(req.stu), +req.params.level);
+  r ? res.json(r) : fail(res, 403, 'locked');
+});
+app.get('/api/students/:id/view/games', needTeacher, ownStudent, (req, res) => res.json(studentGallery(req.stu)));
 app.get('/api/classes/:id/messages', needTeacher, ownClass, (req, res) => {
   const where = ['m.class_id=?'], p = [req.cls.id];
   if (req.query.student) { where.push('m.student_id=?'); p.push(+req.query.student); }
@@ -408,21 +417,30 @@ function studentState(stu, room) {
   const used = usedToday(stu.id);
   return { used, limit: room.daily_limit, classPaused: !!room.paused, paused: !!stu.paused, budget: overBudget() };
 }
-app.get('/api/student/me', needStudent, (req, res) => {
-  const stu = req.student, room = req.room;
-  run('UPDATE students SET last_seen=? WHERE id=?', now(), stu.id);
+// What the student page shows: the map, one level with its chat, the gallery. The teacher's "student view" reads the same data.
+function studentPage(stu, room) {
   const levels = levelMap(stu, room.course_id).map(({ id, position, title, emoji, output, status, stars }) => ({ id, position, title, emoji, output, status, stars }));
   const course = one('SELECT title,library_slug FROM courses WHERE id=?', room.course_id);
   const finished = levels.length > 0 && levels.every((l) => l.status === 'done');
-  res.json({ nickname: stu.nickname, avatar: stu.avatar, room: room.name, course: course?.title, approval: room.approval, levels,
-    next: finished ? nextAdventures(course?.library_slug) : [], ...studentState(stu, room) });
+  return { nickname: stu.nickname, avatar: stu.avatar, room: room.name, course: course?.title, approval: room.approval, levels,
+    next: finished ? nextAdventures(course?.library_slug) : [], ...studentState(stu, room) };
+}
+function studentLevel(stu, room, levelId) {
+  const l = openLevel(stu, room.course_id, levelId);
+  if (!l) return null;
+  const messages = all("SELECT role,content FROM messages WHERE student_id=? AND level_id=? AND role IN ('user','assistant') ORDER BY id DESC LIMIT 60", stu.id, l.id).reverse();
+  const { id, position, title, emoji, intro, task, output, status, stars, feedback } = l;
+  return { level: { id, position, title, emoji, intro, task, output, status, stars, feedback }, messages };
+}
+const studentGallery = (stu) => all(`SELECT g.id,g.title,g.html,g.kind,g.shared,g.student_id,s.nickname,s.avatar FROM games g JOIN students s ON s.id=g.student_id
+  WHERE g.class_id=? AND (g.student_id=? OR g.shared=1) ORDER BY g.id DESC LIMIT 100`, stu.class_id, stu.id);
+app.get('/api/student/me', needStudent, (req, res) => {
+  run('UPDATE students SET last_seen=? WHERE id=?', now(), req.student.id);
+  res.json(studentPage(req.student, req.room));
 });
 app.get('/api/student/levels/:id', needStudent, (req, res) => {
-  const l = openLevel(req.student, req.room.course_id, +req.params.id);
-  if (!l) return fail(res, 403, 'locked');
-  const messages = all("SELECT role,content FROM messages WHERE student_id=? AND level_id=? AND role IN ('user','assistant') ORDER BY id DESC LIMIT 60", req.student.id, l.id).reverse();
-  const { id, position, title, emoji, intro, task, output, status, stars, feedback } = l;
-  res.json({ level: { id, position, title, emoji, intro, task, output, status, stars, feedback }, messages });
+  const r = studentLevel(req.student, req.room, +req.params.id);
+  r ? res.json(r) : fail(res, 403, 'locked');
 });
 app.get('/api/student/events', needStudent, (req, res) => {
   const sid = req.student.id;
@@ -476,7 +494,7 @@ app.post('/api/chat', needStudent, async (req, res) => {
 
   // The teacher watches the reply arrive live: chunks are batched every 250ms to keep the feed light.
   let pending = '', flushT = null;
-  const flush = () => { flushT = null; if (pending) publish(tch, { type: 'delta', student_id: stu.id, text: pending }); pending = ''; };
+  const flush = () => { flushT = null; if (pending) publish(tch, { type: 'delta', student_id: stu.id, level_id: level.id, text: pending }); pending = ''; };
   res.set({ 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no' }).flushHeaders();
   try {
     const { text: reply, usage } = await chat(systemPrompt(level, course, req.body.lang), msgs, (t) => {
@@ -554,9 +572,7 @@ app.post('/api/games', needStudent, (req, res) => {
   publish(`t:${req.student.class_id}`, { type: 'usage' }); // teacher gallery refresh
   res.json({ id: +r.lastInsertRowid });
 });
-app.get('/api/games', needStudent, (req, res) =>
-  res.json(all(`SELECT g.id,g.title,g.html,g.kind,g.shared,g.student_id,s.nickname,s.avatar FROM games g JOIN students s ON s.id=g.student_id
-    WHERE g.class_id=? AND (g.student_id=? OR g.shared=1) ORDER BY g.id DESC LIMIT 100`, req.student.class_id, req.student.id)));
+app.get('/api/games', needStudent, (req, res) => res.json(studentGallery(req.student)));
 app.patch('/api/games/:id', needStudent, gameOwner, (req, res) => {
   run('UPDATE games SET shared=? WHERE id=?', req.body.shared ? 1 : 0, req.game.id);
   res.json({ ok: true });
