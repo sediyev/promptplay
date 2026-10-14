@@ -170,7 +170,7 @@ export const HOME = {
     yt_done: 'Süni intellektə nə istədiyini dəqiq dedin. Əsas bacarıq budur!',
 
     mp_k: 'Macəra', mp_h: '10 səviyyəlik oyun xəritəsi',
-    mp_lead: 'Hər səviyyə süni intellekt köməkçisi ilə qısa yaradıcı missiyadır. Uşaqlar üç ulduza qədər qazanır, növbəti səviyyəni açır və xəritə boyu irəliləyir.',
+    mp_lead: 'Hər səviyyə süni intellekt köməkçisi ilə qısa və təxəyyülü oyadan missiyadır. Uşaqlar üç ulduza qədər qazanır, növbəti səviyyəni açır və xəritə boyu irəliləyir.',
     mp_note: 'Müəllimlər öz kurslarını da hazırlaya bilər.', mp_ex: 'Göstərilən irəliləyiş nümunədir.',
     mp_end: 'Macəra tamamlandı. Sinfə göstərmək vaxtıdır!',
     lv1t: 'Salam, Süni İntellekt!', lv1s: 'Süni intellektin necə işlədiyi və niyə səhv edə bilməsi',
@@ -193,7 +193,7 @@ export const HOME = {
 
     sk_h: 'Həyat üçün bacarıqlar', sk_lead: 'Uşaqlar əyləncə üçün oynayır. Bu arada oyundan kənarda da lazım olan bacarıqları məşq edirlər.',
     sk1t: 'Aydın ünsiyyət', sk1d: 'Aydın istəklər daha yaxşı nəticə verir, ona görə uşaqlar nə demək istədiklərini dəqiq ifadə etməyi öyrənir.',
-    sk2t: 'Yaradıcılıq', sk2d: 'Hər missiya boş vərəqdən başlayır: əvvəl heç kimin görmədiyi qəhrəman, məxluq və ya dünya.',
+    sk2t: 'Təxəyyül', sk2d: 'Hər missiya boş vərəqdən başlayır: əvvəl heç kimin görmədiyi qəhrəman, məxluq və ya dünya.',
     sk3t: 'Problem həlli', sk3d: 'Oyunda xəta olanda uşaqlar onu tapır, izah edir və düzəltdirir.',
     sk4t: 'Tənqidi düşüncə', sk4d: 'Süni intellekt səhv edə bilər, ona görə uşaqlar inanmazdan əvvəl onun dediklərini yoxlamağı öyrənir.',
     sk5t: 'Təhlükəsiz onlayn vərdişlər', sk5d: 'Uşaqlar müəllimin rəhbərliyi ilə şəxsi məlumatları gizli saxlamağı və mövzudan çıxmamağı məşq edir.',
