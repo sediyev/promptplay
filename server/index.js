@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import QRCode from 'qrcode';
 import { db, now, getSetting, setSetting, hashPassword, checkPassword, newToken, newInvite, dayStart, dayRange, newClassCode, purgeOld, migrateLessons } from './db.js';
-import { moderate, chat, evaluate, systemPrompt, costOf } from './ai.js';
+import { moderate, chat, evaluate, systemPrompt, pickLang, costOf } from './ai.js';
 import { LANGS, loadBuiltin, sortCourses, validateCourse, summary, matches, flatten, contentHash, languages } from './library.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url)), PUBLIC = path.join(HERE, '..', 'public');
@@ -450,7 +450,7 @@ app.post('/api/chat', needStudent, async (req, res) => {
   if (st.budget) return fail(res, 503, 'budget');
   const level = openLevel(stu, room.course_id, +req.body.level_id);
   if (!level) return fail(res, 403, 'locked');
-  const course = one('SELECT title FROM courses WHERE id=?', room.course_id);
+  const course = one('SELECT title,library_lang FROM courses WHERE id=?', room.course_id);
   const tch = `t:${room.id}`;
   const save = (role, content, flag) => run('INSERT INTO messages(class_id,student_id,level_id,role,content,flag,created) VALUES(?,?,?,?,?,?,?)',
     room.id, stu.id, level.id, role, content, flag || null, now());
@@ -479,7 +479,7 @@ app.post('/api/chat', needStudent, async (req, res) => {
   const flush = () => { flushT = null; if (pending) publish(tch, { type: 'delta', student_id: stu.id, text: pending }); pending = ''; };
   res.set({ 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no' }).flushHeaders();
   try {
-    const { text: reply, usage } = await chat(systemPrompt(level, course), msgs, (t) => {
+    const { text: reply, usage } = await chat(systemPrompt(level, course, req.body.lang), msgs, (t) => {
       res.write(t); pending += t; flushT ||= setTimeout(flush, 250);
     });
     clearTimeout(flushT); flush();
@@ -522,7 +522,8 @@ app.post('/api/levels/:id/submit', needStudent, async (req, res) => {
     outputId = +run('INSERT INTO games(class_id,student_id,level_id,kind,title,html,created) VALUES(?,?,?,?,?,?,?)',
       room.id, stu.id, level.id, level.output, title.slice(0, 40) || level.title, output.slice(0, 200000), now()).lastInsertRowid;
   }
-  const r = await evaluate(level, transcript, level.output === 'game' ? output?.slice(0, 20000) : output);
+  const course = one('SELECT title,library_lang FROM courses WHERE id=?', room.course_id);
+  const r = await evaluate(level, transcript, level.output === 'game' ? output?.slice(0, 20000) : output, pickLang(req.body?.lang, course, level));
   logUsage(room.id, stu.id, r.usage);
   if (r.error) return fail(res, 502, 'try_again');
 
