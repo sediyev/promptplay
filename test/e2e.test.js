@@ -72,7 +72,7 @@ test('pages: / is the public home page, /join and /join/<token> are the join and
     assert.match(r.data, /id="login"/, url + ' has the teacher login form');
   }
   // the home page loads from same-origin files only, served with usable content types
-  for (const [url, type] of [['/home.css', /text\/css/], ['/home.js', /javascript/], ['/home-i18n.js', /javascript/], ['/home-hero.js', /javascript/], ['/home-power.js', /javascript/], ['/home-map.js', /javascript/], ['/home-game.js', /javascript/], ['/home-fx.js', /javascript/]]) {
+  for (const [url, type] of [['/home.css', /text\/css/], ['/home.js', /javascript/], ['/home-i18n.js', /javascript/], ['/home-story.js', /javascript/], ['/home-mini.js', /javascript/], ['/home-fx.js', /javascript/]]) {
     const r = await fetch(base + url);
     assert.equal(r.status, 200, url);
     assert.match(r.headers.get('content-type'), type, url);
