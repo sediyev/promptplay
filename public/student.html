@@ -46,7 +46,7 @@ function display(text) {
   return s.replace(/\n{3,}/g, '\n\n').trim();
 }
 // Tutor replies are rendered as markdown; the student's own text and notices stay plain.
-function setMsg(d, text) { if (d.classList.contains('assistant')) d.innerHTML = md(text); else d.textContent = text; }
+function setMsg(d, text) { d.classList.toggle('md', d.classList.contains('assistant')); if (d.classList.contains('assistant')) d.innerHTML = md(text); else d.textContent = text; }
 function addMsg(role, text) {
   const d = document.createElement('div'); d.className = 'msg ' + role; setMsg(d, text);
   $('#log').append(d); $('#log').scrollTop = 1e9; return d;
@@ -139,13 +139,13 @@ $('#save').onclick = async () => {
 $('#check').onclick = async () => {
   busy = true; renderState(); $('#check').textContent = t('checking');
   try {
-    const r = await api(`/api/levels/${level.id}/submit`, 'POST');
+    const r = await api(`/api/levels/${level.id}/submit`, 'POST', { lang: getLang() });
     await refresh();
     const next = me.levels.find((l) => l.position === level.position + 1 && l.status !== 'locked');
     $('#rIcon').textContent = r.pending ? '⏳' : r.pass ? '🎉' : '💪';
     $('#rTitle').textContent = r.pending ? t('pending') : r.pass ? t('passed') : t('notYet');
     $('#rStars').textContent = r.pass ? stars(r.stars) : '';
-    $('#rText').textContent = r.pending ? t('pendingMsg') : r.feedback;
+    $('#rText').className = r.pending ? '' : 'md'; $('#rText').innerHTML = r.pending ? esc(t('pendingMsg')) : md(r.feedback);
     $('#rNext').hidden = !(r.pass && next); $('#rNext').onclick = () => { $('#result').hidden = true; level = null; renderState(); location.hash = 'level=' + next.id; };
     $('#result').hidden = false; loadGames();
   } catch (x) { if (x.status === 401) return ended(); toast(t(x.code), 'bad'); }
@@ -161,7 +161,7 @@ $('#form').onsubmit = async (e) => {
   $('#text').value = ''; busy = true; renderState(); addMsg('user', text);
   const bubble = addMsg('assistant', t('thinking'));
   try {
-    const r = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text, level_id: level.id }) });
+    const r = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text, level_id: level.id, lang: getLang() }) });
     if (r.status === 401) return ended();
     if ((r.headers.get('content-type') || '').includes('json')) {
       const j = await r.json(); bubble.className = 'msg note';

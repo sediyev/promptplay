@@ -8,6 +8,7 @@
 <script type="module">
 import { api, t, getLang, applyI18n, toggleLang, esc, $, onEvents, gameFrame, creationCard, stars, toast } from '/common.js';
 import '/library-i18n.js';
+import { md } from '/md.js';
 applyI18n(); $('#lang').textContent = t('lang'); $('#lang').onclick = toggleLang;
 $('#out').onclick = async () => { await api('/api/logout', 'POST'); location = '/join#teacher'; };
 $('#mc').onclick = () => { $('#modal').hidden = true; $('#mb').replaceChildren(); };
@@ -135,7 +136,7 @@ async function roomPage(id) {
   function renderPending() {
     $('#pending').hidden = !cls.pending.length;
     $('#pending').innerHTML = `<h3>⏳ ${t('approvals')} (${cls.pending.length})</h3>` + cls.pending.map((p) => `<div class="row wrapx prow">
-      <span class="grow">${esc(p.avatar)} <b>${esc(p.nickname)}</b> · L${p.position} ${esc(p.title)}<br><span class="muted">${t('aiSuggests')}: ${stars(p.stars)} ${esc(p.feedback)}</span></span>
+      <span class="grow">${esc(p.avatar)} <b>${esc(p.nickname)}</b> · L${p.position} ${esc(p.title)}<br><span class="muted">${t('aiSuggests')}: ${stars(p.stars)}</span><div class="md muted">${md(p.feedback)}</div></span>
       ${p.output_id ? `<button class="ghost" data-o="${p.output_id}">${t('play')}</button>` : ''}
       <select data-st="${p.student_id}-${p.level_id}" style="width:auto">${[1, 2, 3].map((n) => `<option ${n === (p.stars || 1) ? 'selected' : ''} value="${n}">${stars(n)}</option>`).join('')}</select>
       <button class="ok" data-ok="${p.student_id}-${p.level_id}">${t('approve')}</button><button class="ghost" data-no="${p.student_id}-${p.level_id}">${t('reject')}</button></div>`).join('');
@@ -170,7 +171,7 @@ async function roomPage(id) {
   const label = (m) => `<b>${esc(m.avatar || '')} ${esc(m.nickname)}${m.role === 'blocked' ? ` · ${t('blockedMsg')}: ${t('sc_' + m.flag)}` : ''} · ${new Date(m.created).toLocaleTimeString()}${m.level ? ' · ' + esc(m.level) : ''}</b>`;
   const body = (c) => { // fold code blocks so the feed stays readable
     const parts = String(c).split(/```(?:html|creation)?\n?([\s\S]*?)```/);
-    return parts.map((p, i) => (i % 2 ? `<details><summary>code</summary><pre>${esc(p)}</pre></details>` : p.trim() ? `<div style="white-space:pre-wrap">${esc(p.trim())}</div>` : '')).join('');
+    return parts.map((p, i) => (i % 2 ? `<details><summary>code</summary><pre>${esc(p)}</pre></details>` : p.trim() ? `<div class="md">${md(p.trim())}</div>` : '')).join('');
   };
   const msgHtml = (m) => `<div class="fm ${m.role}">${label(m)}${m.role === 'blocked' ? esc(m.content) : body(m.content)}</div>`;
   const nearBottom = () => { const f = $('#feed'); return f.scrollHeight - f.scrollTop - f.clientHeight < 80; };
@@ -222,11 +223,11 @@ async function roomPage(id) {
       if (!b) {
         const s = stu(ev.student_id);
         b = Object.assign(document.createElement('div'), { className: 'fm assistant streaming' }); b.raw = '';
-        b.innerHTML = `<b>${esc(s?.avatar || '')} ${esc(s?.nickname || '')} · AI ✍️</b><div style="white-space:pre-wrap"></div>`;
+        b.innerHTML = `<b>${esc(s?.avatar || '')} ${esc(s?.nickname || '')} · AI ✍️</b><div class="md"></div>`;
         $('#feed > p.muted')?.remove(); $('#feed').append(b); live.set(ev.student_id, b);
       }
       b.raw += ev.text;
-      b.lastChild.textContent = b.raw.replace(/```(html|creation)[\s\S]*?(```|$)/g, (_, k) => (k === 'html' ? '🛠️ [game code]' : '✨ [creation]'));
+      b.lastChild.innerHTML = md(b.raw.replace(/```(html|creation)[\s\S]*?(```|$)/g, (_, k) => (k === 'html' ? '🛠️ [game code]' : '✨ [creation]')));
       if (stick) bottom();
     }
     if (ev.type === 'delta_end') { live.get(ev.student_id)?.remove(); live.delete(ev.student_id); }
