@@ -29,7 +29,8 @@
 <div id="result" class="modal" hidden><div class="resultbox"><div id="rIcon" class="bigicon"></div><h2 id="rTitle"></h2><div class="stars big" id="rStars"></div>
   <p id="rText"></p><div class="row" style="justify-content:center"><button class="ghost" id="rStay" data-t="keepGoing"></button><button id="rNext" data-t="nextLevel"></button></div></div></div>
 <script type="module">
-import { api, t, getLang, applyI18n, toggleLang, esc, md, $, onEvents, extractGame, gameFrame, creationCard, stars, toast } from '/common.js';
+import { md } from '/md.js';
+import { api, t, getLang, applyI18n, toggleLang, esc, $, onEvents, extractGame, gameFrame, creationCard, stars, toast } from '/common.js';
 applyI18n(); $('#lang').textContent = t('lang'); $('#lang').onclick = toggleLang;
 let me, level = null, current = null, busy = false;
 const ended = () => { // back to the room's invite page, so logging in again next session is one step
