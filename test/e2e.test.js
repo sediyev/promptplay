@@ -221,6 +221,140 @@ test('courses, rooms, live sessions and levels', async () => {
   assert.equal((await call('k', 'POST', '/api/chat', { text: 'z', level_id: lv[0].id })).data.error, 'budget', 'spend cap enforced');
 });
 
+// An open event stream that collects its "data:" events as objects.
+function stream(who, url) {
+  const ctl = new AbortController(), evs = [];
+  const done = fetch(base + url, { headers: { cookie: jar[who] }, signal: ctl.signal }).then(async (r) => {
+    const dec = new TextDecoder(); let buf = '';
+    try {
+      for await (const c of r.body) {
+        buf += dec.decode(c, { stream: true });
+        for (let i; (i = buf.indexOf('\n\n')) >= 0; buf = buf.slice(i + 2)) { const m = buf.slice(0, i).match(/^data: (.*)$/m); if (m) evs.push(JSON.parse(m[1])); }
+      }
+    } catch {}
+  });
+  const next = async (type, where = () => true) => {
+    for (let i = 0; i < 75; i++) { const e = evs.find((x) => x.type === type && !x.seen && where(x)); if (e) { e.seen = true; return e; } await sleep(40); }
+    throw new Error(`no "${type}" event on ${url}`);
+  };
+  return { evs, done, next, close: () => ctl.abort() };
+}
+
+test('video call: teacher opens it, up to 4 people, setup messages relayed, teacher controls', async () => {
+  await call('adm', 'POST', '/api/login', { email: 'a@x.com', password: 'adminpw' });
+  await call('adm', 'POST', '/api/admin/teachers', { name: 'Vera', email: 'v@x.com', password: 'secret3' });
+  await call('tv', 'POST', '/api/login', { email: 'v@x.com', password: 'secret3' });
+  const course = (await call('tv', 'POST', '/api/courses/starter')).data.id;
+  const id = (await call('tv', 'POST', '/api/classes', { name: 'Call room', consent: true, course_id: course })).data.id;
+  const room = (await call('tv', 'GET', '/api/classes/' + id)).data;
+  assert.deepEqual(room.call, { open: false, max: 4, peers: [] });
+  assert.equal((await call('tv', 'POST', `/api/classes/${id}/call`, { open: true })).data.error, 'room_closed', 'no call while the room is closed');
+  await call('tv', 'PATCH', '/api/classes/' + id, { live: true });
+  for (const [who, nickname] of [['va', 'Aysel'], ['vb', 'Babek'], ['vc', 'Cavid'], ['vd', 'Dilara']])
+    assert.equal((await call(who, 'POST', '/api/join', { invite: room.invite, nickname, pin: '1111' })).status, 200);
+
+  // students cannot be in a call the teacher has not opened
+  const early = stream('va', '/api/student/call/events');
+  await early.next('ended'); await early.done;
+  assert.equal((await call('va', 'GET', '/api/student/me')).data.call.open, false);
+
+  const teacherFeed = stream('tv', `/api/classes/${id}/events`), roomFeed = stream('vb', '/api/student/events');
+  assert.equal((await call('tv', 'POST', `/api/classes/${id}/call`, { open: true })).data.open, true);
+  assert.equal((await roomFeed.next('call')).call.open, true, 'students are told a call started');
+  const T = stream('tv', `/api/classes/${id}/call/events`), tw = await T.next('welcome');
+  assert.deepEqual(tw.peers, []);
+  assert.ok(tw.iceServers.some((s) => String(s.urls).startsWith('stun:')), 'browsers get a STUN server');
+
+  const A = stream('va', '/api/student/call/events'), aw = await A.next('welcome');
+  assert.deepEqual(aw.peers.map((p) => [p.kind, p.name]), [['teacher', 'Vera']], 'the newcomer learns who is already in');
+  assert.equal((await T.next('join')).peer.name, 'Aysel');
+
+  // setup messages go to the named person only, and only from the browser that holds that place in the call
+  const offer = { sdp: { type: 'offer', sdp: 'v=0 fake' } };
+  assert.equal((await call('va', 'POST', '/api/call/signal', { peer: aw.id, to: tw.id, data: offer })).status, 200);
+  const sig = await T.next('signal');
+  assert.equal(sig.from, aw.id); assert.deepEqual(sig.data, offer);
+  assert.equal((await call('vb', 'POST', '/api/call/signal', { peer: aw.id, to: tw.id, data: offer })).status, 404, 'another student cannot speak for Aysel');
+  assert.equal((await call('tv', 'POST', '/api/call/signal', { peer: aw.id, to: tw.id, data: offer })).status, 404, 'nor can the teacher');
+  assert.equal((await call('va', 'POST', '/api/call/signal', { peer: aw.id, to: 'nobody', data: offer })).status, 404);
+
+  // microphone and camera state reach the others and the dashboard
+  await call('va', 'POST', '/api/call/state', { peer: aw.id, mic: true, cam: false });
+  const st = (await T.next('peer')).peer;
+  assert.deepEqual([st.name, st.mic, st.cam], ['Aysel', true, false]);
+  await teacherFeed.next('call', (e) => e.call.peers.some((p) => p.name === 'Aysel' && p.mic));
+  const live = (await call('tv', 'GET', '/api/classes/' + id)).data.call;
+  assert.deepEqual(live.peers.map((p) => [p.kind, p.name, p.mic]), [['teacher', 'Vera', false], ['student', 'Aysel', true]]);
+  assert.deepEqual((await call('vb', 'GET', '/api/student/me')).data.call, { open: true, max: 4, count: 2, full: false });
+
+  // at most 4 people: the teacher and 3 students
+  const B = stream('vb', '/api/student/call/events'), bw = await B.next('welcome');
+  const C = stream('vc', '/api/student/call/events'), cw = await C.next('welcome');
+  assert.equal(cw.peers.length, 3);
+  const D = stream('vd', '/api/student/call/events');
+  await D.next('full'); await D.done;
+  assert.equal((await call('vd', 'GET', '/api/student/me')).data.call.full, true);
+
+  // the same student in a second tab takes over their own place
+  const A2 = stream('va', '/api/student/call/events');
+  await A.next('replaced'); const a2w = await A2.next('welcome');
+  assert.equal(a2w.peers.length, 3, 'still four people');
+
+  // teacher controls: ask to mute, take out of the call (no coming back until the next call)
+  assert.equal((await call('tv', 'POST', `/api/classes/${id}/call/peers/${bw.id}`, { action: 'mute' })).status, 200);
+  await B.next('mute');
+  assert.equal((await call('vb', 'POST', `/api/classes/${id}/call/peers/${cw.id}`, { action: 'remove' })).status, 401, 'students cannot');
+  await call('tv', 'POST', `/api/classes/${id}/call/peers/${cw.id}`, { action: 'remove' });
+  await C.next('removed'); await C.done;
+  assert.equal((await T.next('leave', (e) => e.id === cw.id)).id, cw.id, 'the others are told who left');
+  const C2 = stream('vc', '/api/student/call/events');
+  await C2.next('removed'); await C2.done;
+
+  // closing the tab leaves the call
+  B.close();
+  await T.next('leave', (e) => e.id === bw.id);
+
+  // ending the session ends the call for everyone
+  await call('tv', 'PATCH', '/api/classes/' + id, { live: false });
+  await T.next('ended'); await A2.next('ended');
+  await T.done; await A2.done;
+  assert.deepEqual((await call('tv', 'GET', '/api/classes/' + id)).data.call, { open: false, max: 4, peers: [] });
+  teacherFeed.close(); roomFeed.close(); A.close();
+});
+
+test('attention: the teacher sees when a student is away from the page, as a status for this session', async () => {
+  await call('tw', 'POST', '/api/login', { email: 'v@x.com', password: 'secret3' });
+  const course = (await call('tw', 'POST', '/api/courses/starter')).data.id;
+  const id = (await call('tw', 'POST', '/api/classes', { name: 'Focus room', consent: true, course_id: course })).data.id;
+  const { invite } = (await call('tw', 'GET', '/api/classes/' + id)).data;
+  await call('tw', 'PATCH', '/api/classes/' + id, { live: true });
+  await call('fa', 'POST', '/api/join', { invite, nickname: 'Elnur', pin: '2222' });
+  const student = () => call('tw', 'GET', '/api/classes/' + id).then((r) => r.data.students[0]);
+  assert.deepEqual(await student().then(({ away, away_count, away_ms }) => ({ away, away_count, away_ms })), { away: null, away_count: 0, away_ms: 0 });
+
+  const feed = stream('tw', `/api/classes/${id}/events`), page = stream('fa', '/api/student/events');
+  await feed.next('presence');
+  assert.equal((await call('fa', 'POST', '/api/student/attention', { away: 'somewhere' })).status, 400);
+  await call('fa', 'POST', '/api/student/attention', { away: 'tab' });
+  const ev = await feed.next('attention');
+  assert.deepEqual([ev.away, ev.away_count], ['tab', 1], 'the dashboard hears it at once');
+  await call('fa', 'POST', '/api/student/attention', { away: 'window' }); // still away: not a second time
+  await sleep(150);
+  await call('fa', 'POST', '/api/student/attention', { away: null });
+  const back = await feed.next('attention', (e) => e.away === null);
+  assert.equal(back.away_count, 1); assert.ok(back.away_ms >= 150, 'time away adds up');
+  assert.equal((await student()).away_count, 1);
+  assert.equal((await call('tw', 'POST', '/api/student/attention', { away: 'tab' })).status, 401, 'only students report it');
+
+  // closing the page is "offline", not "away"; ending the session starts the next one fresh
+  await call('fa', 'POST', '/api/student/attention', { away: 'tab' });
+  page.close();
+  await feed.next('attention', (e) => e.away === null && e.away_count === 2);
+  await call('tw', 'PATCH', '/api/classes/' + id, { live: false });
+  assert.equal((await student()).away_count, 0);
+  feed.close();
+});
+
 test('pilot database: lessons become a course, history keeps its level', async () => {
   const { DatabaseSync } = await import('node:sqlite');
   const file = path.join(dir, 'pilot.db'), old = new DatabaseSync(file);

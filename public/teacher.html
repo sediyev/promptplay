@@ -6,8 +6,25 @@
 <div id="root"></div>
 <div id="modal" class="modal" hidden><div><div class="row"><b class="grow" id="mt"></b><button class="ghost" id="mc" data-t="close"></button></div><div id="mb" class="pane grow"></div></div></div>
 <script type="module">
-import { api, t, getLang, applyI18n, toggleLang, esc, $, onEvents, gameFrame, creationCard, stars, toast, langHtml } from '/common.js';
+import { api, t, getLang, applyI18n, toggleLang, esc, $, onEvents, gameFrame, creationCard, stars, toast, langHtml, addStrings } from '/common.js';
 import '/library-i18n.js';
+import { joinCall, inCall } from '/call.js';
+addStrings({
+  en: { aw_tab: 'on another tab', aw_window: 'in another window', aw_left: 'left the PromptPlay page', aw_away: 'away', aw_min: 'min', aw_lt1: '<1 min',
+    aw_notify: '🔔 Tell me when a student leaves the page', aw_hint: 'Not on the PromptPlay page right now (they may have a good reason). This is only a status.',
+    aw_summary: 'Left the page {n} times this session, {m} in total.', aw_once: 'Left the page once this session, {m} in total.', aw_none: 'Stayed on the page this session.' },
+  az: { aw_tab: 'başqa vərəqdədir', aw_window: 'başqa pəncərədədir', aw_left: 'PromptPlay səhifəsindən çıxdı', aw_away: 'kənarda', aw_min: 'dəq', aw_lt1: '<1 dəq',
+    aw_notify: '🔔 Şagird səhifədən çıxanda mənə xəbər ver', aw_hint: 'Hazırda PromptPlay səhifəsində deyil (səbəbi ola bilər). Bu, sadəcə vəziyyət məlumatıdır.',
+    aw_summary: 'Bu dərsdə səhifədən {n} dəfə çıxıb, cəmi {m}.', aw_once: 'Bu dərsdə səhifədən 1 dəfə çıxıb, cəmi {m}.', aw_none: 'Bu dərsdə səhifədə qalıb.' },
+});
+// "Away" is a status, never a warning: how long a student has not had the PromptPlay page in front of them.
+const mins = (ms) => (ms < 60000 ? t('aw_lt1') : `${Math.floor(ms / 60000)} ${t('aw_min')}`);
+const awayNow = (s) => s.online && s.away;
+// The server sends durations; s.at is when they arrived, so the times keep counting up between updates.
+const awayFor = (s) => s.away_for + (Date.now() - s.at), awayTotal = (s) => s.away_ms + (s.away ? Date.now() - s.at : 0);
+const awayPill = (s) => awayNow(s) ? `<span class="awaypill" title="${esc(t('aw_hint'))}">↗ ${t('aw_' + s.away)} · ${mins(awayFor(s))}</span>` : '';
+let awayNotify = true;
+try { awayNotify = localStorage.getItem('awayNotify') !== '0'; } catch {}
 import { md } from '/md.js';
 applyI18n(); $('#lang').innerHTML = langHtml(); $('#lang').onclick = toggleLang;
 $('#out').onclick = async () => { await api('/api/logout', 'POST'); location = '/join#teacher'; };
@@ -82,6 +99,7 @@ async function roomPage(id) {
     $('#head').innerHTML = `<a href="/teacher.html">${t('back')}</a><div><h2 style="margin:0">${esc(cls.name)}</h2><span class="muted">${esc(cls.course?.title || '')}</span>${cls.next?.length ? `<br><span class="muted">${t('nextAdv')}: ${cls.next.map((n) => `<a href="/library.html#${esc(n.id)}">${esc(n.emoji)} ${esc(n.title[getLang()] || n.title.en || n.title.az)}</a>`).join(', ')}</span>` : ''}</div>
       <button id="lv" class="${cls.live ? 'bad' : 'ok'}">${cls.live ? t('endSession') : t('startSession')}</button>
       ${cls.live ? `<span class="pill live">● ${t('liveNow')}</span>` : ''}
+      ${callHead()}
       <span class="grow"></span>
       <span class="muted">${t('inviteLink')}:</span><input readonly value="${esc(link)}" id="link" class="linkbox"><button class="ghost" id="cp">${t('copy')}</button>
       <button class="ghost" id="qr">${t('qr')}</button><button class="ghost" id="nl">${t('newLink')}</button>
@@ -89,10 +107,13 @@ async function roomPage(id) {
       <details class="settings"><summary>⚙️</summary><div>
         <label>${t('approvalMode')}</label><select id="ap"><option value="ai">${t('approval_ai')}</option><option value="teacher">${t('approval_teacher')}</option></select>
         <label>${t('dailyLimit')}</label><div class="row"><input id="dl" type="number" min="1" value="${cls.daily_limit}"><button class="ghost" id="dls">${t('save2')}</button></div>
+        <label style="display:flex;gap:.5rem;align-items:center;color:inherit"><input type="checkbox" id="an" ${awayNotify ? 'checked' : ''}>${t('aw_notify')}</label>
         <p></p><button id="pa" class="${cls.paused ? 'ok' : 'bad'}">${cls.paused ? t('resumeAll') : t('pauseAll')}</button>
         <p class="muted">${t('autoClose')}</p></div></details>`;
     $('#ap').value = cls.approval;
     if (open) { $('.settings').open = true; $('#dl').value = dl; }
+    if ($('#callGo')) $('#callGo').onclick = startCall;
+    if ($('#callEnd')) $('#callEnd').onclick = async () => { if (confirm(t('call_confirmEnd'))) await api(`/api/classes/${id}/call`, 'POST', { open: false }); };
     $('#lv').onclick = async () => { if (cls.live && !confirm(t('confirmEnd'))) return; await api('/api/classes/' + id, 'PATCH', { live: !cls.live }); refresh(); };
     $('#cp').onclick = async () => { $('#link').select(); try { await navigator.clipboard.writeText(link); } catch { document.execCommand('copy'); } toast(t('copied'), 'ok'); };
     $('#qr').onclick = () => {
@@ -103,15 +124,36 @@ async function roomPage(id) {
     $('#nl').onclick = async () => { if (!confirm(t('confirmNewLink'))) return; await api('/api/classes/' + id, 'PATCH', { regen_invite: true }); refresh(); };
     $('#ap').onchange = async (e) => { await api('/api/classes/' + id, 'PATCH', { approval: e.target.value }); refresh(); };
     $('#dls').onclick = async () => { await api('/api/classes/' + id, 'PATCH', { daily_limit: +$('#dl').value }); refresh(); };
+    $('#an').onchange = (e) => { awayNotify = e.target.checked; try { localStorage.setItem('awayNotify', awayNotify ? '1' : '0'); } catch {} };
     $('#pa').onclick = async () => { await api('/api/classes/' + id, 'PATCH', { paused: !cls.paused }); refresh(); };
   }
+  // Video call: the teacher opens it for the room and joins with camera and microphone on; students join from their page.
+  function callHead() {
+    const c = cls.call;
+    if (!cls.live) return '';
+    if (!c?.open) return `<button class="ghost" id="callGo">${t('call_start')}</button>`;
+    if (inCall()) return `<span class="pill">📹 ${c.peers.length}/${c.max}</span>`;
+    return `<button id="callGo">${t('call_join')} (${c.peers.length}/${c.max})</button><button class="ghost" id="callEnd" title="${t('call_end')}">■</button>`;
+  }
+  async function startCall() {
+    $('#callGo').disabled = true;
+    try { cls.call = await api(`/api/classes/${id}/call`, 'POST', { open: true }); } catch (x) { toast(t(x.code), 'bad'); return renderHead(); }
+    callUi = await joinCall({ events: `/api/classes/${id}/call/events`, teacher: true, classId: id, me: { name: t('teacher'), avatar: '🧑‍🏫' }, mic: true, cam: true,
+      label: (info) => { const s = info.student_id && stu(info.student_id); return s && awayNow(s) ? `↗ ${t('aw_' + s.away)}` : ''; },
+      onLeave: () => { callUi = null; renderHead(); } });
+    renderHead();
+  }
+  let callUi = null;
+  const inCallIds = () => new Set((cls.call?.peers || []).map((p) => p.student_id).filter(Boolean));
   function renderStudents() {
+    const calling = inCallIds();
     const lvl = (s) => (s.level ? `L${levelOf(s.level)?.position}` : '🏁');
-    $('#students').innerHTML = `<h3>${t('students')} (${cls.students.length})</h3><div class="stu ${sel ? '' : 'sel'}" data-s="">${t('everyone')}</div>` +
+    const nAway = cls.students.filter(awayNow).length;
+    $('#students').innerHTML = `<h3>${t('students')} (${cls.students.length})${nAway ? ` <span class="awaypill">↗ ${nAway} ${t('aw_away')}</span>` : ''}</h3><div class="stu ${sel ? '' : 'sel'}" data-s="">${t('everyone')}</div>` +
       cls.students.map((s) => `<div class="stu ${sel == s.id ? 'sel' : ''}" data-s="${s.id}">
-        <span class="dot ${s.online ? 'on' : ''}"></span><span class="grow">${s.paused ? '⏸️ ' : ''}${esc(s.avatar)} ${esc(s.nickname)}
+        <span class="dot ${s.online ? 'on' : ''}"></span><span class="grow">${s.paused ? '⏸️ ' : ''}${calling.has(s.id) ? `<span title="${t('call_inCall')}">📹</span> ` : ''}${esc(s.avatar)} ${esc(s.nickname)}
         <span class="muted">${lvl(s)} · ★${s.stars}${s.pending ? ' · ⏳' : ''} · ${s.used}/${cls.daily_limit}</span>
-        <span class="typing" id="ty${s.id}" ${typing.has(s.id) ? '' : 'hidden'}>${t('typing')}</span></span>
+        ${awayPill(s)}<span class="typing" id="ty${s.id}" ${typing.has(s.id) ? '' : 'hidden'}>${t('typing')}</span></span>
         <button class="ghost" data-view="${s.id}" title="${t('openView')}">👁</button>
         <button class="ghost" data-p="${s.id}" data-v="${s.paused ? 0 : 1}" title="${s.paused ? t('resume') : t('pause')}">${s.paused ? '▶' : '⏸'}</button>
         <button class="ghost" data-pin="${s.id}">${t('resetPin')}</button><button class="ghost" data-k="${s.id}">✕</button></div>`).join('');
@@ -136,7 +178,7 @@ async function roomPage(id) {
   // Each level is a column; students sit on the level they are working on.
   function renderMap() {
     const at = (lid) => cls.students.filter((s) => s.level === lid);
-    const chip = (s) => `<button class="chip ${s.online ? '' : 'off'} ${sel == s.id ? 'sel' : ''} ${s.pending ? 'pend' : ''}" data-s="${s.id}" title="${esc(s.nickname)}">${esc(s.avatar)}<span>${esc(s.nickname)}</span></button>`;
+    const chip = (s) => `<button class="chip ${s.online ? '' : 'off'} ${sel == s.id ? 'sel' : ''} ${s.pending ? 'pend' : ''} ${awayNow(s) ? 'away' : ''}" data-s="${s.id}" title="${esc(s.nickname)}${awayNow(s) ? ' · ' + t('aw_' + s.away) : ''}">${esc(s.avatar)}<span>${esc(s.nickname)}</span>${awayNow(s) ? '<i aria-hidden="true">↗</i>' : ''}</button>`;
     $('#cmap').innerHTML = cls.levels.map((l) => `<div class="mcol"><div class="mhead">${esc(l.emoji)}<b>L${l.position}</b><span>${esc(l.title)}</span></div>${at(l.id).map(chip).join('')}</div>`).join('')
       + `<div class="mcol fin"><div class="mhead">🏁<b>${t('finish')}</b></div>${at(null).map(chip).join('')}</div>`;
     $('#cmap').querySelectorAll('[data-s]').forEach((e) => (e.onclick = () => select(e.dataset.s)));
@@ -155,7 +197,8 @@ async function roomPage(id) {
   }
   function renderProgress() {
     const s = stu(sel); $('#progressCard').hidden = !s; if (!s) return;
-    $('#progressCard').innerHTML = `<div class="row wrapx"><h3 class="grow">${esc(s.avatar)} ${esc(s.nickname)} · ${t('progressOf')}</h3><button class="ghost" id="pv">${t('openView')}</button></div>` + cls.levels.map((l) => {
+    $('#progressCard').innerHTML = `<div class="row wrapx"><h3 class="grow">${esc(s.avatar)} ${esc(s.nickname)} · ${t('progressOf')}</h3><button class="ghost" id="pv">${t('openView')}</button></div>
+      <p class="muted" style="margin:.2rem 0 .6rem">${awayPill(s)} ${s.away_count ? t(s.away_count === 1 ? 'aw_once' : 'aw_summary').replace('{n}', s.away_count).replace('{m}', mins(awayTotal(s))) : t('aw_none')}</p>` + cls.levels.map((l) => {
       const p = s.progress.find((x) => x.id === l.id) || { status: 'locked', stars: 0 };
       const icon = { done: '✅', pending: '⏳', current: '▶️', locked: '🔒' }[p.status];
       return `<div class="row lrow"><span class="grow">${icon} L${l.position} ${esc(l.title)} <span class="stars">${p.status === 'done' ? stars(p.stars) : ''}</span></span>
@@ -172,6 +215,7 @@ async function roomPage(id) {
   }
   async function refresh() {
     cls = await api('/api/classes/' + id);
+    for (const s of cls.students) s.at = Date.now();
     renderHead(); renderStudents(); renderMap(); renderPending(); renderProgress(); renderFilters(); renderGames();
   }
   function select(s) { sel = s; renderStudents(); renderMap(); renderProgress(); renderGames(); loadFeed(); }
@@ -213,10 +257,19 @@ async function roomPage(id) {
   $('#lf').onchange = (e) => { levelFilter = e.target.value; loadFeed(); };
 
   await refresh(); loadFeed(); loadGames();
+  setInterval(() => { if (cls.students.some(awayNow)) { renderStudents(); renderMap(); renderProgress(); } }, 20000); // keeps "away · 2 min" current
   let rt, gt;
   const soon = () => { clearTimeout(rt); rt = setTimeout(refresh, 300); };
   onEvents(`/api/classes/${id}/events`, (ev) => {
     if (ev.type === 'room') soon();
+    if (ev.type === 'attention') {
+      const s = stu(ev.student_id); if (!s) return;
+      const left = ev.away && !s.away;
+      Object.assign(s, { away: ev.away, away_for: ev.away_for, away_count: ev.away_count, away_ms: ev.away_ms, at: Date.now() });
+      renderStudents(); renderMap(); if (sel == s.id) renderProgress(); callUi?.render();
+      if (left && awayNotify && s.online) toast(`${s.avatar} ${s.nickname} ${t('aw_left')} (${t('aw_' + ev.away)})`);
+    }
+    if (ev.type === 'call' && cls) { cls.call = ev.call; renderHead(); renderStudents(); }
     if (ev.type === 'presence') { const s = stu(ev.student_id); if (s) { s.online = ev.online; renderStudents(); renderMap(); } else soon(); }
     if (ev.type === 'typing') {
       clearTimeout(typing.get(ev.student_id)); $('#ty' + ev.student_id)?.removeAttribute('hidden');
