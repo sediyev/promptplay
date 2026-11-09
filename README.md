@@ -141,14 +141,15 @@ Learning goals, in plain words (the same text teachers see and can copy for pare
 5. Admin spend cap is checked before every chat; cost is logged per class/teacher.
 
 ## Home page
-`public/index.html` is the public landing page. Plain HTML, CSS and ES modules: no framework, no build step, no CDN, fonts, images or trackers (zero third-party requests). Page weight: about 125 KB in total (about 41 KB gzipped; `npm test` enforces the budget).
-- **Layout**: a minimal, story-first page. A spacious welcome screen (one greeting, one headline, one sentence, one button), then a scroll story of five chapters, a short line of skills, the parent FAQ and one closing call to action.
+`public/index.html` is the public landing page. Plain HTML, CSS and ES modules: no framework, no build step, no CDN, fonts or trackers (zero third-party requests); the only images are the mascot files in `public/mascot/`. Page weight: about 155 KB of code in total (about 50 KB gzipped) plus about 15 KB of mascot art; `npm test` enforces both budgets.
+- **Layout**: a spacious, story-first page that opens and closes under a night sky (dark in both themes; the middle follows the light or dark theme). A welcome screen (one greeting, one headline, one sentence, one button, the mascot waving next to it above a glowing planet), a band of ideas drifting by in two rows, a scroll story of five chapters, a row of plain facts in big numbers (10 levels, 3 stars, 2 languages, 0 installs), a grid of six skill cards, the parent FAQ and one closing call to action with the mascot cheering.
 - **The story**: the chapters follow one child through a class: (1) a curious kid with ideas, who picks a player; (2) they learn to say exactly what they mean, and each better prompt makes a better game; (3) the AI builds the game and the child asks for a change (level 6 "Your First Game"); (4) "Check my work", stars and the ten levels of the starter course; (5) the teacher and the layers of protection. On wide screens the chapters scroll on the left while one sticky stage on the right plays the chapter being read; on phones the stage sticks under the top bar and the chapters slide up beneath it.
-- **Files**: `index.html` (markup), `home.css` (on top of the tokens in `style.css`), `home.js` (language, top bar, player picker, scroll reveal, loads the story), `home-story.js` (the scroll story: picks the current chapter and plays its scene), `home-mini.js` (the animated game preview used by chapters 2 and 3), `home-fx.js` (typewriter, star burst, avatar), `home-i18n.js` (all strings).
+- **Files**: `index.html` (markup), `home.css` (on top of the tokens in `style.css`), `home.js` (language, top bar, player picker, scroll reveal, loads the story and the motion), `home-story.js` (the scroll story: picks the current chapter and plays its scene), `home-mini.js` (the animated game preview used by chapters 2 and 3), `home-motion.js` (pointer effects, mascots, counters), `home-fx.js` (typewriter, star burst, avatar), `home-i18n.js` (all strings), `mascot/` (the mascot poses).
+- **Pointer effects** (mouse and trackpad only, off on touch screens and with reduced motion): the night sky moves in three parallax layers and a soft light follows the pointer, leaving a short trail of sparkles; the welcome mascot leans towards the pointer; the mascot peeking over the story stage slides along its top edge to stay near the pointer; cards light up under the pointer and tilt slightly; the two main buttons pull gently towards it. Every mascot pops in when its section arrives and hops with a burst of stars when clicked; the big numbers count up once.
 - **Languages**: Azerbaijani (default) and English, same `lang` localStorage key as the rest of the app; the toggle switches without a reload and the current scene starts over in the new language. Strings live in `home-i18n.js` and are registered into the shared dictionary of `common.js`, so `t()` and `applyI18n()` work as everywhere else. **The Azerbaijani copy needs a read-through by a native speaker before launch.**
 - **Static baseline**: the page is complete HTML in Azerbaijani before any script runs (no empty flash, no layout shift, readable without JavaScript; the stage only shows when scripts run). After editing the `az` strings run `npm run home:sync` to rewrite that text in `index.html`; `npm test` fails if it is out of date.
 - **Player**: the avatar chosen in chapter 1 is saved in localStorage (`avatar`), shown on the stage, and preselected on the join page.
-- **Motion**: animations only touch `transform` and `opacity` (including the `translate`, `scale` and `rotate` properties). The welcome text rises in and drifts away as the page scrolls (CSS scroll timelines where supported), scenes pause while the story is off screen or the tab is hidden, and with `prefers-reduced-motion` every scene shows its finished state and the reveal and background drift are off. Colours reuse the `style.css` tokens; `home.css` adds a few AA-safe text shades (checked for both themes in `test/home.test.js`).
+- **Motion**: animations only touch `transform` and `opacity` (including the `translate`, `scale` and `rotate` properties). The welcome text rises in and drifts away as the page scrolls (CSS scroll timelines where supported), scenes pause while the story is off screen or the tab is hidden, and with `prefers-reduced-motion` every scene shows its finished state, the ideas wrap into still rows, and the reveal, pointer effects and background drift are off. Colours reuse the `style.css` tokens; `home.css` adds a few AA-safe text shades and the night sky tokens (checked for both themes in `test/home.test.js`).
 - **Placeholders to fill in** (business details not decided yet; they are bracketed and highlighted on the page):
 
 | Placeholder | Where |
@@ -160,6 +161,18 @@ Learning goals, in plain words (the same text teachers see and can copy for pare
 | `[PRICE]` | FAQ answer `a9` in `home-i18n.js` |
 | `[LOCATIONS AND SCHEDULE]` | FAQ answer `a8` in `home-i18n.js` |
 | `[OG IMAGE]` | `og:image` and `twitter:image` in the `<head>` of `index.html` |
+
+- **Mascot**: a friendly robot in five poses, one file each in `public/mascot/`. The current art is a hand drawn placeholder meant to be replaced.
+
+| File | Where | Pose | Shown at about |
+| --- | --- | --- | --- |
+| `hero.svg` | welcome screen | waving hello, full body | 330 px wide |
+| `peek.svg` | top edge of the story stage | head and both hands holding an edge, cut off at the chest (the bottom 15% of the image overlaps the card) | 150 px wide |
+| `think.svg` | on top of the skill cards | thinking, an idea above its head (the feet hide behind the cards) | 170 px wide |
+| `help.svg` | next to the FAQ heading | friendly, holding up a question bubble | 200 px wide |
+| `cheer.svg` | closing screen | both arms up, celebrating | 210 px wide |
+
+  To swap in new art: export each pose with a transparent background, square or close to the current shape, at twice the display width (for example 660 px for the hero), as WebP or AVIF under 200 KB each (600 KB in total). Either keep the file names, or change the `src` (and the `width`/`height`, which only set the shape) of the matching `<img>` in `index.html`. The welcome pose stands on the bottom edge of its image, so leave little empty space below the feet. The pointer effects move and tilt the whole image, so any art works without code changes. `npm test` checks that every mascot file exists, stays decorative (empty `alt`, inside an `aria-hidden` block) and fits the budget.
 
   There is also a hidden social proof section (`#proof`) with a TODO: only add real, permitted quotes or numbers, never invented ones.
 

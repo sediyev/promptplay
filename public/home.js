@@ -44,10 +44,11 @@ addEventListener('pageshow', () => { avatar = getAvatar(); applyAvatar(avatar); 
 // ---------- after the story, blocks rise in as they arrive (skipped with reduced motion: the page is complete without it) ----------
 if (!reduced() && 'IntersectionObserver' in window) {
   const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -10% 0px' });
-  for (const sel of ['.story-h', '.skills h2, .skills .lead', '.pills li', '#fq-h', '.qa', '.final .wrap > *']) {
+  for (const sel of ['.ideas-h', '.story-h', '#nm-h', '.num-c', '.sk-head > *', '.bento .cell', '#fq-h', '.qa', '.final .wrap > :not(.btn):not(.mascot)']) {
     $$(sel).forEach((el) => { el.classList.add('rv'); el.style.setProperty('--i', [...el.parentElement.children].indexOf(el) % 8); io.observe(el); });
   }
   root.classList.add('rv-on');
 }
 
 import('/home-story.js').then((m) => m.initStory());
+import('/home-motion.js').then((m) => m.initMotion()); // pointer effects, mascots, counters

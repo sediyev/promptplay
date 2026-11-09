@@ -85,8 +85,10 @@ test('structure: one h1, landmarks, meta tags, language', () => {
   levels.forEach((l, i) => assert.ok(i === 0 || l <= levels[i - 1] + 1, `heading level jumps to h${l}`));
   // decorative emoji are hidden from screen readers: every emoji in markup sits inside an aria-hidden element or an element with a text alternative
   assert.ok(!/<(?:span|div|b|i)(?![^>]*aria-hidden)[^>]*class="(?:ico|orb|pl-b|pc-pic)"/.test(html), 'decorative emoji must be aria-hidden');
-  for (const c of ['hero-bg', 'stage', 'wave', 'final-e']) assert.match(html, new RegExp(`class="${c}"[^>]*aria-hidden="true"`), c + ' is decorative');
-  assert.equal([...html.matchAll(/<li><span aria-hidden="true">[^<]+<\/span> <span data-t="sk\dt"/g)].length, 6, 'emoji in the six skills are hidden');
+  for (const c of ['hero-bg', 'stage', 'wave', 'final-e', 'hero-pal']) assert.match(html, new RegExp(`class="${c}(?: [^"]*)?"[^>]*aria-hidden="true"`), c + ' is decorative');
+  assert.equal([...html.matchAll(/<span class="ico" aria-hidden="true">[^<]+<\/span><h3 data-t="sk\dt"/g)].length, 6, 'emoji in the six skills are hidden');
+  // the ideas marquee: the second copy of each row only closes the loop, so screen readers skip it
+  assert.equal([...html.matchAll(/<ul class="mq-row">/g)].length, 2); assert.equal([...html.matchAll(/<ul class="mq-row" aria-hidden="true">/g)].length, 2);
   // the welcome screen: one message, one primary button
   const hero = html.match(/<section class="hero"[^]*?<\/section>/)[0];
   assert.equal((hero.match(/data-cta/g) || []).length, 1, 'one button on the welcome screen');
@@ -99,17 +101,41 @@ test('zero third-party requests: only same-origin files, no network calls in the
     for (const m of text.matchAll(/https?:\/\/[^\s"'`)<>]+/g)) assert.ok(allowed.has(m[0]) || /^https?:\/\/(www\.w3\.org)\//.test(m[0]), `${name} mentions ${m[0]}`);
   }
   assert.ok(!/@import|@font-face|url\(/.test(css), 'no imports, web fonts or images in home.css');
-  assert.ok(!/<img|<link[^>]*rel="(?:preconnect|dns-prefetch)"|<script[^>]*src="(?!\/)/.test(html), 'no images, no external scripts');
+  assert.ok(!/<img(?![^>]*src="\/mascot\/)|<link[^>]*rel="(?:preconnect|dns-prefetch)"|<script[^>]*src="(?!\/)/.test(html), 'no images but the mascot, no external scripts');
   for (const f of JS) assert.ok(!/\bfetch\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon|navigator\.serviceWorker/.test(read(f)), `${f} makes a network call`);
+});
+
+test('mascots: same-origin files that exist, decorative, light enough to swap for new art', () => {
+  const imgs = [...html.matchAll(/<img [^>]*>/g)].map((m) => m[0]);
+  assert.ok(imgs.length >= 5, 'the mascot appears in the welcome, the story, the skills, the FAQ and the closing screen');
+  for (const tag of imgs) {
+    const src = tag.match(/src="([^"]+)"/)[1];
+    assert.match(src, /^\/mascot\/[\w-]+\.(svg|png|webp|avif)$/, src);
+    assert.ok(fs.existsSync(path.join(PUB, src)), src + ' is missing from public/mascot');
+    assert.match(tag, /alt=""/, src + ' is decorative: empty alt');
+    assert.match(tag, /width="\d+" height="\d+"/, src + ' needs width and height so nothing shifts while it loads');
+  }
+  // every image sits inside an aria-hidden element (a small tag walk over the body)
+  const stack = [], VOID = new Set(['img', 'meta', 'link', 'input', 'br', 'hr']);
+  for (const [tag, close, name] of html.slice(html.indexOf('<body')).matchAll(/<(\/?)([a-z0-9]+)\b[^>]*>/g)) {
+    if (close) { stack.pop(); continue; }
+    const hidden = tag.includes('aria-hidden="true"') || stack.some((h) => h);
+    if (name === 'img') assert.ok(hidden, tag + ' is not inside an aria-hidden element');
+    if (!VOID.has(name) && !tag.endsWith('/>')) stack.push(hidden);
+  }
+  assert.equal(stack.length, 0, 'the tag walk ended balanced');
+  const dir = path.join(PUB, 'mascot'), files = fs.readdirSync(dir), each = files.map((f) => fs.statSync(path.join(dir, f)).size);
+  each.forEach((b, i) => assert.ok(b < 200 * 1000, `${files[i]} is ${b} bytes, keep each mascot under 200 KB (WebP or AVIF for generated art)`));
+  assert.ok(each.reduce((a, b) => a + b, 0) < 600 * 1000, 'all mascot images together stay under 600 KB');
 });
 
 test('page weight stays within budget', () => {
   const size = (f) => fs.statSync(path.join(PUB, f)).size, gz = (f) => zlib.gzipSync(fs.readFileSync(path.join(PUB, f)), { level: 9 }).length;
-  const files = ['index.html', 'style.css', 'home.css', 'common.js', 'home-i18n.js', 'home.js', 'home-fx.js', 'home-story.js', 'home-mini.js'];
+  const files = ['index.html', 'style.css', 'home.css', 'common.js', 'home-i18n.js', 'home.js', 'home-fx.js', 'home-story.js', 'home-mini.js', 'home-motion.js'];
   assert.deepEqual(JS.sort(), files.filter((f) => f.startsWith('home') && f.endsWith('.js')).sort(), 'every home page script is counted');
   const raw = files.reduce((a, f) => a + size(f), 0), zipped = files.reduce((a, f) => a + gz(f), 0);
-  assert.ok(raw < 130 * 1000, `the home page is ${raw} bytes, the budget is about 130 KB`);
-  assert.ok(zipped < 44 * 1000, `gzipped total is ${zipped} bytes`);
+  assert.ok(raw < 165 * 1000, `the home page is ${raw} bytes, the budget is about 165 KB (mascot images are counted separately)`);
+  assert.ok(zipped < 54 * 1000, `gzipped total is ${zipped} bytes`);
 });
 
 test('every redirect that used to go to "/" now goes to the join and login page', () => {
@@ -160,6 +186,13 @@ test('text and graphics meet WCAG AA in light and dark mode', () => {
     assert.ok(ratio(t['--muted-h'], t['--card']) >= 3, `${theme}: empty star outline`);
     assert.ok(ratio('#0b2a1b', t['--ok']) >= 4.5, `${theme}: check mark on green`);
   }
+  // the night sky (welcome, ideas, closing screen) is the same in both themes
+  const { light: n } = tokens();
+  for (const bg of ['--night', '--ground', '--n-card']) for (const fg of ['--n-ink', '--n-muted', '--n-link']) {
+    assert.ok(ratio(n[fg], n[bg]) >= 4.5, `night: ${fg} on ${bg} is ${ratio(n[fg], n[bg]).toFixed(2)}, needs 4.5`);
+  }
+  for (const g of ['#c4baff', '#8fd8ff']) assert.ok(ratio(g, n['--night']) >= 4.5, `night: gradient text ${g}`);
+  assert.ok(ratio('#1b1650', '#ffffff') >= 4.5, 'the mascot speech bubble');
 });
 
 test('the inline module script of every page parses (page scripts are not otherwise executed by these tests)', () => {
