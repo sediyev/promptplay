@@ -5,6 +5,7 @@
 <div class="top"><b class="logo">🎮</b><span id="me" class="mebadge"></span><span class="muted grow" id="course"></span><span class="pill" id="left"></span><button class="ghost" id="lang"></button></div>
 <div class="banner" id="seen" data-t="seen"></div>
 <div class="banner stop" id="status" hidden></div>
+<div class="banner callban" id="callBanner" hidden></div>
 
 <div id="mapView" class="mapwrap"><h2 id="mapTitle" style="text-align:center"></h2><div class="map" id="map"></div>
   <div class="card" id="nextUp" style="text-align:center;margin-top:24px" hidden></div></div>
@@ -31,6 +32,7 @@
 <script type="module">
 import { md } from '/md.js';
 import { api, t, getLang, applyI18n, toggleLang, esc, $, onEvents, extractGame, gameFrame, creationCard, stars, toast, langHtml } from '/common.js';
+import { joinCall, inCall } from '/call.js';
 applyI18n(); $('#lang').innerHTML = langHtml(); $('#lang').onclick = toggleLang;
 let me, level = null, current = null, busy = false;
 // "Student view": the teacher opens this page with ?student=<id> to see what the student sees, read-only.
@@ -74,6 +76,18 @@ function renderState() {
   $('#check').disabled = !!msg || busy || lv?.status === 'pending';
   $('#check').textContent = lv?.status === 'pending' ? '⏳ ' + t('pending') : t('checkWork');
   if (lv) $('#lvStars').textContent = lv.status === 'done' ? stars(lv.stars) : '';
+  renderCall();
+}
+// The teacher's video call: a banner to join while it is open; the call itself is a panel over the page (call.js).
+function renderCall() {
+  const c = me?.call, show = !viewId && c?.open && !inCall();
+  $('#callBanner').hidden = !show; if (!show) return;
+  $('#callBanner').innerHTML = `📹 ${t('call_banner')} ` + (c.full ? `<b>${t('call_full')}</b>` : `<button id="joinCall">${t('call_join')}</button> <span>${c.count}/${c.max}</span>`);
+  if ($('#joinCall')) $('#joinCall').onclick = async () => {
+    $('#joinCall').disabled = true;
+    await joinCall({ events: '/api/student/call/events', me: { name: me.nickname, avatar: me.avatar }, mic: false, cam: false, onLeave: renderCall });
+    renderCall();
+  };
 }
 async function refresh() { me = await api(urls.me); renderState(); if (!$('#mapView').hidden) renderMap(); }
 
@@ -225,6 +239,7 @@ if (viewId) {
   const es = onEvents('/api/student/events', async (ev) => {
     if (ev.type === 'closed') { es.close(); return ended(); }
     if (ev.type === 'state') refresh().catch(() => {});
+    if (ev.type === 'call') { me.call = ev.call; renderCall(); }
     if (ev.type === 'progress') {
       toast(t('teacher_' + ev.action) + (ev.feedback ? ' ' + ev.feedback : ''), ev.action === 'pass' ? 'ok' : '');
       await refresh().catch(() => {});

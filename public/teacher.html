@@ -8,6 +8,7 @@
 <script type="module">
 import { api, t, getLang, applyI18n, toggleLang, esc, $, onEvents, gameFrame, creationCard, stars, toast, langHtml } from '/common.js';
 import '/library-i18n.js';
+import { joinCall, inCall } from '/call.js';
 import { md } from '/md.js';
 applyI18n(); $('#lang').innerHTML = langHtml(); $('#lang').onclick = toggleLang;
 $('#out').onclick = async () => { await api('/api/logout', 'POST'); location = '/join#teacher'; };
@@ -82,6 +83,7 @@ async function roomPage(id) {
     $('#head').innerHTML = `<a href="/teacher.html">${t('back')}</a><div><h2 style="margin:0">${esc(cls.name)}</h2><span class="muted">${esc(cls.course?.title || '')}</span>${cls.next?.length ? `<br><span class="muted">${t('nextAdv')}: ${cls.next.map((n) => `<a href="/library.html#${esc(n.id)}">${esc(n.emoji)} ${esc(n.title[getLang()] || n.title.en || n.title.az)}</a>`).join(', ')}</span>` : ''}</div>
       <button id="lv" class="${cls.live ? 'bad' : 'ok'}">${cls.live ? t('endSession') : t('startSession')}</button>
       ${cls.live ? `<span class="pill live">● ${t('liveNow')}</span>` : ''}
+      ${callHead()}
       <span class="grow"></span>
       <span class="muted">${t('inviteLink')}:</span><input readonly value="${esc(link)}" id="link" class="linkbox"><button class="ghost" id="cp">${t('copy')}</button>
       <button class="ghost" id="qr">${t('qr')}</button><button class="ghost" id="nl">${t('newLink')}</button>
@@ -93,6 +95,8 @@ async function roomPage(id) {
         <p class="muted">${t('autoClose')}</p></div></details>`;
     $('#ap').value = cls.approval;
     if (open) { $('.settings').open = true; $('#dl').value = dl; }
+    if ($('#callGo')) $('#callGo').onclick = startCall;
+    if ($('#callEnd')) $('#callEnd').onclick = async () => { if (confirm(t('call_confirmEnd'))) await api(`/api/classes/${id}/call`, 'POST', { open: false }); };
     $('#lv').onclick = async () => { if (cls.live && !confirm(t('confirmEnd'))) return; await api('/api/classes/' + id, 'PATCH', { live: !cls.live }); refresh(); };
     $('#cp').onclick = async () => { $('#link').select(); try { await navigator.clipboard.writeText(link); } catch { document.execCommand('copy'); } toast(t('copied'), 'ok'); };
     $('#qr').onclick = () => {
@@ -105,11 +109,27 @@ async function roomPage(id) {
     $('#dls').onclick = async () => { await api('/api/classes/' + id, 'PATCH', { daily_limit: +$('#dl').value }); refresh(); };
     $('#pa').onclick = async () => { await api('/api/classes/' + id, 'PATCH', { paused: !cls.paused }); refresh(); };
   }
+  // Video call: the teacher opens it for the room and joins with camera and microphone on; students join from their page.
+  function callHead() {
+    const c = cls.call;
+    if (!cls.live) return '';
+    if (!c?.open) return `<button class="ghost" id="callGo">${t('call_start')}</button>`;
+    if (inCall()) return `<span class="pill">📹 ${c.peers.length}/${c.max}</span>`;
+    return `<button id="callGo">${t('call_join')} (${c.peers.length}/${c.max})</button><button class="ghost" id="callEnd" title="${t('call_end')}">■</button>`;
+  }
+  async function startCall() {
+    $('#callGo').disabled = true;
+    try { cls.call = await api(`/api/classes/${id}/call`, 'POST', { open: true }); } catch (x) { toast(t(x.code), 'bad'); return renderHead(); }
+    await joinCall({ events: `/api/classes/${id}/call/events`, teacher: true, classId: id, me: { name: t('teacher'), avatar: '🧑‍🏫' }, mic: true, cam: true, onLeave: renderHead });
+    renderHead();
+  }
+  const inCallIds = () => new Set((cls.call?.peers || []).map((p) => p.student_id).filter(Boolean));
   function renderStudents() {
+    const calling = inCallIds();
     const lvl = (s) => (s.level ? `L${levelOf(s.level)?.position}` : '🏁');
     $('#students').innerHTML = `<h3>${t('students')} (${cls.students.length})</h3><div class="stu ${sel ? '' : 'sel'}" data-s="">${t('everyone')}</div>` +
       cls.students.map((s) => `<div class="stu ${sel == s.id ? 'sel' : ''}" data-s="${s.id}">
-        <span class="dot ${s.online ? 'on' : ''}"></span><span class="grow">${s.paused ? '⏸️ ' : ''}${esc(s.avatar)} ${esc(s.nickname)}
+        <span class="dot ${s.online ? 'on' : ''}"></span><span class="grow">${s.paused ? '⏸️ ' : ''}${calling.has(s.id) ? `<span title="${t('call_inCall')}">📹</span> ` : ''}${esc(s.avatar)} ${esc(s.nickname)}
         <span class="muted">${lvl(s)} · ★${s.stars}${s.pending ? ' · ⏳' : ''} · ${s.used}/${cls.daily_limit}</span>
         <span class="typing" id="ty${s.id}" ${typing.has(s.id) ? '' : 'hidden'}>${t('typing')}</span></span>
         <button class="ghost" data-view="${s.id}" title="${t('openView')}">👁</button>
@@ -217,6 +237,7 @@ async function roomPage(id) {
   const soon = () => { clearTimeout(rt); rt = setTimeout(refresh, 300); };
   onEvents(`/api/classes/${id}/events`, (ev) => {
     if (ev.type === 'room') soon();
+    if (ev.type === 'call' && cls) { cls.call = ev.call; renderHead(); renderStudents(); }
     if (ev.type === 'presence') { const s = stu(ev.student_id); if (s) { s.online = ev.online; renderStudents(); renderMap(); } else soon(); }
     if (ev.type === 'typing') {
       clearTimeout(typing.get(ev.student_id)); $('#ty' + ev.student_id)?.removeAttribute('hidden');
