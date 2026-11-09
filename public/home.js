@@ -13,13 +13,15 @@ function applyLang() {
   applyI18n();
   root.lang = getLang();
   $$('[data-meta]').forEach((m) => (m.content = t(m.dataset.meta)));
+  $$('[data-lang]').forEach((b) => (b.title = t('n_lang')));
   const az = getLang() === 'az';
   $('meta[property="og:locale"]').content = az ? 'az_AZ' : 'en_US';
   $('meta[property="og:locale:alternate"]').content = az ? 'en_US' : 'az_AZ';
   dispatchEvent(new Event('homelang'));
 }
 $$('[data-lang]').forEach((b) => (b.onclick = () => { setLang(getLang() === 'az' ? 'en' : 'az'); applyLang(); }));
-if (getLang() !== 'az') applyLang(); // the HTML is already Azerbaijani
+// The HTML is already Azerbaijani; common.js picked the saved language or the browser's locale.
+if (getLang() !== 'az') applyLang(); else $$('[data-lang]').forEach((b) => (b.title = t('n_lang')));
 root.classList.remove('pend');
 
 // ---------- links whose destination is not decided yet ([CTA LINK], [PRIVACY POLICY LINK]) ----------

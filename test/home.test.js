@@ -178,3 +178,34 @@ test('the inline module script of every page parses (page scripts are not otherw
     }
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 });
+
+test('the language follows the browser locale until the visitor picks one, and index.html agrees with common.js', async () => {
+  const { detectLang } = await import('../public/common.js');
+  const inline = html.match(/<script>(\(function\(h\)[\s\S]*?)<\/script>/)[1];
+  const vm = await import('node:vm');
+  const runInline = (languages, timeZone, saved) => {
+    const h = { lang: 'az', classList: { add(c) { this[c] = true; } } };
+    const Intl = { DateTimeFormat: () => ({ resolvedOptions: () => ({ timeZone }) }) };
+    vm.runInNewContext(inline, { document: { documentElement: h }, navigator: { languages }, Intl, String, localStorage: { getItem: () => saved ?? null } });
+    return h.lang;
+  };
+  const cases = [
+    [['az-AZ'], 'Europe/London', 'az'], [['en-GB', 'az'], 'Asia/Baku', 'en'], [['tr-TR'], 'Europe/Istanbul', 'az'],
+    [['ru-RU', 'en-US'], 'Asia/Baku', 'az'], [['ru-RU', 'en-US'], 'Europe/Moscow', 'en'], [['de-DE'], 'Europe/Berlin', 'en'],
+    [['de-DE'], 'Asia/Baku', 'az'], [['en_US'], 'Asia/Baku', 'en'],
+  ];
+  for (const [langs, tz, want] of cases) {
+    assert.equal(detectLang(langs, tz), want, `common.js: ${langs} in ${tz}`);
+    assert.equal(runInline(langs, tz), want, `index.html: ${langs} in ${tz}`);
+  }
+  assert.equal(runInline(['en-US'], 'UTC', 'az'), 'az', 'a saved choice wins over the locale');
+  assert.equal(runInline(['az'], 'Asia/Baku', 'en'), 'en', 'a saved choice wins over the locale');
+});
+
+test('the language switcher shows flags, not letter codes', () => {
+  for (const f of fs.readdirSync(PUB).filter((n) => n.endsWith('.html'))) {
+    const page = read(f);
+    for (const m of page.matchAll(/<button[^>]*\bclass="lang"[^>]*>([\s\S]*?)<\/button>/g)) assert.ok(['', '<b lang="az"></b><b lang="en"></b>'].includes(m[1]), `${f}: the switcher holds two flags (or is filled by mountLang)`);
+    if (page.includes('id="lang"')) assert.match(page, /mountLang\(\$\('#lang'\)\)/, `${f} mounts the shared switcher`);
+  }
+});

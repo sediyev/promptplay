@@ -20,7 +20,8 @@
 <meta name="twitter:image" content="[OG IMAGE]">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%F0%9F%8E%AE%3C/text%3E%3C/svg%3E">
 <!-- "js" turns on the scroll story layout. Returning English visitors: keep the page invisible until home.js has swapped the text, so nothing flashes or shifts. -->
-<script>document.documentElement.classList.add('js');try{if(localStorage.getItem('lang')==='en'){var h=document.documentElement;h.lang='en';h.classList.add('pend')}}catch(e){}</script>
+<!-- The language is the visitor's saved choice, else their browser's locale (a copy of detectLang() in common.js). -->
+<script>(function(h){h.classList.add('js');var l;try{l=localStorage.getItem('lang')}catch(e){}if(l!=='az'&&l!=='en'){var z,b,a=navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||''];try{z=Intl.DateTimeFormat().resolvedOptions().timeZone}catch(e){}b=z==='Asia/Baku';l=b?'az':'en';for(var i=0;i<a.length;i++){var p=String(a[i]).toLowerCase().split(/[-_]/)[0];if(p==='az'||p==='tr'){l='az';break}if(p==='en'){l='en';break}if(b&&p){l='az';break}}}if(l==='en'){h.lang='en';h.classList.add('pend')}})(document.documentElement)</script>
 <link rel="stylesheet" href="/style.css">
 <link rel="stylesheet" href="/home.css">
 <link rel="modulepreload" href="/common.js">
@@ -35,7 +36,7 @@
   <div class="bar-in">
     <a class="brand" href="/"><span aria-hidden="true">🎮</span><span class="brand-t">PromptPlay</span></a>
     <nav class="bar-act" data-aria="n_nav" aria-label="Əsas menyu">
-      <button class="lang" type="button" data-lang data-aria="n_lang" aria-label="AZ EN, İngilis dilinə keç"><b lang="az">AZ</b><b lang="en">EN</b></button>
+      <button class="lang" type="button" data-lang data-aria="n_lang" aria-label="Dil: Azərbaycan dili. İngilis dilinə keç"><b lang="az"></b><b lang="en"></b></button>
       <a class="link wide" href="/join" data-t="n_enter">Sinfə qoşul</a>
       <a class="btn sm" href="[CTA LINK]" data-cta data-t="cta">Pulsuz sınaq dərsinə yazıl</a>
     </nav>
@@ -251,7 +252,7 @@
       <li><a href="/join" data-t="n_enter">Sinfə qoşul</a></li>
       <li><a href="/join#teacher" data-t="n_teacher">Müəllim girişi</a></li>
     </ul>
-    <button class="lang" type="button" data-lang data-aria="n_lang" aria-label="AZ EN, İngilis dilinə keç"><b lang="az">AZ</b><b lang="en">EN</b></button>
+    <button class="lang" type="button" data-lang data-aria="n_lang" aria-label="Dil: Azərbaycan dili. İngilis dilinə keç"><b lang="az"></b><b lang="en"></b></button>
   </div>
 </footer>
 </body>

@@ -9,7 +9,7 @@ export const HOME = {
     m_desc: 'A classroom adventure for ages 8 to 17. Kids invent heroes, build games and learn to direct AI. A teacher runs every class and sees everything.',
 
     n_skip: 'Skip to content', n_nav: 'Main menu', n_enter: 'Enter class', n_teacher: 'Teacher login',
-    n_lang: 'AZ EN, switch to Azerbaijani',
+    n_lang: 'Language: English. Switch to Azerbaijani',
     cta: 'Book a free trial class', // [PRIMARY CTA]
 
     // welcome
@@ -80,7 +80,7 @@ export const HOME = {
     m_desc: '8 ilə 17 yaş arası uşaqlar üçün sinif macərası. Uşaqlar qəhrəman icad edir, oyun qurur və süni intellektə yön verməyi öyrənir. Hər sinfi müəllim aparır və hər şeyi görür.',
 
     n_skip: 'Məzmuna keç', n_nav: 'Əsas menyu', n_enter: 'Sinfə qoşul', n_teacher: 'Müəllim girişi',
-    n_lang: 'AZ EN, İngilis dilinə keç',
+    n_lang: 'Dil: Azərbaycan dili. İngilis dilinə keç',
     cta: 'Pulsuz sınaq dərsinə yazıl', // [PRIMARY CTA]
 
     hr_hi: 'PromptPlay-ə xoş gəlmisiniz',

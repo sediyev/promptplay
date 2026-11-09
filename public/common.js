@@ -29,7 +29,7 @@ const DICT = {
     teacher: 'Teacher', cls: 'Class', exists: 'Email already exists', invalid: 'Check the fields (password min 6 chars)', code_label: 'Code',
     codeCopy: 'Share this code with students:', sc_sexual: 'sexual content', sc_violence: 'violence', sc_self_harm: 'possible self-harm / danger',
     sc_hate: 'hate', sc_drugs: 'drugs', sc_personal_info: 'personal info', sc_jailbreak: 'rule bypass attempt', sc_other: 'unsafe',
-    showing: 'Showing to class', lang: 'AZ', tagline: 'Learn to talk to AI by building games', student: 'Student', teacher: 'Teacher',
+    showing: 'Showing to class', langSwitch: 'Language: English. Switch to Azerbaijani', tagline: 'Learn to talk to AI by building games', student: 'Student', teacher: 'Teacher',
   },
   az: {
     app: 'PromptPlay', join: 'Sinfə qoşul', code: 'Sinif kodu', nickname: 'Ləqəb (real adın yox!)', go: '🚀 Başla',
@@ -61,7 +61,7 @@ const DICT = {
     teacher: 'Müəllim', cls: 'Sinif', exists: 'Bu e-poçt artıq var', invalid: 'Sahələri yoxlayın (parol min. 6 simvol)', code_label: 'Kod',
     codeCopy: 'Bu kodu şagirdlərlə paylaş:', sc_sexual: 'qeyri-münasib məzmun', sc_violence: 'zorakılıq', sc_self_harm: 'özünə zərər / təhlükə ehtimalı',
     sc_hate: 'nifrət', sc_drugs: 'narkotik', sc_personal_info: 'şəxsi məlumat', sc_jailbreak: 'qaydaları keçməyə cəhd', sc_other: 'təhlükəli',
-    showing: 'Sinfə göstərilir', lang: 'EN', tagline: 'Oyun düzəldərək süni intellektlə danışmağı öyrən', student: 'Şagird', teacher: 'Müəllim',
+    showing: 'Sinfə göstərilir', langSwitch: 'Dil: Azərbaycan dili. İngilis dilinə keç', tagline: 'Oyun düzəldərək süni intellektlə danışmağı öyrən', student: 'Şagird', teacher: 'Müəllim',
   },
 };
 // Rooms, courses and the level map
@@ -133,12 +133,32 @@ Object.assign(DICT.az, {
   nextAdv: 'Növbəti macəra', askTeacher: 'Müəllimindən onu açmasını istə!',
   openView: '👁 Ekranına bax', studentView: 'ekranı (yalnız baxış)', watching: '👁 Şagirdin ekranına baxırsınız (yalnız baxış):', toDashboard: '← Panelə qayıt',
 });
-let lang = 'az';
+// The app's language: the visitor's own choice once they have used the switcher, otherwise their browser's locale.
+// Kept in sync with the small inline copy in the <head> of index.html, which hides the page until home.js swaps the text.
+export function detectLang(langs = globalThis.navigator?.languages, tz) {
+  try { tz ??= Intl.DateTimeFormat().resolvedOptions().timeZone; } catch {}
+  const baku = tz === 'Asia/Baku';
+  for (const l of langs?.length ? langs : [globalThis.navigator?.language || '']) {
+    const p = String(l).toLowerCase().split(/[-_]/)[0];
+    if (p === 'az' || p === 'tr') return 'az'; // Turkish readers follow Azerbaijani far better than English
+    if (p === 'en') return 'en';
+    if (baku && p) return 'az'; // e.g. a Russian browser in Azerbaijan
+  }
+  return baku ? 'az' : 'en';
+}
+let lang;
 try { const saved = localStorage.getItem('lang'); if (DICT[saved]) lang = saved; } catch {}
+lang ??= detectLang();
+if (globalThis.document) document.documentElement.lang = lang;
 export const t = (k) => DICT[lang][k] ?? DICT.en[k] ?? k;
 export const getLang = () => lang;
-// Label of the switcher button: the flag and code of the language you will switch to.
-export const langHtml = () => `<span class="flag flag-${lang === 'az' ? 'en' : 'az'}" aria-hidden="true"></span> ${t('lang')}`;
+// The language switcher: both flags, the current one highlighted (style.css, .lang). Clicking switches to the other language.
+export const langHtml = () => '<b lang="az"></b><b lang="en"></b>';
+export function mountLang(btn) {
+  btn.classList.add('lang'); btn.type = 'button';
+  btn.innerHTML = langHtml(); btn.title = t('langSwitch'); btn.setAttribute('aria-label', t('langSwitch'));
+  btn.onclick = toggleLang;
+}
 export function toggleLang() { try { localStorage.setItem('lang', lang === 'az' ? 'en' : 'az'); } catch {} location.reload(); }
 // Switch language without a reload (the home page does this); call applyI18n() afterwards.
 export function setLang(l) {

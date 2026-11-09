@@ -176,7 +176,14 @@ iframe.studentview { flex:1; width:100%; min-height:0; border:1px solid var(--li
 .lvgrid { display:grid; grid-template-columns:1fr 1fr; gap:0 12px; } .lvgrid label { margin-top:.6em; }
 @media (max-width:700px) { .lvgrid { grid-template-columns:1fr; } .linkbox { width:100%; } }
 
-/* Flags: inline SVG, as flag emoji show as letters on Windows */
+/* Language switcher: both flags in a pill, the current language raised (html[lang] is set by common.js).
+   Flags are inline SVG, as flag emoji show as letters on Windows. */
 :root { --fa:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 20'><path fill='%2300b5e2' d='M0 0h30v7H0z'/><path fill='%23ef3340' d='M0 7h30v6H0z'/><path fill='%23509e2f' d='M0 13h30v7H0z'/><circle cx='13' cy='10' r='3.3' fill='%23fff'/><circle cx='14.1' cy='10' r='2.7' fill='%23ef3340'/></svg>"); --fe:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 20'><path fill='%23012169' d='M0 0h30v20H0z'/><path d='M0 0l30 20M30 0L0 20M15 0v20M0 10h30' stroke='%23fff' stroke-width='4'/><path d='M0 0l30 20M30 0L0 20M15 0v20M0 10h30' stroke='%23c8102e' stroke-width='2'/></svg>"); }
-.flag, .lang b::before { display:inline-block; width:1.35em; height:.9em; border-radius:3px; background:center/cover; box-shadow:0 0 0 1px #0003; vertical-align:-.12em; }
-.flag-az { background-image:var(--fa); } .flag-en { background-image:var(--fe); }
+.lang { display:inline-flex; align-items:center; gap:2px; flex:none; height:40px; padding:3px; border-radius:999px; background:var(--brand-soft); box-shadow:none; cursor:pointer; }
+.lang:hover { box-shadow:none; } .lang:focus-visible { outline:3px solid var(--brand); outline-offset:2px; }
+.lang b { display:inline-flex; align-items:center; height:100%; padding:0 9px; border-radius:999px; transition:background-color .2s,box-shadow .2s; }
+.lang b::before { content:""; width:22px; height:15px; border-radius:3px; background:center/cover; box-shadow:0 0 0 1px #0003; opacity:.5; transition:opacity .2s; }
+.lang:hover b::before { opacity:.8; }
+.lang b[lang=az]::before { background-image:var(--fa); } .lang b[lang=en]::before { background-image:var(--fe); }
+html[lang=az] .lang b[lang=az], html[lang=en] .lang b[lang=en] { background:var(--card); box-shadow:var(--shadow); }
+html[lang=az] .lang b[lang=az]::before, html[lang=en] .lang b[lang=en]::before { opacity:1; }

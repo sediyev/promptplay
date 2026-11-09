@@ -2,7 +2,7 @@
 <html lang="az"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>PromptPlay</title><link rel="stylesheet" href="/style.css"></head>
 <body>
-<div class="top"><b class="logo">🎮</b><span id="me" class="mebadge"></span><span class="muted grow" id="course"></span><span class="pill" id="left"></span><button class="ghost" id="lang"></button></div>
+<div class="top"><b class="logo">🎮</b><span id="me" class="mebadge"></span><span class="muted grow" id="course"></span><span class="pill" id="left"></span><button class="lang" id="lang" type="button"></button></div>
 <div class="banner" id="seen" data-t="seen"></div>
 <div class="banner stop" id="status" hidden></div>
 
@@ -30,8 +30,8 @@
   <p id="rText"></p><div class="row" style="justify-content:center"><button class="ghost" id="rStay" data-t="keepGoing"></button><button id="rNext" data-t="nextLevel"></button></div></div></div>
 <script type="module">
 import { md } from '/md.js';
-import { api, t, getLang, applyI18n, toggleLang, esc, $, onEvents, extractGame, gameFrame, creationCard, stars, toast, langHtml } from '/common.js';
-applyI18n(); $('#lang').innerHTML = langHtml(); $('#lang').onclick = toggleLang;
+import { api, t, getLang, applyI18n, esc, $, onEvents, extractGame, gameFrame, creationCard, stars, toast, mountLang } from '/common.js';
+applyI18n(); mountLang($('#lang'));
 let me, level = null, current = null, busy = false;
 // "Student view": the teacher opens this page with ?student=<id> to see what the student sees, read-only.
 const params = new URLSearchParams(location.search), viewId = +params.get('student') || 0, embed = viewId && params.has('embed');

@@ -3,7 +3,7 @@
 <title>PromptPlay – Course</title><link rel="stylesheet" href="/style.css"></head>
 <body>
 <div class="top"><a href="/teacher.html" data-t="back"></a><b class="logo">🎮 PromptPlay</b><span class="grow"></span><span class="muted" id="dirty" hidden data-t="unsaved"></span>
-  <button class="ghost" id="exp" data-t="exportJson"></button><button id="save" data-t="saveCourse"></button><button class="ghost" id="lang"></button></div>
+  <button class="ghost" id="exp" data-t="exportJson"></button><button id="save" data-t="saveCourse"></button><button class="lang" id="lang" type="button"></button></div>
 <div class="editor">
   <div class="card"><h2 data-t="editCourse"></h2>
     <label data-t="title"></label><input id="title" maxlength="100">
@@ -14,8 +14,8 @@
   <div class="row" style="margin:12px 0 40px"><button class="ghost" id="add" data-t="addLevel"></button><span class="grow"></span><button class="bad" id="del" data-t="deleteCourse" hidden></button></div>
 </div>
 <script type="module">
-import { api, t, applyI18n, toggleLang, esc, $, langHtml } from '/common.js';
-applyI18n(); $('#lang').innerHTML = langHtml(); $('#lang').onclick = toggleLang;
+import { api, t, applyI18n, esc, $, mountLang } from '/common.js';
+applyI18n(); mountLang($('#lang'));
 try { await api('/api/me'); } catch { location = '/join#teacher'; await new Promise(() => {}); } // leaving: do not run the rest of the page
 let id = +new URLSearchParams(location.search).get('id') || null, levels = [], dirty = false;
 const FIELDS = ['title', 'emoji', 'output', 'intro', 'task', 'ai_guide', 'criteria'];
