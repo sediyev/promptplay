@@ -54,6 +54,7 @@ function armGrace(classId) {
 // Ending a session logs every student out; accounts and progress stay for the next session.
 function closeRoom(classId) {
   run('UPDATE classes SET live=0 WHERE id=?', classId);
+  for (const { id } of all('SELECT id FROM students WHERE class_id=?', classId)) attention.delete(id); // the next session starts fresh
   run("DELETE FROM sessions WHERE kind='student' AND ref IN (SELECT id FROM students WHERE class_id=?)", classId);
   endCall(classId);
   publish(`s:${classId}`, { type: 'closed' }); hangUp(`s:${classId}`);
@@ -284,7 +285,7 @@ app.get('/api/classes/:id', needTeacher, ownClass, (req, res) => {
       (SELECT COUNT(*) FROM games g WHERE g.student_id=s.id) outputs
     FROM students s WHERE s.class_id=? ORDER BY s.nickname`, dayStart(), req.cls.id).map((s) => {
     const map = levelMap(s, req.cls.course_id), cur = map.find((l) => l.status !== 'done' && l.status !== 'locked');
-    return { ...s, online: !!studentConns.get(s.id), level: cur?.id ?? null, done: map.filter((l) => l.status === 'done').length,
+    return { ...s, online: !!studentConns.get(s.id), ...attentionOf(s.id), level: cur?.id ?? null, done: map.filter((l) => l.status === 'done').length,
       stars: map.reduce((a, l) => a + l.stars, 0), pending: cur?.status === 'pending', progress: map.map((l) => ({ id: l.id, status: l.status, stars: l.stars })) };
   });
   const pending = all(`SELECT p.student_id,p.level_id,p.stars,p.feedback,p.output_id,p.created,s.nickname,s.avatar,l.title,l.position FROM progress p
@@ -448,8 +449,34 @@ app.get('/api/student/events', needStudent, (req, res) => {
   const sid = req.student.id;
   if (bump(studentConns, sid, 1) === 1) publish(`t:${req.room.id}`, { type: 'presence', student_id: sid, online: true });
   subscribe(req, res, [`s:${req.room.id}`, `u:${sid}`], () => {
-    if (!bump(studentConns, sid, -1)) publish(`t:${req.room.id}`, { type: 'presence', student_id: sid, online: false });
+    if (bump(studentConns, sid, -1)) return;
+    setAway(sid, req.room.id, null); // a closed page is "offline", not "away"
+    publish(`t:${req.room.id}`, { type: 'presence', student_id: sid, online: false });
   });
+});
+// Attention: whether the student's PromptPlay page is in front of them. The page reports "tab" (they switched tab or
+// minimised the browser), "window" (another window or app is in front) or nothing (back on the page). It is a status for
+// the teacher, kept in memory for the current session only, and never blocks the student. Other sites are never seen.
+const AWAY = ['tab', 'window'];
+const attention = new Map(); // student id -> { away, since, count, total }
+function attentionOf(sid) {
+  const a = attention.get(sid);
+  const current = a?.away ? now() - a.since : 0; // durations, not clock times, so the teacher's clock does not matter
+  return { away: a?.away ?? null, away_for: current, away_count: a?.count ?? 0, away_ms: (a?.total ?? 0) + current };
+}
+function setAway(sid, classId, away) {
+  const a = attention.get(sid) ?? { away: null, since: 0, count: 0, total: 0 };
+  if (a.away === away) return;
+  if (!a.away) { a.count++; a.since = now(); } // switching from "tab" to "window" is the same time away
+  else if (!away) a.total += now() - a.since;
+  a.away = away; attention.set(sid, a);
+  publish(`t:${classId}`, { type: 'attention', student_id: sid, ...attentionOf(sid) });
+}
+app.post('/api/student/attention', needStudent, (req, res) => {
+  const away = req.body.away ?? null;
+  if (away !== null && !AWAY.includes(away)) return fail(res, 400, 'away');
+  setAway(req.student.id, req.room.id, away);
+  res.json({ ok: true });
 });
 const lastTyping = new Map();
 app.post('/api/student/typing', needStudent, (req, res) => {

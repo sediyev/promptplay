@@ -208,3 +208,9 @@ iframe.studentview { flex:1; width:100%; min-height:0; border:1px solid var(--li
 .callbar button.ghost.on { background:var(--brand-soft); border-color:var(--brand); }
 .callbox.min .tiles, .callbox.min .callbar, .callbox.min .callnote { display:none; }
 @media (max-width:600px) { .callbox, .callbox.big { right:8px; left:8px; bottom:8px; width:auto; } .tile .tav { font-size:1.8rem; } }
+
+/* "away" status for the teacher: informative, deliberately not alarming */
+.awaypill { display:inline-block; background:color-mix(in srgb,var(--sun) 28%,var(--card)); color:var(--ink); border-radius:999px; padding:.05em .55em;
+  font-size:.75rem; font-weight:600; white-space:nowrap; }
+.chip.away { border-style:dashed; border-color:var(--sun); } .chip i { font-style:normal; font-size:.75rem; opacity:.8; }
+.stu > .grow { min-width:0; } .stu .awaypill { white-space:normal; }

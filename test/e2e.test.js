@@ -322,6 +322,39 @@ test('video call: teacher opens it, up to 4 people, setup messages relayed, teac
   teacherFeed.close(); roomFeed.close(); A.close();
 });
 
+test('attention: the teacher sees when a student is away from the page, as a status for this session', async () => {
+  await call('tw', 'POST', '/api/login', { email: 'v@x.com', password: 'secret3' });
+  const course = (await call('tw', 'POST', '/api/courses/starter')).data.id;
+  const id = (await call('tw', 'POST', '/api/classes', { name: 'Focus room', consent: true, course_id: course })).data.id;
+  const { invite } = (await call('tw', 'GET', '/api/classes/' + id)).data;
+  await call('tw', 'PATCH', '/api/classes/' + id, { live: true });
+  await call('fa', 'POST', '/api/join', { invite, nickname: 'Elnur', pin: '2222' });
+  const student = () => call('tw', 'GET', '/api/classes/' + id).then((r) => r.data.students[0]);
+  assert.deepEqual(await student().then(({ away, away_count, away_ms }) => ({ away, away_count, away_ms })), { away: null, away_count: 0, away_ms: 0 });
+
+  const feed = stream('tw', `/api/classes/${id}/events`), page = stream('fa', '/api/student/events');
+  await feed.next('presence');
+  assert.equal((await call('fa', 'POST', '/api/student/attention', { away: 'somewhere' })).status, 400);
+  await call('fa', 'POST', '/api/student/attention', { away: 'tab' });
+  const ev = await feed.next('attention');
+  assert.deepEqual([ev.away, ev.away_count], ['tab', 1], 'the dashboard hears it at once');
+  await call('fa', 'POST', '/api/student/attention', { away: 'window' }); // still away: not a second time
+  await sleep(150);
+  await call('fa', 'POST', '/api/student/attention', { away: null });
+  const back = await feed.next('attention', (e) => e.away === null);
+  assert.equal(back.away_count, 1); assert.ok(back.away_ms >= 150, 'time away adds up');
+  assert.equal((await student()).away_count, 1);
+  assert.equal((await call('tw', 'POST', '/api/student/attention', { away: 'tab' })).status, 401, 'only students report it');
+
+  // closing the page is "offline", not "away"; ending the session starts the next one fresh
+  await call('fa', 'POST', '/api/student/attention', { away: 'tab' });
+  page.close();
+  await feed.next('attention', (e) => e.away === null && e.away_count === 2);
+  await call('tw', 'PATCH', '/api/classes/' + id, { live: false });
+  assert.equal((await student()).away_count, 0);
+  feed.close();
+});
+
 test('pilot database: lessons become a course, history keeps its level', async () => {
   const { DatabaseSync } = await import('node:sqlite');
   const file = path.join(dir, 'pilot.db'), old = new DatabaseSync(file);

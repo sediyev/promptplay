@@ -37,7 +37,7 @@ let active = null; // one call per page
 
 /**
  * Joins the call and shows the panel. Resolves to the call, or null when it could not start.
- * opts: { events: stream url, teacher: bool, classId, mic: bool, cam: bool, onLeave(reason) }
+ * opts: { events: stream url, teacher: bool, classId, me: {name, avatar}, mic: bool, cam: bool, label(info): extra tile text, onLeave(reason) }
  */
 export async function joinCall(opts) {
   if (active) return active;
@@ -266,7 +266,7 @@ class Call {
     const ctl = this.opts.teacher && p.info.kind === 'student'
       ? `${p.info.mic ? `<button class="ghost icon" data-act="mute" data-peer="${esc(p.info.id)}" title="${t('call_mute')}" aria-label="${t('call_mute')}">🔇</button>` : ''}
          <button class="ghost icon" data-act="remove" data-peer="${esc(p.info.id)}" title="${t('call_remove')}" aria-label="${t('call_remove')}">✕</button>` : '';
-    this.fillTile(p.tile, p.info, waiting ? t('call_connecting') : '', ctl);
+    this.fillTile(p.tile, p.info, waiting ? t('call_connecting') : this.opts.label?.(p.info) || '', ctl);
   }
   renderMine() {
     const me = this.opts.me || {};
@@ -285,5 +285,6 @@ class Call {
     set('cam', !!this.cam, `📷 ${t('call_cam')}`, `🚫 ${t('call_cam')}`);
     set('screen', !!this.screen, `🖥️ ${t('call_stopScreen')}`, `🖥️ ${t('call_screen')}`);
     this.renderMine();
+    for (const p of this.peers.values()) this.renderTile(p);
   }
 }
