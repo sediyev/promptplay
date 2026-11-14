@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="az"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PromptPlay</title><link rel="stylesheet" href="/style.css"></head>
+<title>PromptPlay</title><link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"></head>
 <body>
-<div class="top"><b class="logo">🎮</b><span id="me" class="mebadge"></span><span class="muted grow" id="course"></span><span class="pill" id="left"></span><button class="ghost" id="lang"></button></div>
+<div class="top"><b class="logo">🎮</b><span id="me" class="mebadge"></span><span class="muted grow ctx" id="course"></span><span class="pill" id="left"></span><button class="ghost" id="lang"></button></div>
 <div class="banner" id="seen" data-t="seen"></div>
 <div class="banner stop" id="status" hidden></div>
 
@@ -13,21 +13,22 @@
   <div class="levelbar"><button class="ghost" id="toMap" data-t="backToMap"></button><span class="lvemoji" id="lvEmoji"></span>
     <b class="grow" id="lvTitle"></b><span class="stars" id="lvStars"></span><button class="ok" id="check" data-t="checkWork"></button></div>
   <details class="taskcard card" id="taskCard" open><summary><b data-t="task"></b></summary><p class="muted" id="lvIntro"></p><p id="lvTask" style="white-space:pre-wrap;margin:0"></p></details>
+  <div class="seg panetabs"><button type="button" id="tabChat"></button><button type="button" id="tabOut"></button></div>
   <div class="app">
-    <div class="card pane">
+    <div class="card pane chatpane">
       <div class="log" id="log"></div>
       <form class="composer" id="form"><textarea id="text" maxlength="1500" data-ph="placeholder"></textarea><button id="send" data-t="send"></button></form>
     </div>
-    <div class="card pane" style="overflow:auto">
+    <div class="card pane outpane" style="overflow:auto">
       <div class="row"><h3 class="grow" id="outTitle"></h3><button id="save" class="ghost" data-t="save" hidden></button></div>
       <div id="stage" class="pane" style="height:min(52vh,430px);flex:none"></div>
       <h3 data-t="myWork"></h3><div class="grid" id="games"></div>
     </div>
   </div>
 </div>
-<div id="modal" class="modal" hidden><div><div class="row"><b class="grow" id="mt"></b><button class="ghost" id="mc" data-t="close"></button></div><div id="mb" class="pane grow"></div></div></div>
-<div id="result" class="modal" hidden><div class="resultbox"><div id="rIcon" class="bigicon"></div><h2 id="rTitle"></h2><div class="stars big" id="rStars"></div>
-  <p id="rText"></p><div class="row" style="justify-content:center"><button class="ghost" id="rStay" data-t="keepGoing"></button><button id="rNext" data-t="nextLevel"></button></div></div></div>
+<dialog id="modal" class="modal" aria-labelledby="mt"><div><div class="row"><b class="grow" id="mt"></b><button class="ghost" id="mc" data-t="close"></button></div><div id="mb" class="pane grow"></div></div></dialog>
+<dialog id="result" class="modal" aria-labelledby="rTitle"><div class="resultbox"><div id="rIcon" class="bigicon"></div><h2 id="rTitle"></h2><div class="stars big" id="rStars"></div>
+  <p id="rText"></p><div class="row" style="justify-content:center"><button class="ghost" id="rStay" data-t="keepGoing"></button><button id="rNext" data-t="nextLevel"></button></div></div></dialog>
 <script type="module">
 import { md } from '/md.js';
 import { api, t, getLang, applyI18n, toggleLang, esc, $, onEvents, extractGame, gameFrame, creationCard, stars, toast, langHtml } from '/common.js';
@@ -66,7 +67,8 @@ const tag = (kind) => (kind === 'creation' ? 'creation' : 'html');
 
 function renderState() {
   $('#me').textContent = `${me.avatar} ${me.nickname}`; $('#course').textContent = `${me.room} · ${me.course || ''}`;
-  const left = Math.max(0, me.limit - me.used); $('#left').textContent = `${left} ${t('left')}`;
+  const left = Math.max(0, me.limit - me.used); // phones show "💬 28", the full sentence stays in the tooltip
+  $('#left').innerHTML = `<span aria-hidden="true">💬</span> ${left} <span class="wide-t">${esc(t('left'))}</span>`; $('#left').title = `${left} ${t('left')}`;
   const msg = me.classPaused ? 'paused' : me.paused ? 'pausedYou' : left <= 0 ? 'limit' : me.budget ? 'budget' : null;
   $('#status').hidden = !msg; if (msg) $('#status').textContent = t(msg);
   const off = !!msg || busy || !level || !!viewId; $('#text').disabled = off; $('#send').disabled = off;
@@ -102,16 +104,25 @@ async function openLevel(id) {
   let r; level = null; renderState(); // nothing can be sent to the previous level while this one loads
   try { r = await api(urls.level + id); } catch (x) { if (x.status === 401) return ended(); toast(t(x.code)); return (location.hash = ''); }
   level = r.level;
-  $('#mapView').hidden = true; $('#levelView').hidden = false;
+  $('#mapView').hidden = true; $('#levelView').hidden = false; document.body.classList.add('inlevel'); pane('chat');
   $('#lvEmoji').textContent = level.emoji; $('#lvTitle').textContent = `${t('level')} ${level.position}: ${level.title}`;
   $('#lvIntro').textContent = level.intro; $('#lvIntro').hidden = !level.intro; $('#lvTask').textContent = level.task;
   $('#outTitle').textContent = level.output === 'creation' ? t('yourCreation') : level.output === 'game' ? t('yourGame') : t('task');
+  $('#tabOut').textContent = level.output === 'chat' ? t('myWork') : $('#outTitle').textContent; $('#tabOut').classList.remove('new');
   $('#log').replaceChildren(); stream = null;
   for (const m of r.messages) addMsg(m.role, m.role === 'assistant' ? display(m.content) : m.content);
   const last = [...r.messages].reverse().map((m) => m.role === 'assistant' && extractGame(m.content, tag(level.output))).find(Boolean);
   showOutput(level.output === 'chat' ? null : last); renderState(); $('#text').focus();
 }
-function showMap() { level = null; $('#levelView').hidden = true; $('#mapView').hidden = false; renderMap(); renderState(); }
+function showMap() { level = null; $('#levelView').hidden = true; $('#mapView').hidden = false; document.body.classList.remove('inlevel'); renderMap(); renderState(); }
+// Phones show one pane at a time. A dot on the game tab says a new game or creation is waiting there.
+function pane(p) {
+  $('#levelView').dataset.pane = p;
+  for (const [b, on] of [[$('#tabChat'), p === 'chat'], [$('#tabOut'), p === 'out']]) { b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); }
+  if (p === 'out') $('#tabOut').classList.remove('new');
+}
+const freshOutput = () => { if ($('#levelView').dataset.pane !== 'out') $('#tabOut').classList.add('new'); };
+$('#tabChat').textContent = '💬 ' + t('chat'); $('#tabChat').onclick = () => pane('chat'); $('#tabOut').onclick = () => pane('out');
 const route = () => { const id = +(location.hash.match(/level=(\d+)/)?.[1] || 0); id ? openLevel(id) : showMap(); };
 window.onhashchange = route;
 $('#toMap').onclick = () => (location.hash = '');
@@ -133,8 +144,10 @@ async function loadGames() {
 }
 function openModal(g, label) {
   $('#mt').textContent = label || `${g.title} (${g.nickname})`;
-  $('#mb').replaceChildren(g.kind === 'creation' ? creationCard(g.html) : Object.assign(gameFrame(g.html), { className: 'game' })); $('#modal').hidden = false;
+  $('#mb').replaceChildren(g.kind === 'creation' ? creationCard(g.html) : Object.assign(gameFrame(g.html), { className: 'game' }));
+  if (!$('#modal').open) $('#modal').showModal();
 }
+$('#modal').onclose = () => $('#mb').replaceChildren(); // stops the game that was playing
 $('#save').onclick = async () => {
   const m = current.kind === 'game' && current.content.match(/<title>([^<]*)<\/title>/i);
   const title = current.kind === 'creation' ? current.content.split('\n')[0].replace(/[#*]/g, '').trim() : (m && m[1].trim()) || level.title;
@@ -152,12 +165,13 @@ $('#check').onclick = async () => {
     $('#rTitle').textContent = r.pending ? t('pending') : r.pass ? t('passed') : t('notYet');
     $('#rStars').textContent = r.pass ? stars(r.stars) : '';
     $('#rText').className = r.pending ? '' : 'md'; $('#rText').innerHTML = r.pending ? esc(t('pendingMsg')) : md(r.feedback);
-    $('#rNext').hidden = !(r.pass && next); $('#rNext').onclick = () => { $('#result').hidden = true; level = null; renderState(); location.hash = 'level=' + next.id; };
-    $('#result').hidden = false; loadGames();
+    $('#rNext').hidden = !(r.pass && next); $('#rNext').autofocus = !$('#rNext').hidden;
+    $('#rNext').onclick = () => { $('#result').close(); level = null; renderState(); location.hash = 'level=' + next.id; };
+    $('#result').showModal(); loadGames();
   } catch (x) { if (x.status === 401) return ended(); toast(t(x.code), 'bad'); }
   busy = false; renderState();
 };
-$('#rStay').onclick = () => ($('#result').hidden = true);
+$('#rStay').onclick = () => $('#result').close();
 
 let lastTyping = 0;
 $('#text').oninput = () => { if (viewId) return; if (Date.now() - lastTyping > 3000) { lastTyping = Date.now(); api('/api/student/typing', 'POST').catch(() => {}); } };
@@ -180,13 +194,13 @@ $('#form').onsubmit = async (e) => {
         setMsg(bubble, display(full.replace('\u0000error', '')) || t('thinking')); $('#log').scrollTop = 1e9;
       }
       if (full.includes('\u0000error')) { bubble.className = 'msg note'; bubble.textContent = t('try_again'); }
-      const out = level.output !== 'chat' && extractGame(full, tag(level.output)); if (out) showOutput(out);
+      const out = level.output !== 'chat' && extractGame(full, tag(level.output)); if (out) { showOutput(out); freshOutput(); }
     }
   } catch { bubble.className = 'msg note'; bubble.textContent = t('try_again'); }
   busy = false; await refresh().catch(() => {});
 };
 $('#text').onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#form').requestSubmit(); } };
-$('#mc').onclick = () => { $('#modal').hidden = true; $('#mb').replaceChildren(); };
+$('#mc').onclick = () => $('#modal').close();
 
 try { me = await api(urls.me); } catch (x) { x.code === 'room_closed' || viewId ? ended() : (location = '/join'); await new Promise(() => {}); } // leaving: do not run the rest of the page
 if (viewId) {
@@ -216,7 +230,7 @@ if (viewId) {
       const m = ev.message;
       if (m.role === 'assistant') {
         stream?.remove(); stream = null; addMsg('assistant', display(m.content));
-        const out = level.output !== 'chat' && extractGame(m.content, tag(level.output)); if (out) showOutput(out);
+        const out = level.output !== 'chat' && extractGame(m.content, tag(level.output)); if (out) { showOutput(out); freshOutput(); }
       } else if (m.role === 'user') addMsg('user', m.content);
       else if (m.role === 'blocked') addMsg('note', `🚫 ${t('sc_' + m.flag)}: ${m.content}`);
     }

@@ -1,17 +1,18 @@
 <!doctype html>
 <html lang="az"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PromptPlay – Teacher</title><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/library.css"></head>
+<title>PromptPlay – Teacher</title><link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/library.css"></head>
 <body>
 <div class="top"><b class="logo">🎮 PromptPlay</b><span class="grow"></span><button class="ghost" id="lang"></button><button class="ghost" id="out" data-t="logout"></button></div>
 <div id="root"></div>
-<div id="modal" class="modal" hidden><div><div class="row"><b class="grow" id="mt"></b><button class="ghost" id="mc" data-t="close"></button></div><div id="mb" class="pane grow"></div></div></div>
+<dialog id="modal" class="modal" aria-labelledby="mt"><div><div class="row"><b class="grow" id="mt"></b><button class="ghost" id="mc" data-t="close"></button></div><div id="mb" class="pane grow"></div></div></dialog>
 <script type="module">
 import { api, t, getLang, applyI18n, toggleLang, esc, $, onEvents, gameFrame, creationCard, stars, toast, langHtml } from '/common.js';
 import '/library-i18n.js';
 import { md } from '/md.js';
 applyI18n(); $('#lang').innerHTML = langHtml(); $('#lang').onclick = toggleLang;
 $('#out').onclick = async () => { await api('/api/logout', 'POST'); location = '/join#teacher'; };
-$('#mc').onclick = () => { $('#modal').hidden = true; $('#mb').replaceChildren(); };
+$('#mc').onclick = () => $('#modal').close();
+$('#modal').onclose = () => $('#mb').replaceChildren(); // stops a game or the student view that was open
 const root = $('#root');
 try { await api('/api/me'); } catch { location = '/join#teacher'; await new Promise(() => {}); } // leaving: do not run the rest of the page
 const classId = new URLSearchParams(location.search).get('class');
@@ -20,7 +21,7 @@ classId ? roomPage(+classId) : listPage();
 function openModal(title, el, size) { // size: 'small' or 'wide'
   $('#mt').textContent = title; $('#mb').replaceChildren(el);
   for (const s of ['small', 'wide']) $('#modal').firstElementChild.classList.toggle(s, size === s);
-  $('#modal').hidden = false;
+  if (!$('#modal').open) $('#modal').showModal();
 }
 const outputEl = (g) => (g.kind === 'creation' ? creationCard(g.html) : Object.assign(gameFrame(g.html), { className: 'game' }));
 
@@ -49,7 +50,12 @@ async function listPage() {
     try { const r = await api('/api/classes', 'POST', { name: $('#cn').value, consent: true, daily_limit: +$('#dl').value, course_id: +$('#co').value, approval: $('#ap').value }); location = '?class=' + r.id; }
     catch (x) { $('#err').textContent = x.code; }
   };
-  $('#st').onclick = async () => { await api('/api/courses/starter', 'POST'); listPage(); };
+  // The starter is the library's bilingual "Junior Explorers", copied in the teacher's language.
+  // The older English-only starter is the fallback if the admin has hidden that library course.
+  $('#st').onclick = async () => {
+    try { await api('/api/library/starter-junior/copy', 'POST', { lang: getLang() }); } catch { await api('/api/courses/starter', 'POST'); }
+    listPage();
+  };
   $('#imp').onchange = async (e) => {
     try { await api('/api/courses', 'POST', JSON.parse(await e.target.files[0].text())); listPage(); }
     catch (x) { $('#ierr').textContent = x instanceof SyntaxError ? t('badFile') : (['title', 'levels'].includes(x.code) ? t(x.code + '_err') : t('badFile')); }
@@ -79,18 +85,17 @@ async function roomPage(id) {
   function renderHead() {
     const open = $('.settings')?.open, dl = open && $('#dl').value; // live refreshes must not close the menu mid-edit
     const link = `${location.origin}/join/${cls.invite}`;
-    $('#head').innerHTML = `<a href="/teacher.html">${t('back')}</a><div><h2 style="margin:0">${esc(cls.name)}</h2><span class="muted">${esc(cls.course?.title || '')}</span>${cls.next?.length ? `<br><span class="muted">${t('nextAdv')}: ${cls.next.map((n) => `<a href="/library.html#${esc(n.id)}">${esc(n.emoji)} ${esc(n.title[getLang()] || n.title.en || n.title.az)}</a>`).join(', ')}</span>` : ''}</div>
-      <button id="lv" class="${cls.live ? 'bad' : 'ok'}">${cls.live ? t('endSession') : t('startSession')}</button>
+    $('#head').innerHTML = `<div class="row wrapx"><a href="/teacher.html">${t('back')}</a><div class="grow"><h2 style="margin:0">${esc(cls.name)}</h2><span class="muted">${esc(cls.course?.title || '')}</span>${cls.next?.length ? `<br><span class="muted">${t('nextAdv')}: ${cls.next.map((n) => `<a href="/library.html#${esc(n.id)}">${esc(n.emoji)} ${esc(n.title[getLang()] || n.title.en || n.title.az)}</a>`).join(', ')}</span>` : ''}</div>
       ${cls.live ? `<span class="pill live">● ${t('liveNow')}</span>` : ''}
-      <span class="grow"></span>
-      <span class="muted">${t('inviteLink')}:</span><input readonly value="${esc(link)}" id="link" class="linkbox"><button class="ghost" id="cp">${t('copy')}</button>
-      <button class="ghost" id="qr">${t('qr')}</button><button class="ghost" id="nl">${t('newLink')}</button>
-      <span class="muted">${t('code2')}:</span><span class="code small">${esc(cls.code)}</span>
-      <details class="settings"><summary>⚙️</summary><div>
+      <button id="lv" class="${cls.live ? 'bad' : 'ok'}">${cls.live ? t('endSession') : t('startSession')}</button>
+      <details class="settings"><summary aria-label="${t('roomSettings')}" title="${t('roomSettings')}">⚙️</summary><div>
         <label>${t('approvalMode')}</label><select id="ap"><option value="ai">${t('approval_ai')}</option><option value="teacher">${t('approval_teacher')}</option></select>
         <label>${t('dailyLimit')}</label><div class="row"><input id="dl" type="number" min="1" value="${cls.daily_limit}"><button class="ghost" id="dls">${t('save2')}</button></div>
         <p></p><button id="pa" class="${cls.paused ? 'ok' : 'bad'}">${cls.paused ? t('resumeAll') : t('pauseAll')}</button>
-        <p class="muted">${t('autoClose')}</p></div></details>`;
+        <p class="muted">${t('autoClose')}</p></div></details></div>
+      <div class="row wrapx"><span class="muted">${t('code2')}:</span><span class="code">${esc(cls.code)}</span>
+        <span class="muted">${t('inviteLink')}:</span><input readonly value="${esc(link)}" id="link" class="linkbox" aria-label="${t('inviteLink')}">
+        <button class="ghost" id="cp">${t('copy')}</button><button class="ghost" id="qr">${t('qr')}</button><button class="ghost" id="nl">${t('newLink')}</button></div>`;
     $('#ap').value = cls.approval;
     if (open) { $('.settings').open = true; $('#dl').value = dl; }
     $('#lv').onclick = async () => { if (cls.live && !confirm(t('confirmEnd'))) return; await api('/api/classes/' + id, 'PATCH', { live: !cls.live }); refresh(); };
@@ -107,26 +112,18 @@ async function roomPage(id) {
   }
   function renderStudents() {
     const lvl = (s) => (s.level ? `L${levelOf(s.level)?.position}` : '🏁');
-    $('#students').innerHTML = `<h3>${t('students')} (${cls.students.length})</h3><div class="stu ${sel ? '' : 'sel'}" data-s="">${t('everyone')}</div>` +
-      cls.students.map((s) => `<div class="stu ${sel == s.id ? 'sel' : ''}" data-s="${s.id}">
-        <span class="dot ${s.online ? 'on' : ''}"></span><span class="grow">${s.paused ? '⏸️ ' : ''}${esc(s.avatar)} ${esc(s.nickname)}
+    // Each row: a button that selects the student, then the two live controls. New PIN and Remove sit on the selected student's card.
+    const pick = (sid, inner) => `<button class="stu-pick" data-s="${sid}" aria-pressed="${sel == sid}">${inner}</button>`;
+    $('#students').innerHTML = `<h3>${t('students')} (${cls.students.length})</h3><div class="stu ${sel ? '' : 'sel'}">${pick('', `<span>${t('everyone')}</span>`)}</div>` +
+      cls.students.map((s) => `<div class="stu ${sel == s.id ? 'sel' : ''}">
+        <span class="dot ${s.online ? 'on' : ''}"></span>${pick(s.id, `<span>${s.paused ? '⏸️ ' : ''}${esc(s.avatar)} ${esc(s.nickname)}</span>
         <span class="muted">${lvl(s)} · ★${s.stars}${s.pending ? ' · ⏳' : ''} · ${s.used}/${cls.daily_limit}</span>
-        <span class="typing" id="ty${s.id}" ${typing.has(s.id) ? '' : 'hidden'}>${t('typing')}</span></span>
-        <button class="ghost" data-view="${s.id}" title="${t('openView')}">👁</button>
-        <button class="ghost" data-p="${s.id}" data-v="${s.paused ? 0 : 1}" title="${s.paused ? t('resume') : t('pause')}">${s.paused ? '▶' : '⏸'}</button>
-        <button class="ghost" data-pin="${s.id}">${t('resetPin')}</button><button class="ghost" data-k="${s.id}">✕</button></div>`).join('');
+        <span class="typing" id="ty${s.id}" ${typing.has(s.id) ? '' : 'hidden'}>${t('typing')}</span>`)}
+        <button class="ghost" data-view="${s.id}" title="${t('openView')}" aria-label="${t('openView')}: ${esc(s.nickname)}">👁</button>
+        <button class="ghost" data-p="${s.id}" data-v="${s.paused ? 0 : 1}" title="${s.paused ? t('resume') : t('pause')}" aria-label="${s.paused ? t('resume') : t('pause')}: ${esc(s.nickname)}">${s.paused ? '▶' : '⏸'}</button></div>`).join('');
     $('#students').querySelectorAll('[data-s]').forEach((e) => (e.onclick = () => select(e.dataset.s)));
-    $('#students').querySelectorAll('[data-view]').forEach((e) => (e.onclick = (ev) => { ev.stopPropagation(); openView(e.dataset.view); }));
-    $('#students').querySelectorAll('[data-p]').forEach((e) => (e.onclick = async (ev) => { ev.stopPropagation(); await api('/api/students/' + e.dataset.p, 'PATCH', { paused: +e.dataset.v === 1 }); refresh(); }));
-    $('#students').querySelectorAll('[data-pin]').forEach((e) => (e.onclick = async (ev) => {
-      ev.stopPropagation(); const r = await api('/api/students/' + e.dataset.pin, 'PATCH', { reset_pin: true });
-      const box = document.createElement('div'); box.className = 'qrbox'; box.innerHTML = `<p>${t('newPin')} <b>${esc(stu(e.dataset.pin).nickname)}</b></p><span class="code">${r.pin}</span>`;
-      openModal(t('resetPin'), box, 'small');
-    }));
-    $('#students').querySelectorAll('[data-k]').forEach((e) => (e.onclick = async (ev) => {
-      ev.stopPropagation(); if (!confirm(t('confirmRemove'))) return;
-      await api('/api/students/' + e.dataset.k, 'DELETE'); if (sel == e.dataset.k) sel = ''; refresh(); loadFeed();
-    }));
+    $('#students').querySelectorAll('[data-view]').forEach((e) => (e.onclick = () => openView(e.dataset.view)));
+    $('#students').querySelectorAll('[data-p]').forEach((e) => (e.onclick = async () => { await api('/api/students/' + e.dataset.p, 'PATCH', { paused: +e.dataset.v === 1 }); refresh(); }));
   }
   // The student's own page, read-only, in a popup over the dashboard, to see where they got stuck. Closing the popup drops it.
   const openView = (sid) => {
@@ -149,19 +146,37 @@ async function roomPage(id) {
       <select data-st="${p.student_id}-${p.level_id}" style="width:auto">${[1, 2, 3].map((n) => `<option ${n === (p.stars || 1) ? 'selected' : ''} value="${n}">${stars(n)}</option>`).join('')}</select>
       <button class="ok" data-ok="${p.student_id}-${p.level_id}">${t('approve')}</button><button class="ghost" data-no="${p.student_id}-${p.level_id}">${t('reject')}</button></div>`).join('');
     const act = (key, action, extra = {}) => { const [s, l] = key.split('-'); return api(`/api/students/${s}/progress`, 'POST', { level_id: +l, action, ...extra }).then(refresh); };
+    // "Send back" asks for an optional note in a popup; closing the popup sends nothing.
+    const sendBack = (key) => {
+      const f = document.createElement('form');
+      f.innerHTML = `<label for="sbn" style="margin-top:0">${t('rejectNote')}</label><textarea id="sbn" maxlength="500" rows="4" autofocus></textarea>
+        <div class="row" style="justify-content:flex-end;margin-top:.8rem"><button>${t('reject')}</button></div>`;
+      f.onsubmit = (e) => { e.preventDefault(); act(key, 'reject', { feedback: f.querySelector('textarea').value.trim() }); $('#modal').close(); };
+      openModal(t('reject'), f, 'small'); f.querySelector('textarea').focus();
+    };
     $('#pending').querySelectorAll('[data-ok]').forEach((b) => (b.onclick = () => act(b.dataset.ok, 'pass', { stars: +$(`[data-st="${b.dataset.ok}"]`).value })));
-    $('#pending').querySelectorAll('[data-no]').forEach((b) => (b.onclick = () => act(b.dataset.no, 'reject', { feedback: prompt(t('reject')) || '' })));
+    $('#pending').querySelectorAll('[data-no]').forEach((b) => (b.onclick = () => sendBack(b.dataset.no)));
     $('#pending').querySelectorAll('[data-o]').forEach((b) => (b.onclick = async () => { await loadGames(); const g = games.find((x) => x.id === +b.dataset.o); if (g) openModal(`${g.title} – ${g.nickname}`, outputEl(g)); }));
   }
   function renderProgress() {
     const s = stu(sel); $('#progressCard').hidden = !s; if (!s) return;
-    $('#progressCard').innerHTML = `<div class="row wrapx"><h3 class="grow">${esc(s.avatar)} ${esc(s.nickname)} · ${t('progressOf')}</h3><button class="ghost" id="pv">${t('openView')}</button></div>` + cls.levels.map((l) => {
+    $('#progressCard').innerHTML = `<h3>${esc(s.avatar)} ${esc(s.nickname)} · ${t('progressOf')}</h3>
+      <div class="row wrapx" style="margin-bottom:.4rem"><button class="ghost" id="pv">${t('openView')}</button><button class="ghost" id="pin">${t('resetPinL')}</button><button class="ghost" id="kick">${t('removeStudent')}</button></div>` + cls.levels.map((l) => {
       const p = s.progress.find((x) => x.id === l.id) || { status: 'locked', stars: 0 };
       const icon = { done: '✅', pending: '⏳', current: '▶️', locked: '🔒' }[p.status];
       return `<div class="row lrow"><span class="grow">${icon} L${l.position} ${esc(l.title)} <span class="stars">${p.status === 'done' ? stars(p.stars) : ''}</span></span>
         ${p.status !== 'done' ? `<button class="ghost" data-pass="${l.id}">${t('passLevel')}</button>` : ''}${p.status === 'done' || p.status === 'pending' ? `<button class="ghost" data-reset="${l.id}">${t('resetLevel')}</button>` : ''}</div>`;
     }).join('');
     $('#pv').onclick = () => openView(s.id);
+    $('#pin').onclick = async () => {
+      const r = await api('/api/students/' + s.id, 'PATCH', { reset_pin: true });
+      const box = document.createElement('div'); box.className = 'qrbox'; box.innerHTML = `<p>${t('newPin')} <b>${esc(s.nickname)}</b></p><span class="code">${r.pin}</span>`;
+      openModal(t('resetPin'), box, 'small');
+    };
+    $('#kick').onclick = async () => {
+      if (!confirm(t('confirmRemove'))) return;
+      await api('/api/students/' + s.id, 'DELETE'); sel = ''; refresh(); loadFeed();
+    };
     const act = (lid, action) => api(`/api/students/${s.id}/progress`, 'POST', { level_id: +lid, action }).then(refresh);
     $('#progressCard').querySelectorAll('[data-pass]').forEach((b) => (b.onclick = () => act(b.dataset.pass, 'pass')));
     $('#progressCard').querySelectorAll('[data-reset]').forEach((b) => (b.onclick = () => act(b.dataset.reset, 'reset')));

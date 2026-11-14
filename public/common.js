@@ -13,7 +13,7 @@ const DICT = {
     blocked: "I can't send that one. Let's keep it kind, safe and about our lesson. 😊",
     blocked_self_harm: "That sounds important. Please talk to your teacher or a grown-up you trust right now. 💛",
     blocked_personal_info: "Please don't share personal info like your name, school or phone number. Let's try again!",
-    thinking: 'Thinking…', building: '🛠️ Building your game…', gameReady: '🎮 Game ready! See it on the right.',
+    thinking: 'Thinking…', building: '🛠️ Building your game…', gameReady: '🎮 Game ready! Play it in "Your game".',
     yourGame: '🎮 Your game', noGame: 'Ask the AI to make a game and it will appear here!', save: '💾 Save', saved: 'Saved!',
     myGames: 'Games', share: '📤 Share with class', unshare: 'Stop sharing', delete: '🗑️ Delete', play: '▶️ Play', by: 'by',
     showcase: '⭐ Your teacher is showing a game', close: 'Close', chat: 'Chat', gamesTab: 'Games',
@@ -45,7 +45,7 @@ const DICT = {
     blocked: 'Bunu göndərə bilmirəm. Gəl mehriban, təhlükəsiz və dərsimizə uyğun yazaq. 😊',
     blocked_self_harm: 'Bu vacib səslənir. Zəhmət olmasa, indi müəlliminlə və ya etibar etdiyin böyüklə danış. 💛',
     blocked_personal_info: 'Zəhmət olmasa, adın, məktəbin və ya telefon nömrən kimi şəxsi məlumatları paylaşma. Yenidən cəhd et!',
-    thinking: 'Düşünürəm…', building: '🛠️ Oyunun hazırlanır…', gameReady: '🎮 Oyun hazırdır! Sağda bax.',
+    thinking: 'Düşünürəm…', building: '🛠️ Oyunun hazırlanır…', gameReady: '🎮 Oyun hazırdır! "Sənin oyunun" bölməsində oyna.',
     yourGame: '🎮 Sənin oyunun', noGame: 'Süni intellektdən oyun düzəltməsini istə, burada görünəcək!', save: '💾 Yadda saxla', saved: 'Saxlanıldı!',
     myGames: 'Oyunlar', share: '📤 Siniflə paylaş', unshare: 'Paylaşmanı dayandır', delete: '🗑️ Sil', play: '▶️ Oyna', by: 'müəllif:',
     showcase: '⭐ Müəllim bir oyun göstərir', close: 'Bağla', chat: 'Çat', gamesTab: 'Oyunlar',
@@ -75,7 +75,7 @@ Object.assign(DICT.en, {
   passed: 'Level complete!', notYet: 'Not quite yet!', pendingMsg: 'Sent to your teacher. Waiting for approval ⏳', pending: 'Waiting for teacher',
   no_work: 'Work on the task with the AI first!', no_output: 'Make your creation with the AI first, then check your work.',
   too_fast: 'Wait a few seconds before checking again.', locked: 'This level is still locked.', nextLevel: 'Next level →', keepGoing: 'Keep going',
-  yourCreation: 'Your creation', noCreation: 'Ask the AI to help you create it. It will appear here!', creationReady: '✨ Creation updated! See it on the right.',
+  yourCreation: 'Your creation', noCreation: 'Ask the AI to help you create it. It will appear here!', creationReady: '✨ Creation updated! See it in "Your creation".',
   chatLevel: 'This level is a conversation. Talk it through with the AI, then press "Check my work".', courseDone: 'You finished the whole course! 🏆',
   teacher_pass: 'Your teacher approved a level! ⭐', teacher_reject: 'Your teacher wants you to keep working on this level.',
   teacher_reset: 'Your teacher reset a level so you can play it again.', youAreHere: 'You are here', myWork: 'Gallery', replay: 'Play again',
@@ -98,6 +98,7 @@ Object.assign(DICT.en, {
   confirmRemove: 'Remove this student and their progress?', levelsTitle: 'Levels', edit: 'Edit',
   nextAdv: 'Next adventure', askTeacher: 'Ask your teacher to open it!',
   openView: '👁 Open their screen', studentView: 'their screen (view only)', watching: '👁 You are viewing this student\'s screen (view only):', toDashboard: '← Back to the dashboard',
+  resetPinL: '🔑 New PIN', removeStudent: '✕ Remove student', rejectNote: 'What should they work on? (optional, the student sees this)', roomSettings: 'Room settings',
 });
 Object.assign(DICT.az, {
   pin: 'Gizli PIN (4 rəqəm, yadda saxla!)', pickAvatar: 'Avatarını seç', invitedTo: 'Dəvət olundun:', haveCode: 'Sinif kodun var?',
@@ -109,7 +110,7 @@ Object.assign(DICT.az, {
   passed: 'Səviyyə tamamlandı!', notYet: 'Hələ yox!', pendingMsg: 'Müəllimə göndərildi. Təsdiq gözlənilir ⏳', pending: 'Müəllim gözlənilir',
   no_work: 'Əvvəlcə süni intellektlə tapşırıq üzərində işlə!', no_output: 'Əvvəlcə süni intellektlə işini düzəlt, sonra yoxla.',
   too_fast: 'Yenidən yoxlamadan əvvəl bir neçə saniyə gözlə.', locked: 'Bu səviyyə hələ bağlıdır.', nextLevel: 'Növbəti səviyyə →', keepGoing: 'Davam et',
-  yourCreation: 'Sənin işin', noCreation: 'Süni intellektdən kömək istə. Burada görünəcək!', creationReady: '✨ İşin yeniləndi! Sağda bax.',
+  yourCreation: 'Sənin işin', noCreation: 'Süni intellektdən kömək istə. Burada görünəcək!', creationReady: '✨ İşin yeniləndi! "Sənin işin" bölməsinə bax.',
   chatLevel: 'Bu səviyyə söhbətdir. Süni intellektlə danış, sonra "İşimi yoxla" düyməsini bas.', courseDone: 'Bütün kursu bitirdin! 🏆',
   teacher_pass: 'Müəllim səviyyəni təsdiqlədi! ⭐', teacher_reject: 'Müəllim bu səviyyə üzərində işləməyə davam etməyini istəyir.',
   teacher_reset: 'Müəllim bir səviyyəni yenidən oynamağın üçün sıfırladı.', youAreHere: 'Sən buradasan', myWork: 'Qalereya', replay: 'Yenidən oyna',
@@ -132,9 +133,16 @@ Object.assign(DICT.az, {
   confirmRemove: 'Bu şagird və irəliləyişi silinsin?', levelsTitle: 'Səviyyələr', edit: 'Redaktə',
   nextAdv: 'Növbəti macəra', askTeacher: 'Müəllimindən onu açmasını istə!',
   openView: '👁 Ekranına bax', studentView: 'ekranı (yalnız baxış)', watching: '👁 Şagirdin ekranına baxırsınız (yalnız baxış):', toDashboard: '← Panelə qayıt',
+  resetPinL: '🔑 Yeni PIN', removeStudent: '✕ Şagirdi çıxar', rejectNote: 'Nə üzərində işləməlidir? (istəyə bağlı, şagird bunu görür)', roomSettings: 'Otaq ayarları',
 });
 let lang = 'az';
 try { const saved = localStorage.getItem('lang'); if (DICT[saved]) lang = saved; } catch {}
+document.documentElement.lang = lang;
+
+// Popups (<dialog class="modal">) close on a click on the dimmed area, if the press also started there (not a text selection).
+let downOn = null;
+addEventListener('pointerdown', (e) => (downOn = e.target));
+addEventListener('click', (e) => { const d = e.target; if (d === downOn && d instanceof HTMLDialogElement && d.classList.contains('modal')) d.close(); });
 export const t = (k) => DICT[lang][k] ?? DICT.en[k] ?? k;
 export const getLang = () => lang;
 // Label of the switcher button: the flag and code of the language you will switch to.
