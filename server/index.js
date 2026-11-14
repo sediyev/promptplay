@@ -54,7 +54,9 @@ function armGrace(classId) {
 // Ending a session logs every student out; accounts and progress stay for the next session.
 function closeRoom(classId) {
   run('UPDATE classes SET live=0 WHERE id=?', classId);
+  for (const { id } of all('SELECT id FROM students WHERE class_id=?', classId)) attention.delete(id); // the next session starts fresh
   run("DELETE FROM sessions WHERE kind='student' AND ref IN (SELECT id FROM students WHERE class_id=?)", classId);
+  endCall(classId);
   publish(`s:${classId}`, { type: 'closed' }); hangUp(`s:${classId}`);
   publish(`t:${classId}`, { type: 'room' });
 }
@@ -283,13 +285,13 @@ app.get('/api/classes/:id', needTeacher, ownClass, (req, res) => {
       (SELECT COUNT(*) FROM games g WHERE g.student_id=s.id) outputs
     FROM students s WHERE s.class_id=? ORDER BY s.nickname`, dayStart(), req.cls.id).map((s) => {
     const map = levelMap(s, req.cls.course_id), cur = map.find((l) => l.status !== 'done' && l.status !== 'locked');
-    return { ...s, online: !!studentConns.get(s.id), level: cur?.id ?? null, done: map.filter((l) => l.status === 'done').length,
+    return { ...s, online: !!studentConns.get(s.id), ...attentionOf(s.id), level: cur?.id ?? null, done: map.filter((l) => l.status === 'done').length,
       stars: map.reduce((a, l) => a + l.stars, 0), pending: cur?.status === 'pending', progress: map.map((l) => ({ id: l.id, status: l.status, stars: l.stars })) };
   });
   const pending = all(`SELECT p.student_id,p.level_id,p.stars,p.feedback,p.output_id,p.created,s.nickname,s.avatar,l.title,l.position FROM progress p
     JOIN students s ON s.id=p.student_id JOIN levels l ON l.id=p.level_id WHERE s.class_id=? AND p.status='pending' ORDER BY p.created`, req.cls.id);
   const source = one('SELECT library_slug FROM courses WHERE id=?', req.cls.course_id)?.library_slug;
-  res.json({ ...req.cls, course, levels, students, pending, next: nextAdventures(source), teacherOnline: !!teacherConns.get(req.cls.id) });
+  res.json({ ...req.cls, course, levels, students, pending, next: nextAdventures(source), teacherOnline: !!teacherConns.get(req.cls.id), call: callSummary(req.cls.id) });
 });
 app.patch('/api/classes/:id', needTeacher, ownClass, (req, res) => {
   const { paused, daily_limit, live, approval, regen_invite } = req.body;
@@ -326,6 +328,7 @@ app.delete('/api/students/:id', needTeacher, ownStudent, (req, res) => {
   run('DELETE FROM sessions WHERE kind=? AND ref=?', 'student', req.stu.id);
   run('DELETE FROM progress WHERE student_id=?', req.stu.id);
   run('DELETE FROM students WHERE id=?', req.stu.id);
+  endStudentCall(req.stu.id);
   publish(`u:${req.stu.id}`, { type: 'closed' }); hangUp(`u:${req.stu.id}`);
   res.json({ ok: true });
 });
@@ -423,7 +426,7 @@ function studentPage(stu, room) {
   const course = one('SELECT title,library_slug FROM courses WHERE id=?', room.course_id);
   const finished = levels.length > 0 && levels.every((l) => l.status === 'done');
   return { nickname: stu.nickname, avatar: stu.avatar, room: room.name, course: course?.title, approval: room.approval, levels,
-    next: finished ? nextAdventures(course?.library_slug) : [], ...studentState(stu, room) };
+    next: finished ? nextAdventures(course?.library_slug) : [], call: studentCall(room.id), ...studentState(stu, room) };
 }
 function studentLevel(stu, room, levelId) {
   const l = openLevel(stu, room.course_id, levelId);
@@ -446,8 +449,34 @@ app.get('/api/student/events', needStudent, (req, res) => {
   const sid = req.student.id;
   if (bump(studentConns, sid, 1) === 1) publish(`t:${req.room.id}`, { type: 'presence', student_id: sid, online: true });
   subscribe(req, res, [`s:${req.room.id}`, `u:${sid}`], () => {
-    if (!bump(studentConns, sid, -1)) publish(`t:${req.room.id}`, { type: 'presence', student_id: sid, online: false });
+    if (bump(studentConns, sid, -1)) return;
+    setAway(sid, req.room.id, null); // a closed page is "offline", not "away"
+    publish(`t:${req.room.id}`, { type: 'presence', student_id: sid, online: false });
   });
+});
+// Attention: whether the student's PromptPlay page is in front of them. The page reports "tab" (they switched tab or
+// minimised the browser), "window" (another window or app is in front) or nothing (back on the page). It is a status for
+// the teacher, kept in memory for the current session only, and never blocks the student. Other sites are never seen.
+const AWAY = ['tab', 'window'];
+const attention = new Map(); // student id -> { away, since, count, total }
+function attentionOf(sid) {
+  const a = attention.get(sid);
+  const current = a?.away ? now() - a.since : 0; // durations, not clock times, so the teacher's clock does not matter
+  return { away: a?.away ?? null, away_for: current, away_count: a?.count ?? 0, away_ms: (a?.total ?? 0) + current };
+}
+function setAway(sid, classId, away) {
+  const a = attention.get(sid) ?? { away: null, since: 0, count: 0, total: 0 };
+  if (a.away === away) return;
+  if (!a.away) { a.count++; a.since = now(); } // switching from "tab" to "window" is the same time away
+  else if (!away) a.total += now() - a.since;
+  a.away = away; attention.set(sid, a);
+  publish(`t:${classId}`, { type: 'attention', student_id: sid, ...attentionOf(sid) });
+}
+app.post('/api/student/attention', needStudent, (req, res) => {
+  const away = req.body.away ?? null;
+  if (away !== null && !AWAY.includes(away)) return fail(res, 400, 'away');
+  setAway(req.student.id, req.room.id, away);
+  res.json({ ok: true });
 });
 const lastTyping = new Map();
 app.post('/api/student/typing', needStudent, (req, res) => {
@@ -579,6 +608,121 @@ app.patch('/api/games/:id', needStudent, gameOwner, (req, res) => {
 });
 app.delete('/api/games/:id', needStudent, gameOwner, (req, res) => {
   run('DELETE FROM games WHERE id=?', req.game.id);
+  res.json({ ok: true });
+});
+
+// ---------- video call ----------
+// One small group call per room: the teacher and up to CALL_MAX - 1 students. Video goes straight between the browsers
+// (WebRTC, everyone connected to everyone); this server only passes the few setup messages between them and knows who is in.
+// Being in the call is keeping its event stream open, so closing the tab or losing the connection leaves the call.
+const CALL_MAX = Math.min(8, Math.max(2, +process.env.CALL_MAX || 4));
+const calls = new Map(); // class id -> { peers: Map<peer id, peer>, removed: Set<owner> } while the teacher has the call open
+const callPeers = new Map(); // peer id -> { id, classId, owner, kind, name, avatar, student_id, mic, cam, screen, res }
+const peerInfo = ({ id, kind, name, avatar, student_id, mic, cam, screen }) => ({ id, kind, name, avatar, student_id, mic, cam, screen });
+function callSummary(classId) {
+  const c = calls.get(classId);
+  return { open: !!c, max: CALL_MAX, peers: c ? [...c.peers.values()].map(peerInfo) : [] };
+}
+// Students see that a call is open and how full it is; the teacher's dashboard sees who is in it.
+const studentCall = (classId) => {
+  const s = callSummary(classId), students = s.peers.filter((p) => p.kind === 'student').length;
+  return { open: s.open, max: s.max, count: s.peers.length, full: students >= CALL_MAX - 1 };
+};
+const toPeer = (p, ev) => !p.res.writableEnded && p.res.write(`data: ${JSON.stringify(ev)}\n\n`);
+function callChanged(classId, students = true) {
+  publish(`t:${classId}`, { type: 'call', call: callSummary(classId) });
+  if (students) publish(`s:${classId}`, { type: 'call', call: studentCall(classId) });
+}
+function dropPeer(p, ev) { // ends one person's call stream; their 'close' handler tells the others
+  if (ev) toPeer(p, ev);
+  if (!p.res.writableEnded) p.res.end();
+}
+function endCall(classId) {
+  const c = calls.get(classId);
+  if (!c) return;
+  calls.delete(classId);
+  for (const p of c.peers.values()) dropPeer(p, { type: 'ended' });
+  callChanged(classId);
+}
+// Relay servers: STUN finds each browser's public address. TURN relays the video for the few home or school networks that
+// block direct connections; with TURN_SECRET the credentials are short-lived (the coturn "use-auth-secret" scheme).
+const urlList = (v) => String(v || '').split(',').map((s) => s.trim()).filter(Boolean);
+function iceServers(peerId) {
+  const list = [], stun = urlList(process.env.STUN_URLS ?? 'stun:stun.l.google.com:19302'), turn = urlList(process.env.TURN_URLS);
+  if (stun.length) list.push({ urls: stun });
+  if (turn.length && process.env.TURN_SECRET) {
+    const username = `${Math.floor(now() / 1000) + 12 * 3600}:${peerId}`;
+    list.push({ urls: turn, username, credential: crypto.createHmac('sha1', process.env.TURN_SECRET).update(username).digest('base64') });
+  } else if (turn.length && process.env.TURN_USERNAME) list.push({ urls: turn, username: process.env.TURN_USERNAME, credential: process.env.TURN_CREDENTIAL || '' });
+  return list;
+}
+function joinCall(req, res, classId, who) {
+  res.set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' }).flushHeaders();
+  const c = calls.get(classId), end = (type) => res.end(`data: ${JSON.stringify({ type })}\n\n`);
+  if (!c) return end('ended');
+  if (c.removed.has(who.owner)) return end('removed');
+  for (const p of c.peers.values()) if (p.owner === who.owner) dropPeer(p, { type: 'replaced' }); // the same person in a second tab
+  const others = [...c.peers.values()].filter((p) => !p.res.writableEnded);
+  // One place is always kept for the teacher, so students cannot fill the call before the teacher is back.
+  const students = others.filter((p) => p.kind === 'student').length;
+  if (others.length >= CALL_MAX || (who.kind === 'student' && students >= CALL_MAX - 1)) return end('full');
+  const p = { ...who, id: crypto.randomBytes(9).toString('base64url'), classId, mic: false, cam: false, screen: false, res };
+  c.peers.set(p.id, p); callPeers.set(p.id, p);
+  toPeer(p, { type: 'welcome', id: p.id, max: CALL_MAX, peers: others.map(peerInfo), iceServers: iceServers(p.id) });
+  for (const o of others) toPeer(o, { type: 'join', peer: peerInfo(p) });
+  callChanged(classId);
+  const ping = setInterval(() => !res.writableEnded && res.write(': ping\n\n'), 25000);
+  res.on('close', () => {
+    clearInterval(ping); callPeers.delete(p.id);
+    if (!c.peers.delete(p.id)) return;
+    for (const o of c.peers.values()) toPeer(o, { type: 'leave', id: p.id });
+    if (calls.get(classId) === c) callChanged(classId);
+  });
+}
+const endStudentCall = (studentId) => { for (const p of callPeers.values()) if (p.owner === `s:${studentId}`) dropPeer(p, { type: 'removed' }); };
+
+app.post('/api/classes/:id/call', needTeacher, ownClass, (req, res) => {
+  const id = req.cls.id;
+  if (req.body.open === true) {
+    if (!req.cls.live) return fail(res, 403, 'room_closed');
+    if (!calls.has(id)) { calls.set(id, { peers: new Map(), removed: new Set() }); callChanged(id); }
+  } else if (req.body.open === false) endCall(id);
+  res.json(callSummary(id));
+});
+app.get('/api/classes/:id/call/events', needTeacher, ownClass, (req, res) =>
+  joinCall(req, res, req.cls.id, { owner: `u:${req.user.id}`, kind: 'teacher', name: req.user.name || 'Teacher', avatar: '🧑‍🏫', student_id: null }));
+app.get('/api/student/call/events', needStudent, (req, res) =>
+  joinCall(req, res, req.room.id, { owner: `s:${req.student.id}`, kind: 'student', name: req.student.nickname, avatar: req.student.avatar, student_id: req.student.id }));
+// The teacher can ask anyone to mute, or take a student out of the call (they cannot come back until the next call).
+app.post('/api/classes/:id/call/peers/:peer', needTeacher, ownClass, (req, res) => {
+  const p = callPeers.get(req.params.peer);
+  if (!p || p.classId !== req.cls.id) return fail(res, 404, 'not_in_call');
+  if (req.body.action === 'mute') toPeer(p, { type: 'mute' });
+  else if (req.body.action === 'remove' && p.kind === 'student') { calls.get(p.classId)?.removed.add(p.owner); dropPeer(p, { type: 'removed' }); }
+  else return fail(res, 400, 'action');
+  res.json({ ok: true });
+});
+// Only the browser that holds a place in the call can speak for it.
+function ownPeer(req, res, next) {
+  const p = callPeers.get(String(req.body?.peer || ''));
+  const owner = p && (p.kind === 'teacher' ? req.user && `u:${req.user.id}` : req.student && `s:${req.student.id}`);
+  if (!p || owner !== p.owner || p.res.writableEnded) return fail(res, 404, 'not_in_call');
+  req.peer = p; next();
+}
+// Connection setup (offer, answer, network candidates) for one other person in the same call, passed on unread.
+app.post('/api/call/signal', ownPeer, (req, res) => {
+  const to = callPeers.get(String(req.body.to || '')), data = req.body.data;
+  if (!to || to.classId !== req.peer.classId || to === req.peer) return fail(res, 404, 'not_in_call');
+  if (!data || typeof data !== 'object' || JSON.stringify(data).length > 60000) return fail(res, 400, 'bad_signal');
+  toPeer(to, { type: 'signal', from: req.peer.id, data });
+  res.json({ ok: true });
+});
+// Microphone, camera and screen sharing on or off, shown on everyone's tiles and on the dashboard.
+app.post('/api/call/state', ownPeer, (req, res) => {
+  const p = req.peer;
+  for (const k of ['mic', 'cam', 'screen']) if (typeof req.body[k] === 'boolean') p[k] = req.body[k];
+  for (const o of calls.get(p.classId)?.peers.values() ?? []) if (o !== p) toPeer(o, { type: 'peer', peer: peerInfo(p) });
+  callChanged(p.classId, false);
   res.json({ ok: true });
 });
 

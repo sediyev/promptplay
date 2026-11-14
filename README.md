@@ -20,7 +20,9 @@ Needs Node >= 22.5 (built-in `node:sqlite`). Put it behind HTTPS (e.g. Caddy) fo
 - **Students** open the link, pick a nickname, a 4-digit PIN and an avatar. The same nickname and PIN log back in from any device. The teacher can reset a forgotten PIN.
 - **Level map** (`/student.html`): levels unlock in order. Inside a level the student chats with the AI on the left and sees the game or creation card on the right. "Check my work" saves the output and asks an AI evaluator to judge it against the level's criteria (1 to 3 stars). In "teacher approves" mode the result waits in the teacher's approval queue with the AI's suggestion. Finished levels can be replayed for more stars.
 - **Teacher dashboard**: class map with each student's avatar on their current level, online and typing indicators, live feed with AI replies streamed token by token, safety alerts, approval queue, per-student progress with Pass/Reset overrides, and a gallery of every game and creation (with "show to class").
-- **Student view**: the 👁 button next to a student (or "Open their screen" on their progress card) opens the page that student sees in a large popup over the dashboard, read-only (`/student.html?student=<id>`, also usable on its own): the level they are working on, their chat, their game or creation and their gallery. New messages, AI replies and "typing…" appear live, so the teacher can guide a student over a video call (Zoom for now). It also works after the session, to review where a student got stuck.
+- **Student view**: the 👁 button next to a student (or "Open their screen" on their progress card) opens the page that student sees in a large popup over the dashboard, read-only (`/student.html?student=<id>`, also usable on its own): the level they are working on, their chat, their game or creation and their gallery. New messages, AI replies and "typing…" appear live, so the teacher can guide a student over the built-in video call. It also works after the session, to review where a student got stuck.
+- **Away status**: the dashboard shows, as a calm status and never a warning, when a student's PromptPlay page is not in front of them (see "Away status").
+- **Video call**: the teacher can talk face to face with up to 3 students at once (4 people in total) right inside the room, free and without any accounts or outside service (see "Video call").
 
 ## Course JSON
 ```json
@@ -133,22 +135,49 @@ Learning goals, in plain words (the same text teachers see and can copy for pare
 
 **The Azerbaijani text of every library course needs a read-through by a native speaker before launch** (same as the home page). Until `az_reviewed` is `true`, the admin list and library show a warning on the course.
 
+## Video call
+A small group call that lives inside a room, for the teacher and up to 3 students (4 people). It needs no Zoom link, accounts or paid service.
+
+- **Starting**: while the session is live, the teacher presses **📹 Start video call** in the room header. Their camera and microphone turn on, and the call panel opens in the bottom corner of the dashboard.
+- **Joining**: students in that room see a banner, "Your teacher started a video call", with a **Join call** button and how full the call is. They join with their camera and microphone **off** and turn them on themselves. The room's invite link and class code are all they need.
+- **The panel** floats over the page, so students keep working on their level while they talk. It can be made bigger or smaller, and everyone can turn their microphone and camera on and off, share their screen (on a computer) and leave. Turning the camera off really switches it off.
+- **Teacher controls**: on each student's tile, 🔇 asks them to mute and ✕ takes them out of the call (they cannot rejoin until the next call). The student list shows 📹 next to everyone in the call. **End call for everyone** closes it; ending the session or the room closing by itself also ends the call.
+- **Limits**: one place is always kept for the teacher, so at most 3 students can join. A fourth student sees "The call is full". Opening the call in a second tab moves that person to the new tab instead of taking another place. Nothing is ever recorded.
+
+**How it works**: the video goes straight from browser to browser (WebRTC, everyone connected to everyone), so it never passes through the server and costs nothing to run. The server only passes the short setup messages between the browsers over event streams, like the rest of the live dashboard (`/api/classes/:id/call…`, `/api/student/call/events`, `/api/call/signal`, `/api/call/state` in `server/index.js`; the browser side is `public/call.js`). Video is kept small (360p, about 0.5 Mbit/s per person) so four people run smoothly on ordinary home internet. Browsers only allow the camera on `https` (or `localhost`), which the pilot setup already uses.
+
+**Network settings** (optional, in `.env`):
+- `STUN_URLS`: helps browsers find a direct path to each other. Defaults to Google's free public STUN server; set it to an empty value to turn it off.
+- `TURN_URLS` and `TURN_SECRET`: a relay for the few home or school networks that block direct connections (roughly 1 in 10). Without it, those students cannot see or be seen. The free, open source [coturn](https://github.com/coturn/coturn) can run on the same machine as the app: start it with `use-auth-secret` and `static-auth-secret=<the same TURN_SECRET>`, and set `TURN_URLS=turn:your.domain:3478`. The app then gives each browser a password that is valid for 12 hours. A TURN service with a fixed login works too, with `TURN_USERNAME` and `TURN_CREDENTIAL` instead of `TURN_SECRET`.
+- `CALL_MAX`: the number of people in a call, 4 by default. Each browser sends its video to every other person, so more than 4 or 5 gets choppy on home internet.
+
+## Away status
+Helps the teacher notice who may not be following along, without getting in the way of a student who has a good reason to look elsewhere.
+
+- **What the teacher sees**: a soft "↗ on another tab · 2 min" or "↗ in another window" pill next to the student in the list, a dashed outline on their chip in the class map, the number away in the list header, "↗ away" on their tile in the video call, and on their progress card how many times and for how long they left the page this session.
+- **Notifications**: a short notice ("🐼 Babek left the PromptPlay page") appears when a student leaves. It can be turned off with "🔔 Tell me when a student leaves the page" in the room's ⚙️ menu (remembered per browser).
+- **For the student nothing changes**: no warning, no pause, nothing blocks them. The banner on their page tells them openly that the teacher can see whether the page is in front of them.
+- **What it can and cannot see**: the page only knows whether it is the tab in front (switched tab or minimised browser counts as "another tab") and whether its window has focus (another app or window counts as "another window"). It never sees which other tab, site or app the student uses. Glances shorter than 3 seconds are not reported, and playing the game on the page counts as being on the page. Closing the page shows as offline, not away.
+- **Kept briefly**: the counts live in the server's memory for the current session only and start fresh when the session ends. Nothing is written to the database.
+
 ## Safety model
 1. Every student message goes through a Haiku classifier first. Unsafe messages are logged, shown to the teacher as an alert (self-harm is highlighted red), and never reach the main AI. Classifier errors fail closed.
 2. Lesson-scoped, child-safe system prompt (no personal info, refuse adult/off-topic).
 3. Games run in `<iframe sandbox="allow-scripts">` (opaque origin) with a CSP of `default-src 'none'`: no network, storage, cookies or access to the platform.
 4. Only a nickname, an avatar and a hashed PIN are stored. Wrong PINs lock that account for 5 minutes after 5 tries. Messages, games and idle students are deleted after the admin-set retention (default 30 days).
 5. Admin spend cap is checked before every chat; cost is logged per class/teacher.
+6. Video calls happen only inside a live room that the teacher opened, with the teacher always able to mute or remove anyone. Students start with camera and microphone off, and nothing is recorded or stored. Only browsers that hold a place in the call can send it setup messages.
 
 ## Home page
-`public/index.html` is the public landing page. Plain HTML, CSS and ES modules: no framework, no build step, no CDN, fonts, images or trackers (zero third-party requests). Page weight: about 125 KB in total (about 41 KB gzipped; `npm test` enforces the budget).
-- **Layout**: a minimal, story-first page. A spacious welcome screen (one greeting, one headline, one sentence, one button), then a scroll story of five chapters, a short line of skills, the parent FAQ and one closing call to action.
+`public/index.html` is the public landing page. Plain HTML, CSS and ES modules: no framework, no build step, no CDN, fonts or trackers (zero third-party requests); the only images are the mascot files in `public/mascot/`. Page weight: about 155 KB of code in total (about 50 KB gzipped) plus about 15 KB of mascot art; `npm test` enforces both budgets.
+- **Layout**: a spacious, story-first page that opens and closes under a night sky (dark in both themes; the middle follows the light or dark theme). A welcome screen (one greeting, one headline, one sentence, one button, the mascot waving next to it above a glowing planet), a band of ideas drifting by in two rows, a scroll story of five chapters, a row of plain facts in big numbers (10 levels, 3 stars, 2 languages, 0 installs), a grid of six skill cards, the parent FAQ and one closing call to action with the mascot cheering.
 - **The story**: the chapters follow one child through a class: (1) a curious kid with ideas, who picks a player; (2) they learn to say exactly what they mean, and each better prompt makes a better game; (3) the AI builds the game and the child asks for a change (level 6 "Your First Game"); (4) "Check my work", stars and the ten levels of the starter course; (5) the teacher and the layers of protection. On wide screens the chapters scroll on the left while one sticky stage on the right plays the chapter being read; on phones the stage sticks under the top bar and the chapters slide up beneath it.
-- **Files**: `index.html` (markup), `home.css` (on top of the tokens in `style.css`), `home.js` (language, top bar, player picker, scroll reveal, loads the story), `home-story.js` (the scroll story: picks the current chapter and plays its scene), `home-mini.js` (the animated game preview used by chapters 2 and 3), `home-fx.js` (typewriter, star burst, avatar), `home-i18n.js` (all strings).
+- **Files**: `index.html` (markup), `home.css` (on top of the tokens in `style.css`), `home.js` (language, top bar, player picker, scroll reveal, loads the story and the motion), `home-story.js` (the scroll story: picks the current chapter and plays its scene), `home-mini.js` (the animated game preview used by chapters 2 and 3), `home-motion.js` (pointer effects, mascots, counters), `home-fx.js` (typewriter, star burst, avatar), `home-i18n.js` (all strings), `mascot/` (the mascot poses).
+- **Pointer effects** (mouse and trackpad only, off on touch screens and with reduced motion): the night sky moves in three parallax layers and a soft light follows the pointer, leaving a short trail of sparkles; the welcome mascot leans towards the pointer; the mascot peeking over the story stage slides along its top edge to stay near the pointer; cards light up under the pointer and tilt slightly; the two main buttons pull gently towards it. Every mascot pops in when its section arrives and hops with a burst of stars when clicked; the big numbers count up once.
 - **Languages**: Azerbaijani (default) and English, same `lang` localStorage key as the rest of the app; the toggle switches without a reload and the current scene starts over in the new language. Strings live in `home-i18n.js` and are registered into the shared dictionary of `common.js`, so `t()` and `applyI18n()` work as everywhere else. **The Azerbaijani copy needs a read-through by a native speaker before launch.**
 - **Static baseline**: the page is complete HTML in Azerbaijani before any script runs (no empty flash, no layout shift, readable without JavaScript; the stage only shows when scripts run). After editing the `az` strings run `npm run home:sync` to rewrite that text in `index.html`; `npm test` fails if it is out of date.
 - **Player**: the avatar chosen in chapter 1 is saved in localStorage (`avatar`), shown on the stage, and preselected on the join page.
-- **Motion**: animations only touch `transform` and `opacity` (including the `translate`, `scale` and `rotate` properties). The welcome text rises in and drifts away as the page scrolls (CSS scroll timelines where supported), scenes pause while the story is off screen or the tab is hidden, and with `prefers-reduced-motion` every scene shows its finished state and the reveal and background drift are off. Colours reuse the `style.css` tokens; `home.css` adds a few AA-safe text shades (checked for both themes in `test/home.test.js`).
+- **Motion**: animations only touch `transform` and `opacity` (including the `translate`, `scale` and `rotate` properties). The welcome text rises in and drifts away as the page scrolls (CSS scroll timelines where supported), scenes pause while the story is off screen or the tab is hidden, and with `prefers-reduced-motion` every scene shows its finished state, the ideas wrap into still rows, and the reveal, pointer effects and background drift are off. Colours reuse the `style.css` tokens; `home.css` adds a few AA-safe text shades and the night sky tokens (checked for both themes in `test/home.test.js`).
 - **Placeholders to fill in** (business details not decided yet; they are bracketed and highlighted on the page):
 
 | Placeholder | Where |
@@ -160,6 +189,18 @@ Learning goals, in plain words (the same text teachers see and can copy for pare
 | `[PRICE]` | FAQ answer `a9` in `home-i18n.js` |
 | `[LOCATIONS AND SCHEDULE]` | FAQ answer `a8` in `home-i18n.js` |
 | `[OG IMAGE]` | `og:image` and `twitter:image` in the `<head>` of `index.html` |
+
+- **Mascot**: a friendly robot in five poses, one file each in `public/mascot/`. The current art is a hand drawn placeholder meant to be replaced.
+
+| File | Where | Pose | Shown at about |
+| --- | --- | --- | --- |
+| `hero.svg` | welcome screen | waving hello, full body | 330 px wide |
+| `peek.svg` | top edge of the story stage | head and both hands holding an edge, cut off at the chest (the bottom 15% of the image overlaps the card) | 150 px wide |
+| `think.svg` | on top of the skill cards | thinking, an idea above its head (the feet hide behind the cards) | 170 px wide |
+| `help.svg` | next to the FAQ heading | friendly, holding up a question bubble | 200 px wide |
+| `cheer.svg` | closing screen | both arms up, celebrating | 210 px wide |
+
+  To swap in new art: export each pose with a transparent background, square or close to the current shape, at twice the display width (for example 660 px for the hero), as WebP or AVIF under 200 KB each (600 KB in total). Either keep the file names, or change the `src` (and the `width`/`height`, which only set the shape) of the matching `<img>` in `index.html`. The welcome pose stands on the bottom edge of its image, so leave little empty space below the feet. The pointer effects move and tilt the whole image, so any art works without code changes. `npm test` checks that every mascot file exists, stays decorative (empty `alt`, inside an `aria-hidden` block) and fits the budget.
 
   There is also a hidden social proof section (`#proof`) with a TODO: only add real, permitted quotes or numbers, never invented ones.
 

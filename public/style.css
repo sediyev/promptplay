@@ -210,3 +210,37 @@ iframe.studentview { flex:1; width:100%; min-height:0; border:1px solid var(--li
 :root { --fa:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 20'><path fill='%2300b5e2' d='M0 0h30v7H0z'/><path fill='%23ef3340' d='M0 7h30v6H0z'/><path fill='%23509e2f' d='M0 13h30v7H0z'/><circle cx='13' cy='10' r='3.3' fill='%23fff'/><circle cx='14.1' cy='10' r='2.7' fill='%23ef3340'/></svg>"); --fe:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 20'><path fill='%23012169' d='M0 0h30v20H0z'/><path d='M0 0l30 20M30 0L0 20M15 0v20M0 10h30' stroke='%23fff' stroke-width='4'/><path d='M0 0l30 20M30 0L0 20M15 0v20M0 10h30' stroke='%23c8102e' stroke-width='2'/></svg>"); }
 .flag, .lang b::before { display:inline-block; width:1.35em; height:.9em; border-radius:3px; background:center/cover; box-shadow:0 0 0 1px #0003; vertical-align:-.12em; }
 .flag-az { background-image:var(--fa); } .flag-en { background-image:var(--fe); }
+
+/* video call panel (call.js): floats over the page so students keep working while they talk */
+.callban { display:flex; flex-wrap:wrap; gap:.6rem; align-items:center; background:var(--brand-soft); color:var(--ink); }
+.callban button { padding:.35em .9em; }
+.callbox { position:fixed; right:16px; bottom:16px; z-index:9; width:min(400px,calc(100vw - 32px)); background:var(--card); color:var(--ink);
+  border:1px solid var(--line); border-radius:var(--r); box-shadow:0 12px 40px rgba(10,6,40,.28); padding:10px; display:flex; flex-direction:column; gap:8px; }
+.callbox.big { width:min(860px,calc(100vw - 32px)); }
+.callhead { display:flex; align-items:center; gap:.5rem; }
+.callbox button.icon { padding:.15em .55em; font-size:.85rem; line-height:1.4; }
+.tiles { display:grid; grid-template-columns:1fr; gap:6px; }
+.callbox[data-n="2"] .tiles, .callbox[data-n="3"] .tiles, .callbox[data-n="4"] .tiles { grid-template-columns:1fr 1fr; }
+.callbox[data-n="3"] .tile.me { grid-column:1 / -1; }
+.tile { position:relative; aspect-ratio:16/9; background:#16132e; border-radius:12px; overflow:hidden; }
+.tile video { width:100%; height:100%; object-fit:cover; display:block; }
+.tile.screen video { object-fit:contain; } .tile.mirror video { transform:scaleX(-1); }
+.tile .tav { position:absolute; inset:0; display:none; place-items:center; font-size:2.4rem; }
+.tile.novideo video { visibility:hidden; } .tile.novideo .tav { display:grid; }
+.tile .tname { position:absolute; left:6px; bottom:6px; max-width:calc(100% - 12px); background:rgba(10,8,30,.65); color:#fff; font-size:.75rem;
+  padding:.1em .5em; border-radius:999px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tile .tname span { opacity:.75; }
+.tile .tact { position:absolute; top:6px; right:6px; display:flex; gap:4px; }
+.tile .tact button { background:rgba(10,8,30,.65); color:#fff; border-color:transparent; }
+.callnote { margin:0; font-size:.78rem; }
+.callbar { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+.callbar button { padding:.35em .7em; font-size:.85rem; box-shadow:none; }
+.callbar button.ghost.on { background:var(--brand-soft); border-color:var(--brand); }
+.callbox.min .tiles, .callbox.min .callbar, .callbox.min .callnote { display:none; }
+@media (max-width:600px) { .callbox, .callbox.big { right:8px; left:8px; bottom:8px; width:auto; } .tile .tav { font-size:1.8rem; } }
+
+/* "away" status for the teacher: informative, deliberately not alarming */
+.awaypill { display:inline-block; background:color-mix(in srgb,var(--sun) 28%,var(--card)); color:var(--ink); border-radius:999px; padding:.05em .55em;
+  font-size:.75rem; font-weight:600; white-space:nowrap; }
+.chip.away { border-style:dashed; border-color:var(--sun); } .chip i { font-style:normal; font-size:.75rem; opacity:.8; }
+.stu .awaypill { white-space:normal; }

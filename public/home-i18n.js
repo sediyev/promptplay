@@ -18,6 +18,12 @@ export const HOME = {
     hr_sub: 'PromptPlay is a classroom adventure where kids learn to create with AI by playing. A teacher runs every class.',
     hr_how: 'Follow the story',
     hr_t2: 'Ages 8 to 17', hr_t3: 'Azerbaijani and English', hr_t4: 'Nothing to install',
+    ms_hi: 'Hi! Shall we build a game?',
+
+    // ideas marquee
+    id_h: 'Any idea can become a game',
+    id1: 'a dragon who bakes cakes', id2: 'a maze inside a giant pizza', id3: 'a robot pet that learns new tricks',
+    id4: 'a quiz about the planets', id5: 'a race between flying turtles', id6: 'a story where the moon goes on holiday',
 
     // the story, in five chapters
     sy_k: 'How it works', sy_h: 'Follow one child through a class',
@@ -59,6 +65,13 @@ export const HOME = {
     // after the story
     sk_h: 'Skills that last beyond the game', sk_lead: 'Kids play for fun. Along the way they practise skills that matter far beyond the game.',
     sk1t: 'Clear communication', sk2t: 'Creativity', sk3t: 'Problem solving', sk4t: 'Critical thinking', sk5t: 'Safe online habits', sk6t: 'Confidence to build',
+    sk1d: 'Saying exactly what they mean, so the AI understands them.', sk2d: 'Heroes, creatures and worlds that start in their own head.',
+    sk3d: 'Breaking a big idea into small steps that work.', sk4d: 'Checking what the AI made instead of trusting it blindly.',
+    sk5d: 'Keeping personal details private, every single time.', sk6d: 'The pride of showing something they built themselves.',
+
+    // in numbers
+    nm_h: 'A whole adventure, ready from the first class',
+    nm1: 'levels in the starter course', nm2: 'stars to earn in every level', nm3: 'languages: Azerbaijani and English', nm4: 'things to install',
 
     fq_h: 'Questions parents ask',
     q1: 'Does my child need to know coding?', a1: 'No. The AI writes the game code. Kids learn to direct it, test it and get bugs fixed.',
@@ -88,6 +101,11 @@ export const HOME = {
     hr_sub: 'PromptPlay uşaqların oynayaraq süni intellektlə öz ideyalarını gerçəkləşdirməyi öyrəndiyi sinif macərasıdır. Hər sinfi müəllim aparır.',
     hr_how: 'Hekayəni izləyin',
     hr_t2: '8 ilə 17 yaş arası', hr_t3: 'Azərbaycan və ingilis dilləri', hr_t4: 'Quraşdırma lazım deyil',
+    ms_hi: 'Salam! Birlikdə oyun quraq?',
+
+    id_h: 'İstənilən ideya oyuna çevrilə bilər',
+    id1: 'tort bişirən əjdaha', id2: 'nəhəng pizzanın içində labirint', id3: 'yeni fəndlər öyrənən robot ev heyvanı',
+    id4: 'planetlər haqqında viktorina', id5: 'uçan tısbağaların yarışı', id6: 'Ayın tətilə getdiyi hekayə',
 
     sy_k: 'Necə işləyir', sy_h: 'Bir uşağın dərsini birlikdə izləyək',
 
@@ -127,6 +145,12 @@ export const HOME = {
 
     sk_h: 'Oyundan kənarda da lazım olan bacarıqlar', sk_lead: 'Uşaqlar əyləncə üçün oynayır. Bu arada oyundan kənarda da lazım olan bacarıqları məşq edirlər.',
     sk1t: 'Aydın ünsiyyət', sk2t: 'Təxəyyül', sk3t: 'Problem həlli', sk4t: 'Tənqidi düşüncə', sk5t: 'Təhlükəsiz onlayn vərdişlər', sk6t: 'Bacarığına inam',
+    sk1d: 'Nə istədiyini dəqiq demək ki, süni intellekt onu başa düşsün.', sk2d: 'Öz təxəyyüllərindən doğan qəhrəmanlar, məxluqlar və dünyalar.',
+    sk3d: 'Böyük ideyanı işləyən kiçik addımlara bölmək.', sk4d: 'Süni intellektin etdiyini kor-koranə qəbul etmək əvəzinə yoxlamaq.',
+    sk5d: 'Şəxsi məlumatları hər zaman gizli saxlamaq.', sk6d: 'Öz qurduqları bir şeyi göstərməyin qüruru.',
+
+    nm_h: 'İlk dərsdən hazır olan tam bir macəra',
+    nm1: 'başlanğıc kursunda səviyyə', nm2: 'hər səviyyədə qazanıla bilən ulduz', nm3: 'dil: Azərbaycan və ingilis', nm4: 'quraşdırılacaq proqram',
 
     fq_h: 'Valideynlərin sualları',
     q1: 'Övladımın kodlaşdırma bilməsi lazımdırmı?', a1: 'Xeyr. Oyun kodunu süni intellekt yazır. Uşaqlar ona yön verməyi, nəticəni sınamağı və xətaları düzəltdirməyi öyrənir.',
