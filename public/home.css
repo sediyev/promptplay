@@ -1,20 +1,18 @@
-/* PromptPlay home page. Built on the tokens in style.css (colours, radius, shadow, dark mode).
-   Only a few helper tokens are added here, mainly AA-safe text shades (see test/home.test.js notes in README).
+/* PromptPlay home page. Built on the tokens in style.css (colours incl. the AA-safe --link, --tg1/--tg2 and --g1/--g2, radius, shadow, dark mode).
+   Only a few helper tokens are added here (see test/home.test.js notes in README).
    Design: spacious sections, a night sky that opens and closes the page, a mascot that shows up along the way,
    and surfaces that answer the pointer (home-motion.js). The middle of the page follows the light or dark theme.
    Motion rule: animations and transitions touch transform and opacity only (and the translate, scale and rotate properties). */
 :root {
   --star:#ffc93c; --star-line:#b86e00;
-  --link:#4a30d6; --muted-h:#5f5a7d; --ok-ink:#0b6e40;
-  --tg1:#5a3de6; --tg2:#2f68d8;                                   /* gradient text (AA on --bg and --card) */
-  --g1:color-mix(in srgb,var(--brand) 88%,#000); --g2:color-mix(in srgb,var(--brand2) 74%,#000); /* brand gradient behind white text */
+  --muted-h:#5f5a7d; --ok-ink:#0b6e40;
   --edge:color-mix(in srgb,var(--g1) 70%,#000);
   --sheet:color-mix(in srgb,var(--brand-soft) 72%,var(--bg));
   --glow:rgba(84,56,222,.32); --ease:cubic-bezier(.22,.9,.3,1); --bar:60px;
   --night:#0d0b26; --ground:#120e36; --n-ink:#f4f1ff; --n-muted:#bdb6e6; --n-link:#c4baff; --n-card:#1b1650; --n-line:#3a3378; /* the night sky, same in both themes */
 }
 @media (prefers-color-scheme:dark) { :root {
-  --link:#c4baff; --muted-h:var(--muted); --star-line:var(--star); --ok-ink:#5fd49a; --tg1:#c4baff; --tg2:#9cc4ff;
+  --muted-h:var(--muted); --star-line:var(--star); --ok-ink:#5fd49a;
   --sheet:color-mix(in srgb,var(--brand-soft) 60%,var(--bg)); --glow:rgba(106,76,255,.4);
 } }
 
@@ -30,7 +28,6 @@ html { scroll-padding-top:calc(var(--bar) + 12px); }
 body { overflow-x:clip; -webkit-tap-highlight-color:transparent; }
 html.pend body { opacity:0; animation:unpend 0s 1.6s forwards; } /* English visitors: hidden until home.js swapped the text */
 @keyframes unpend { to { opacity:1; } }
-a { color:var(--link); }
 :focus-visible { outline:3px solid var(--link); outline-offset:3px; }
 .wrap { width:min(1120px,100% - 40px); margin-inline:auto; }
 .narrow-wrap { width:min(760px,100% - 40px); }
