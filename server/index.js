@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import QRCode from 'qrcode';
 import { db, now, getSetting, setSetting, hashPassword, checkPassword, newToken, newInvite, dayStart, dayRange, newClassCode, purgeOld, migrateLessons } from './db.js';
 import { moderate, chat, evaluate, systemPrompt, pickLang, costOf } from './ai.js';
+import { buildHistory, cutOpenBlock } from './history.js';
 import { LANGS, loadBuiltin, sortCourses, validateCourse, summary, matches, flatten, contentHash, languages } from './library.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url)), PUBLIC = path.join(HERE, '..', 'public');
@@ -266,16 +267,19 @@ function roomFields(body) {
   if (consent !== true) return { error: 'consent' };
   return { name: String(name).trim().slice(0, 60), daily_limit: Math.max(1, +daily_limit || 30), approval: APPROVAL.includes(approval) ? approval : 'ai' };
 }
-const insertRoom = (teacherId, f, courseId) => +run('INSERT INTO classes(teacher_id,name,code,consent_at,daily_limit,course_id,invite,approval,live,created) VALUES(?,?,?,?,?,?,?,?,0,?)',
-  teacherId, f.name, newClassCode(), now(), f.daily_limit, courseId, newInvite(), f.approval, now()).lastInsertRowid;
+// A room either plays a course (kind 'course') or is a video meeting only (kind 'meeting': no course, levels or AI chat).
+const insertRoom = (teacherId, f, courseId, kind = 'course') => +run('INSERT INTO classes(teacher_id,name,code,consent_at,daily_limit,course_id,invite,approval,kind,live,created) VALUES(?,?,?,?,?,?,?,?,?,0,?)',
+  teacherId, f.name, newClassCode(), now(), f.daily_limit, courseId, newInvite(), f.approval, kind, now()).lastInsertRowid;
+const isMeeting = (room) => room?.kind === 'meeting';
 app.post('/api/classes', needTeacher, (req, res) => {
   const f = roomFields(req.body);
   if (f.error) return fail(res, 400, f.error);
+  if (req.body.kind === 'meeting') return res.json({ id: insertRoom(req.user.id, f, null, 'meeting') }); // "like Zoom": nothing to prepare
   if (!one('SELECT 1 FROM courses WHERE id=? AND teacher_id=?', +req.body.course_id, req.user.id)) return fail(res, 400, 'course');
   res.json({ id: insertRoom(req.user.id, f, +req.body.course_id) });
 });
 app.get('/api/classes', needTeacher, (req, res) =>
-  res.json(all(`SELECT c.id,c.name,c.code,c.paused,c.live,co.title course,(SELECT COUNT(*) FROM students s WHERE s.class_id=c.id) students
+  res.json(all(`SELECT c.id,c.name,c.code,c.paused,c.live,c.kind,co.title course,(SELECT COUNT(*) FROM students s WHERE s.class_id=c.id) students
     FROM classes c LEFT JOIN courses co ON co.id=c.course_id WHERE c.teacher_id=? ORDER BY c.id DESC`, req.user.id)));
 
 app.get('/api/classes/:id', needTeacher, ownClass, (req, res) => {
@@ -299,7 +303,7 @@ app.patch('/api/classes/:id', needTeacher, ownClass, (req, res) => {
   if (daily_limit !== undefined) run('UPDATE classes SET daily_limit=? WHERE id=?', Math.max(1, +daily_limit || 30), req.cls.id);
   if (APPROVAL.includes(approval)) run('UPDATE classes SET approval=? WHERE id=?', approval, req.cls.id);
   if (regen_invite) run('UPDATE classes SET invite=? WHERE id=?', newInvite(), req.cls.id);
-  if (live === true) run('UPDATE classes SET live=1 WHERE id=?', req.cls.id);
+  if (live === true) { run('UPDATE classes SET live=1 WHERE id=?', req.cls.id); if (isMeeting(req.cls)) openCall(req.cls.id); } // a meeting is its call
   if (live === false && req.cls.live) closeRoom(req.cls.id);
   publish(`s:${req.cls.id}`, { type: 'state' });
   res.json({ ok: true });
@@ -382,8 +386,8 @@ const AVATARS = ['🦊', '🐼', '🐯', '🦁', '🐸', '🐵', '🦄', '🐙',
 const pinFails = new Map(); // student id -> {n, until}: slows down guessing a 4-digit PIN
 const findRoom = (b) => b.invite ? one('SELECT * FROM classes WHERE invite=?', String(b.invite)) : one('SELECT * FROM classes WHERE code=?', String(b.code || '').trim().toUpperCase());
 app.get('/api/invite/:token', (req, res) => {
-  const c = one('SELECT c.name,c.live,co.title course FROM classes c LEFT JOIN courses co ON co.id=c.course_id WHERE c.invite=?', req.params.token);
-  c ? res.json({ name: c.name, course: c.course, live: !!c.live, avatars: AVATARS }) : fail(res, 404, 'bad_invite');
+  const c = one('SELECT c.name,c.live,c.kind,co.title course FROM classes c LEFT JOIN courses co ON co.id=c.course_id WHERE c.invite=?', req.params.token);
+  c ? res.json({ name: c.name, course: c.course, kind: c.kind, live: !!c.live, avatars: AVATARS }) : fail(res, 404, 'bad_invite');
 });
 app.get('/api/avatars', (_req, res) => res.json(AVATARS));
 app.post('/api/join', (req, res) => {
@@ -430,7 +434,7 @@ function studentPage(stu, room) {
   const levels = levelMap(stu, room.course_id).map(({ id, position, title, emoji, output, status, stars }) => ({ id, position, title, emoji, output, status, stars }));
   const course = one('SELECT title,library_slug FROM courses WHERE id=?', room.course_id);
   const finished = levels.length > 0 && levels.every((l) => l.status === 'done');
-  return { nickname: stu.nickname, avatar: stu.avatar, room: room.name, course: course?.title, approval: room.approval, levels,
+  return { nickname: stu.nickname, avatar: stu.avatar, room: room.name, kind: room.kind, course: course?.title, approval: room.approval, levels,
     next: finished ? nextAdventures(course?.library_slug) : [], call: studentCall(room.id), ...studentState(stu, room) };
 }
 function studentLevel(stu, room, levelId) {
@@ -516,27 +520,37 @@ app.post('/api/chat', needStudent, async (req, res) => {
     save('blocked', text, mod.category); emit('blocked', text, mod.category);
     return res.json({ blocked: true, category: mod.category });
   }
-  save('user', text); emit('user', text);
+  const asked = save('user', text).lastInsertRowid; emit('user', text);
 
-  // conversation context: recent turns of this level, merged so roles alternate and start with 'user'
-  const msgs = [];
-  for (const m of all("SELECT role,content FROM messages WHERE student_id=? AND level_id=? AND role IN ('user','assistant') ORDER BY id DESC LIMIT 16", stu.id, level.id).reverse()) {
-    const last = msgs[msgs.length - 1];
-    if (last?.role === m.role) last.content += '\n\n' + m.content; else msgs.push({ ...m });
+  // Conversation context: the recent turns of this level, with every game or creation but the newest taken out (history.js).
+  // When the newest one is older than those turns, it goes into the system prompt so the tutor can still change it.
+  const { messages: msgs, hasOutput } = buildHistory(all("SELECT role,content FROM messages WHERE student_id=? AND level_id=? AND role IN ('user','assistant') AND flag IS NOT 'refused' ORDER BY id DESC LIMIT 16", stu.id, level.id).reverse());
+  let current = null;
+  if (!hasOutput && level.output !== 'chat') {
+    const tag = level.output === 'game' ? 'html' : 'creation';
+    for (const m of all("SELECT content FROM messages WHERE student_id=? AND level_id=? AND role='assistant' AND instr(content, ?) ORDER BY id DESC LIMIT 5", stu.id, level.id, '```' + tag))
+      if ((current = extractOutput(m.content, level.output))) break;
   }
-  while (msgs[0]?.role === 'assistant') msgs.shift();
 
   // The teacher watches the reply arrive live: chunks are batched every 250ms to keep the feed light.
   let pending = '', flushT = null;
   const flush = () => { flushT = null; if (pending) publish(tch, { type: 'delta', student_id: stu.id, level_id: level.id, text: pending }); pending = ''; };
   res.set({ 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no' }).flushHeaders();
   try {
-    const { text: reply, usage } = await chat(systemPrompt(level, course, req.body.lang), msgs, (t) => {
+    const { text: reply, usage, stop } = await chat(systemPrompt(level, course, req.body.lang, current), msgs, (t) => {
       res.write(t); pending += t; flushT ||= setTimeout(flush, 250);
-    });
+    }, level.output);
     clearTimeout(flushT); flush();
     logUsage(room.id, stu.id, usage);
-    if (reply) { save('assistant', reply); emit('assistant', reply); }
+    // A reply that ran out of room stops in the middle of the game file: half a game is no use, so it is dropped and the
+    // student is told to ask for something smaller. A reply the model's safeguards declined is not kept at all.
+    // The page reads the reason after a NUL at the end of the stream (the same way as "error" below).
+    const kept = stop === 'refusal' ? '' : stop === 'max_tokens' ? cutOpenBlock(reply) : reply;
+    const mark = stop === 'refusal' ? 'refused' : kept !== reply || !reply.trim() ? 'cut' : '';
+    if (kept.trim()) { save('assistant', kept, mark); emit('assistant', kept, mark); } else publish(tch, { type: 'delta_end', student_id: stu.id });
+    // A declined question is left out of later requests, or it would be sent again with the next one and decline that too.
+    if (mark === 'refused') run("UPDATE messages SET flag='refused' WHERE id=?", asked);
+    if (mark) { console.warn(`chat reply ${mark} (student ${stu.id}, level ${level.id})`); res.write('\u0000' + mark); }
     publish(tch, { type: 'usage' });
   } catch (e) {
     clearTimeout(flushT);
@@ -620,18 +634,25 @@ app.delete('/api/games/:id', needStudent, gameOwner, (req, res) => {
 // One small group call per room: the teacher and up to CALL_MAX - 1 students. Video goes straight between the browsers
 // (WebRTC, everyone connected to everyone); this server only passes the few setup messages between them and knows who is in.
 // Being in the call is keeping its event stream open, so closing the tab or losing the connection leaves the call.
+// A meeting room is only its call, so it takes more people (MEETING_MAX); the browsers send a smaller picture as it fills up.
 const CALL_MAX = Math.min(8, Math.max(2, +process.env.CALL_MAX || 4));
-const calls = new Map(); // class id -> { peers: Map<peer id, peer>, removed: Set<owner> } while the teacher has the call open
+const MEETING_MAX = Math.min(12, Math.max(2, +process.env.MEETING_MAX || 8));
+const roomMax = (classId) => (isMeeting(one('SELECT kind FROM classes WHERE id=?', classId)) ? MEETING_MAX : CALL_MAX);
+const calls = new Map(); // class id -> { peers: Map<peer id, peer>, removed: Set<owner>, max } while the teacher has the call open
+function openCall(classId) {
+  if (calls.has(classId)) return;
+  calls.set(classId, { peers: new Map(), removed: new Set(), max: roomMax(classId) }); callChanged(classId);
+}
 const callPeers = new Map(); // peer id -> { id, classId, owner, kind, name, avatar, student_id, mic, cam, screen, res }
 const peerInfo = ({ id, kind, name, avatar, student_id, mic, cam, screen }) => ({ id, kind, name, avatar, student_id, mic, cam, screen });
 function callSummary(classId) {
   const c = calls.get(classId);
-  return { open: !!c, max: CALL_MAX, peers: c ? [...c.peers.values()].map(peerInfo) : [] };
+  return { open: !!c, max: c?.max ?? roomMax(classId), peers: c ? [...c.peers.values()].map(peerInfo) : [] };
 }
 // Students see that a call is open and how full it is; the teacher's dashboard sees who is in it.
 const studentCall = (classId) => {
   const s = callSummary(classId), students = s.peers.filter((p) => p.kind === 'student').length;
-  return { open: s.open, max: s.max, count: s.peers.length, full: students >= CALL_MAX - 1 };
+  return { open: s.open, max: s.max, count: s.peers.length, full: students >= s.max - 1 };
 };
 const toPeer = (p, ev) => !p.res.writableEnded && p.res.write(`data: ${JSON.stringify(ev)}\n\n`);
 function callChanged(classId, students = true) {
@@ -698,11 +719,11 @@ async function joinCall(req, res, classId, who) {
   const others = [...c.peers.values()].filter((p) => !p.res.writableEnded);
   // One place is always kept for the teacher, so students cannot fill the call before the teacher is back.
   const students = others.filter((p) => p.kind === 'student').length;
-  if (others.length >= CALL_MAX || (who.kind === 'student' && students >= CALL_MAX - 1)) return end('full');
+  if (others.length >= c.max || (who.kind === 'student' && students >= c.max - 1)) return end('full');
   const p = { ...who, id: crypto.randomBytes(9).toString('base64url'), classId, mic: false, cam: false, screen: false, res };
   c.peers.set(p.id, p); callPeers.set(p.id, p);
   const ice = iceServers(p.id, relay);
-  toPeer(p, { type: 'welcome', id: p.id, max: CALL_MAX, peers: others.map(peerInfo), iceServers: ice, relay: hasRelay(ice) });
+  toPeer(p, { type: 'welcome', id: p.id, max: c.max, peers: others.map(peerInfo), iceServers: ice, relay: hasRelay(ice) });
   for (const o of others) toPeer(o, { type: 'join', peer: peerInfo(p) });
   callChanged(classId);
   const ping = setInterval(() => !res.writableEnded && res.write(': ping\n\n'), 25000);
@@ -719,8 +740,11 @@ app.post('/api/classes/:id/call', needTeacher, ownClass, (req, res) => {
   const id = req.cls.id;
   if (req.body.open === true) {
     if (!req.cls.live) return fail(res, 403, 'room_closed');
-    if (!calls.has(id)) { calls.set(id, { peers: new Map(), removed: new Set() }); callChanged(id); }
-  } else if (req.body.open === false) endCall(id);
+    openCall(id);
+  } else if (req.body.open === false) {
+    if (isMeeting(req.cls) && req.cls.live) closeRoom(id); // ending a meeting's call ends the meeting
+    else endCall(id);
+  }
   res.json(callSummary(id));
 });
 app.get('/api/classes/:id/call/events', needTeacher, ownClass, (req, res) =>
@@ -817,7 +841,7 @@ if (process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
 } else if (!one("SELECT 1 FROM users WHERE role='admin'")) console.warn('No admin yet: set ADMIN_EMAIL and ADMIN_PASSWORD.');
 if (!process.env.ANTHROPIC_API_KEY) console.warn('ANTHROPIC_API_KEY is not set; chat will fail.');
 migrateLessons();
-for (const { id } of all('SELECT id FROM classes WHERE live=1')) armGrace(id); // after a restart, give teachers time to reconnect
+for (const c of all('SELECT id,kind FROM classes WHERE live=1')) { armGrace(c.id); if (isMeeting(c)) openCall(c.id); } // after a restart, give teachers time to reconnect
 purgeOld();
 setInterval(purgeOld, 3600000).unref();
 const port = +process.env.PORT || 3000;

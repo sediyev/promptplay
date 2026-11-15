@@ -56,7 +56,7 @@ if (invite) {
   $('#newHere').textContent = t('newHereLink');
   try {
     const r = await api('/api/invite/' + invite);
-    $('#invited').hidden = false; $('#roomName').textContent = r.name; $('#courseName').textContent = r.course || '';
+    $('#invited').hidden = false; $('#roomName').textContent = r.name; $('#courseName').textContent = r.kind === 'meeting' ? t('mt_label') : r.course || '';
     avatars(r.avatars);
     live = r.live;
     if (!live) { if (!params.get('closed')) { $('#wait').hidden = false; $('#wait').textContent = t('waitStart'); } watchLive(); }

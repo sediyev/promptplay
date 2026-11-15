@@ -36,6 +36,7 @@ addCol('classes', 'course_id', 'INTEGER');
 addCol('classes', 'invite', 'TEXT');
 addCol('classes', 'live', 'INTEGER DEFAULT 0');
 addCol('classes', 'approval', "TEXT DEFAULT 'ai'"); // 'ai': the evaluator unlocks levels; 'teacher': the teacher approves each one
+addCol('classes', 'kind', "TEXT DEFAULT 'course'"); // 'course': a room that plays a course; 'meeting': a video meeting only, with no course
 addCol('students', 'pin', 'TEXT');
 addCol('students', 'avatar', "TEXT DEFAULT '🙂'");
 addCol('messages', 'level_id', 'INTEGER');
@@ -90,7 +91,7 @@ export function purgeOld() {
 
 // Pilot classes had a flat list of lessons; turn each class's lessons into a course of levels so nothing is lost.
 export function migrateLessons() {
-  for (const c of db.prepare('SELECT * FROM classes WHERE course_id IS NULL').all()) {
+  for (const c of db.prepare("SELECT * FROM classes WHERE course_id IS NULL AND kind='course'").all()) { // meeting rooms have no course on purpose
     const lessons = db.prepare('SELECT * FROM lessons WHERE class_id=? ORDER BY id').all(c.id);
     const course = db.prepare('INSERT INTO courses(teacher_id,title,description,created,updated) VALUES(?,?,?,?,?)')
       .run(c.teacher_id, `${c.name} lessons`, 'Converted from the lessons of this class.', now(), now()).lastInsertRowid;

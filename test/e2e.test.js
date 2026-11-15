@@ -9,6 +9,7 @@ import path from 'node:path';
 // Fake Anthropic API so the whole pipeline runs offline.
 const GAME = '<!doctype html><html><head><title>Tap</title></head><body><button onclick="1">tap</button></body></html>';
 let turnAuth = null; // what the fake Cloudflare TURN API was sent
+let lastChat = null; // the last tutor request the fake Anthropic API was sent
 const fake = http.createServer((req, res) => {
   if (req.url.startsWith('/v1/turn/keys/')) { // fake Cloudflare TURN: short-lived credentials, including a port 53 address browsers refuse
     turnAuth = [req.method, req.url, req.headers.authorization];
@@ -23,6 +24,7 @@ const fake = http.createServer((req, res) => {
     if (isMod) {
       const bad = body.messages[0].content.includes('badword');
       res.setHeader('content-type', 'application/json');
+      if (body.messages[0].content.includes('modrefuse')) return res.end(JSON.stringify({ ...base, stop_reason: 'refusal', content: [] })); // the model's own safeguards
       return res.end(JSON.stringify({ ...base, content: [{ type: 'text', text: bad ? '{"ok":false,"category":"sexual"}' : '{"ok":true}' }] }));
     }
     if (isEval) { // passes unless the student only said "lazy"
@@ -30,14 +32,21 @@ const fake = http.createServer((req, res) => {
       res.setHeader('content-type', 'application/json');
       return res.end(JSON.stringify({ ...base, content: [{ type: 'text', text: lazy ? '{"pass":false,"stars":0,"feedback":"Try more"}' : '{"pass":true,"stars":2,"feedback":"Great job"}' }] }));
     }
-    const reply = String(body.system).includes('Making creations') ? 'Nice!\n```creation\nCaptain Cloud\nPowers: rain\n```' : 'Here you go!\n```html\n' + GAME + '\n```';
+    lastChat = body;
+    const said = String(body.messages[body.messages.length - 1].content);
+    // "hugegame": the reply runs out of room in the middle of the game file; "refuseme": the model declines; "justtalk": no game
+    const stop = said.includes('hugegame') ? 'max_tokens' : said.includes('refuseme') ? 'refusal' : 'end_turn';
+    const reply = stop === 'max_tokens' ? 'Here it comes!\n```html\n<!doctype html><html><body><p>half a ga' : stop === 'refusal' ? '' : said.includes('justtalk') ? 'Sure, tell me more.'
+      : String(body.system).includes('Making creations') ? 'Nice!\n```creation\nCaptain Cloud\nPowers: rain\n```' : 'Here you go!\n```html\n' + GAME + '\n```';
     res.writeHead(200, { 'content-type': 'text/event-stream' });
     const ev = (type, data) => res.write(`event: ${type}\ndata: ${JSON.stringify({ type, ...data })}\n\n`);
-    ev('message_start', { message: { ...base, content: [], usage: { input_tokens: 100, output_tokens: 1 } } });
-    ev('content_block_start', { index: 0, content_block: { type: 'text', text: '' } });
-    ev('content_block_delta', { index: 0, delta: { type: 'text_delta', text: reply } });
-    ev('content_block_stop', { index: 0 });
-    ev('message_delta', { delta: { stop_reason: 'end_turn', stop_sequence: null }, usage: { output_tokens: 50 } });
+    ev('message_start', { message: { ...base, stop_reason: null, content: [], usage: { input_tokens: 100, output_tokens: 1 } } });
+    if (reply) {
+      ev('content_block_start', { index: 0, content_block: { type: 'text', text: '' } });
+      ev('content_block_delta', { index: 0, delta: { type: 'text_delta', text: reply } });
+      ev('content_block_stop', { index: 0 });
+    }
+    ev('message_delta', { delta: { stop_reason: stop, stop_sequence: null }, usage: { output_tokens: 50 } });
     ev('message_stop', {}); res.end();
   });
 });
@@ -238,6 +247,7 @@ test('courses, rooms, live sessions and levels', async () => {
   await call('adm', 'PUT', '/api/admin/settings', { spend_cap: 0.000001 });
   await call('t', 'PATCH', '/api/classes/' + id2, { daily_limit: 50 });
   assert.equal((await call('k', 'POST', '/api/chat', { text: 'z', level_id: lv[0].id })).data.error, 'budget', 'spend cap enforced');
+  await call('adm', 'PUT', '/api/admin/settings', { spend_cap: 0 }); // the tests below chat again
 });
 
 // An open event stream that collects its "data:" events as objects.
@@ -349,6 +359,93 @@ test('video call: teacher opens it, up to 4 people, setup messages relayed, teac
   await T.done; await A2.done;
   assert.deepEqual((await call('tv', 'GET', '/api/classes/' + id)).data.call, { open: false, max: 4, peers: [] });
   teacherFeed.close(); roomFeed.close(); A.close();
+});
+
+test('video meeting room: no course needed, the call opens with the session and takes more people', async () => {
+  await call('adm', 'POST', '/api/admin/teachers', { name: 'Zoya', email: 'z@x.com', password: 'secret4' });
+  await call('tz', 'POST', '/api/login', { email: 'z@x.com', password: 'secret4' });
+  assert.deepEqual((await call('tz', 'GET', '/api/courses')).data, [], 'this teacher never made a course');
+  assert.equal((await call('tz', 'POST', '/api/classes', { kind: 'meeting', name: 'Maths club', consent: false })).data.error, 'consent');
+  const id = (await call('tz', 'POST', '/api/classes', { kind: 'meeting', name: 'Maths club', consent: true })).data.id;
+  let room = (await call('tz', 'GET', '/api/classes/' + id)).data;
+  assert.deepEqual([room.kind, room.course_id, room.levels, room.call], ['meeting', null, [], { open: false, max: 8, peers: [] }]);
+  assert.equal((await call('tz', 'GET', '/api/classes')).data[0].kind, 'meeting');
+  assert.equal((await call('x', 'GET', '/api/invite/' + room.invite)).data.kind, 'meeting', 'the join page can say what it is');
+
+  // starting the meeting opens its call; students come in with the link and a nickname, as in any room
+  await call('tz', 'PATCH', '/api/classes/' + id, { live: true });
+  assert.equal((await call('tz', 'GET', '/api/classes/' + id)).data.call.open, true);
+  const who = ['m1', 'm2', 'm3', 'm4', 'm5'];
+  for (const [i, w] of who.entries()) assert.equal((await call(w, 'POST', '/api/join', { invite: room.invite, nickname: 'Kid' + i })).status, 200);
+  const me = (await call('m1', 'GET', '/api/student/me')).data;
+  assert.deepEqual([me.kind, me.levels, me.call], ['meeting', [], { open: true, max: 8, count: 0, full: false }]);
+  assert.equal((await call('m1', 'POST', '/api/chat', { text: 'hi', level_id: 1 })).data.error, 'locked', 'there is no AI chat in a meeting');
+
+  // more people than a course room's call: the teacher and five students here
+  const T = stream('tz', `/api/classes/${id}/call/events`);
+  assert.equal((await T.next('welcome')).max, 8);
+  const S = who.map((w) => stream(w, '/api/student/call/events'));
+  for (const x of S) await x.next('welcome');
+  room = (await call('tz', 'GET', '/api/classes/' + id)).data;
+  assert.equal(room.call.peers.length, 6);
+  assert.equal((await call('m1', 'GET', '/api/student/me')).data.call.count, 6);
+
+  // "End meeting for everyone" in the call ends the session too: a meeting is its call
+  const page = stream('m1', '/api/student/events'); await page.ready;
+  await call('tz', 'POST', `/api/classes/${id}/call`, { open: false });
+  await T.next('ended'); await S[0].next('ended'); await page.next('closed');
+  room = (await call('tz', 'GET', '/api/classes/' + id)).data;
+  assert.deepEqual([room.live, room.call.open], [0, false]);
+  assert.equal((await call('m1', 'GET', '/api/student/me')).status, 401, 'students are logged out');
+  T.close(); for (const x of S) x.close(); page.close();
+});
+
+test('tutor replies: old games are not sent again, cut-off and declined replies are handled', async () => {
+  await call('th', 'POST', '/api/login', { email: 'z@x.com', password: 'secret4' });
+  const course = (await call('th', 'POST', '/api/courses', { title: 'One game', levels: [{ title: 'Tap', task: 'Make a tap game', output: 'game' }] })).data.id;
+  const lv = (await call('th', 'GET', '/api/courses/' + course)).data.levels[0].id;
+  const id = (await call('th', 'POST', '/api/classes', { name: 'G', consent: true, daily_limit: 60, course_id: course })).data.id;
+  const { invite } = (await call('th', 'GET', '/api/classes/' + id)).data;
+  await call('th', 'PATCH', '/api/classes/' + id, { live: true });
+  await call('hs', 'POST', '/api/join', { invite, nickname: 'Hasan' });
+  const say = (text) => call('hs', 'POST', '/api/chat', { text, level_id: lv });
+  const sent = () => lastChat.messages.map((m) => m.content).join('\n');
+  const count = (text, part) => text.split(part).length - 1;
+
+  // three versions of the game: the third request carries only the newest one, the older one is a short note
+  await say('make a tap game'); await say('make it blue');
+  assert.equal(count(sent(), '```html'), 1, 'the second request has the one game so far');
+  await say('add a score');
+  assert.equal(count(sent(), '```html'), 1, 'only the newest game is sent again');
+  assert.equal(count(sent(), 'an older version was here'), 1);
+  assert.match(lastChat.system, /never write it yourself/, 'the tutor is told what the note means');
+  assert.equal(lastChat.model, 'claude-haiku-5-5');
+  assert.deepEqual(lastChat.output_config, { effort: 'medium' }, 'game levels think a little more');
+  assert.ok(lastChat.max_tokens >= 16000, 'room for a whole game and the thinking before it');
+
+  // a reply that ran out of room: the half game is dropped, the student is told, and nothing broken is stored
+  const cut = (await say('hugegame please')).data;
+  assert.equal(cut, 'Here it comes!\n```html\n<!doctype html><html><body><p>half a ga\u0000cut');
+  let msgs = (await call('hs', 'GET', '/api/student/levels/' + lv)).data.messages;
+  assert.equal(msgs.at(-1).content, 'Here it comes!', 'the unfinished file is not kept');
+  assert.equal((await call('th', 'GET', `/api/classes/${id}/messages`)).data.at(-1).flag, 'cut', 'the teacher can see it was cut off');
+
+  // a reply the model declined: nothing is kept, the student gets a kind note
+  const n = msgs.length;
+  assert.equal((await say('refuseme')).data, '\u0000refused');
+  msgs = (await call('hs', 'GET', '/api/student/levels/' + lv)).data.messages;
+  assert.deepEqual([msgs.length, msgs.at(-1).role], [n + 1, 'user']);
+  await say('justtalk');
+  assert.ok(!sent().includes('refuseme'), 'a declined question is not sent again with the next one');
+  assert.deepEqual((await say('modrefuse')).data, { blocked: true, category: 'other' }, 'a declined safety check blocks the message');
+
+  // the game is still there after a long talk: once it is older than the turns that are sent, it rides in the system prompt
+  for (let i = 0; i < 9; i++) await say('justtalk ' + i);
+  assert.equal(count(sent(), '```html'), 0, 'the game is older than the turns sent');
+  assert.match(lastChat.system, /The student's current game/);
+  assert.ok(lastChat.system.includes(GAME), 'so the tutor can still change it');
+  assert.equal(lastChat.messages[0].role, 'user');
+  await call('th', 'PATCH', '/api/classes/' + id, { live: false });
 });
 
 test('attention: the teacher sees when a student is away from the page, as a status for this session', async () => {
