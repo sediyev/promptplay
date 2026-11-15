@@ -392,22 +392,27 @@ app.post('/api/join', (req, res) => {
   if (!cls) return fail(res, 404, req.body.invite ? 'bad_invite' : 'bad_code');
   if (!cls.live) return fail(res, 403, 'room_closed');
   if (nick.length < 2) return fail(res, 400, 'bad_nick');
-  if (!PIN_RE.test(pin)) return fail(res, 400, 'bad_pin_format');
+  // The invite link is the room's key (the teacher shares it privately and "New link" replaces it), so with the link a nickname is
+  // enough. The short class code is easy to guess, so joining by code still needs the PIN.
+  const byLink = !!req.body.invite;
+  if (!byLink && !PIN_RE.test(pin)) return fail(res, 400, 'bad_pin_format');
   let stu = one('SELECT * FROM students WHERE class_id=? AND nickname=?', cls.id, nick);
-  if (stu) { // logging back in to an existing account
+  if (stu && byLink) { // nobody can take over a nickname that is in the lesson right now
+    if (studentConns.get(stu.id) && req.student?.id !== stu.id) return fail(res, 409, 'nick_online');
+  } else if (stu) { // logging back in to an existing account with the class code
     const f = pinFails.get(stu.id);
     if (f?.until > now()) return fail(res, 429, 'pin_locked');
     const legacy = !stu.pin && req.student?.id === stu.id; // pilot accounts had no PIN: the original browser sets one
     if (!legacy && !(stu.pin && checkPassword(pin, stu.pin))) {
       const n = (f?.n || 0) + 1;
       pinFails.set(stu.id, n >= 5 ? { n: 0, until: now() + 5 * 60000 } : { n, until: 0 });
-      return fail(res, stu.pin ? 401 : 409, stu.pin ? 'bad_pin' : 'nick_taken');
+      return fail(res, stu.pin ? 401 : 409, stu.pin ? 'bad_pin' : 'use_link');
     }
     pinFails.delete(stu.id);
     if (legacy) run('UPDATE students SET pin=? WHERE id=?', hashPassword(pin), stu.id);
   } else {
     const avatar = AVATARS.includes(req.body.avatar) ? req.body.avatar : AVATARS[0];
-    const r = run('INSERT INTO students(class_id,nickname,pin,avatar,created,last_seen) VALUES(?,?,?,?,?,?)', cls.id, nick, hashPassword(pin), avatar, now(), now());
+    const r = run('INSERT INTO students(class_id,nickname,pin,avatar,created,last_seen) VALUES(?,?,?,?,?,?)', cls.id, nick, PIN_RE.test(pin) ? hashPassword(pin) : null, avatar, now(), now());
     stu = { id: +r.lastInsertRowid };
   }
   startSession(res, 'student', stu.id);
@@ -646,17 +651,45 @@ function endCall(classId) {
 }
 // Relay servers: STUN finds each browser's public address. TURN relays the video for the few home or school networks that
 // block direct connections; with TURN_SECRET the credentials are short-lived (the coturn "use-auth-secret" scheme).
+// The easiest relay is Cloudflare's TURN service (free up to 1000 GB a month): with CLOUDFLARE_TURN_KEY_ID and
+// CLOUDFLARE_TURN_API_TOKEN the server asks it for short-lived credentials, so the API token never reaches a browser.
 const urlList = (v) => String(v || '').split(',').map((s) => s.trim()).filter(Boolean);
-function iceServers(peerId) {
+const CF_TURN = process.env.CLOUDFLARE_TURN_KEY_ID && process.env.CLOUDFLARE_TURN_API_TOKEN;
+let cfIce = null; // { list, until }: one set of credentials is shared by everyone and renewed every 12 hours
+async function cloudflareIce() {
+  if (!CF_TURN) return null;
+  if (cfIce?.until > now()) return cfIce.list;
+  try {
+    const api = process.env.CLOUDFLARE_TURN_API || 'https://rtc.live.cloudflare.com';
+    const r = await fetch(`${api}/v1/turn/keys/${encodeURIComponent(process.env.CLOUDFLARE_TURN_KEY_ID)}/credentials/generate-ice-servers`, {
+      method: 'POST', headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_TURN_API_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ttl: 86400 }), signal: AbortSignal.timeout(5000) });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    // iceServers is a list (or a single entry in older answers). Browsers refuse port 53, and trying it only slows the call down.
+    const list = [].concat((await r.json()).iceServers || [])
+      .map((s) => ({ ...s, urls: [].concat(s.urls || []).filter((u) => !/:53(\?|$)/.test(u)) })).filter((s) => s.urls.length);
+    if (!list.length) throw new Error('no ICE servers in the answer');
+    cfIce = { list, until: now() + 12 * 3600e3 };
+  } catch (e) {
+    console.warn('Cloudflare TURN:', e.message);
+    cfIce = { list: null, until: now() + 60e3 }; // the call still works without the relay; try again in a minute
+  }
+  return cfIce.list;
+}
+function iceServers(peerId, relay) {
   const list = [], stun = urlList(process.env.STUN_URLS ?? 'stun:stun.l.google.com:19302'), turn = urlList(process.env.TURN_URLS);
   if (stun.length) list.push({ urls: stun });
+  if (relay) list.push(...relay);
   if (turn.length && process.env.TURN_SECRET) {
     const username = `${Math.floor(now() / 1000) + 12 * 3600}:${peerId}`;
     list.push({ urls: turn, username, credential: crypto.createHmac('sha1', process.env.TURN_SECRET).update(username).digest('base64') });
   } else if (turn.length && process.env.TURN_USERNAME) list.push({ urls: turn, username: process.env.TURN_USERNAME, credential: process.env.TURN_CREDENTIAL || '' });
   return list;
 }
-function joinCall(req, res, classId, who) {
+const hasRelay = (list) => list.some((s) => [].concat(s.urls).some((u) => /^turns?:/.test(u)));
+async function joinCall(req, res, classId, who) {
+  const relay = await cloudflareIce();
+  if (req.socket.destroyed) return; // they left while the relay answered: never add a place nobody holds
   res.set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' }).flushHeaders();
   const c = calls.get(classId), end = (type) => res.end(`data: ${JSON.stringify({ type })}\n\n`);
   if (!c) return end('ended');
@@ -668,7 +701,8 @@ function joinCall(req, res, classId, who) {
   if (others.length >= CALL_MAX || (who.kind === 'student' && students >= CALL_MAX - 1)) return end('full');
   const p = { ...who, id: crypto.randomBytes(9).toString('base64url'), classId, mic: false, cam: false, screen: false, res };
   c.peers.set(p.id, p); callPeers.set(p.id, p);
-  toPeer(p, { type: 'welcome', id: p.id, max: CALL_MAX, peers: others.map(peerInfo), iceServers: iceServers(p.id) });
+  const ice = iceServers(p.id, relay);
+  toPeer(p, { type: 'welcome', id: p.id, max: CALL_MAX, peers: others.map(peerInfo), iceServers: ice, relay: hasRelay(ice) });
   for (const o of others) toPeer(o, { type: 'join', peer: peerInfo(p) });
   callChanged(classId);
   const ping = setInterval(() => !res.writableEnded && res.write(': ping\n\n'), 25000);

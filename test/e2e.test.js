@@ -8,7 +8,14 @@ import path from 'node:path';
 
 // Fake Anthropic API so the whole pipeline runs offline.
 const GAME = '<!doctype html><html><head><title>Tap</title></head><body><button onclick="1">tap</button></body></html>';
+let turnAuth = null; // what the fake Cloudflare TURN API was sent
 const fake = http.createServer((req, res) => {
+  if (req.url.startsWith('/v1/turn/keys/')) { // fake Cloudflare TURN: short-lived credentials, including a port 53 address browsers refuse
+    turnAuth = [req.method, req.url, req.headers.authorization];
+    res.setHeader('content-type', 'application/json');
+    return res.end(JSON.stringify({ iceServers: [{ urls: ['stun:stun.cloudflare.com:3478', 'stun:stun.cloudflare.com:53'] },
+      { urls: ['turn:turn.cloudflare.com:3478?transport=udp', 'turn:turn.cloudflare.com:53?transport=udp', 'turns:turn.cloudflare.com:443?transport=tcp'], username: 'u1', credential: 'c1' }] }));
+  }
   let b = ''; req.on('data', (c) => (b += c)); req.on('end', () => {
     const body = JSON.parse(b || '{}'), usage = { input_tokens: 100, output_tokens: 50 };
     const isMod = String(body.system).includes('safety filter'), isEval = String(body.system).includes('level evaluator');
@@ -50,7 +57,8 @@ before(async () => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-'));
   const port = 3100 + Math.floor(Math.random() * 500); base = `http://localhost:${port}`;
   server = spawn('node', ['server/index.js'], { env: { ...process.env, PORT: port, SESSION_GRACE_MS: '600', SUBMIT_COOLDOWN_MS: '1000', DB_PATH: path.join(dir, 't.db'), ANTHROPIC_API_KEY: 'x',
-    ANTHROPIC_BASE_URL: `http://localhost:${fake.address().port}`, ADMIN_EMAIL: 'a@x.com', ADMIN_PASSWORD: 'adminpw' }, stdio: 'inherit' });
+    ANTHROPIC_BASE_URL: `http://localhost:${fake.address().port}`, CLOUDFLARE_TURN_API: `http://localhost:${fake.address().port}`,
+    CLOUDFLARE_TURN_KEY_ID: 'key1', CLOUDFLARE_TURN_API_TOKEN: 'tok1', ADMIN_EMAIL: 'a@x.com', ADMIN_PASSWORD: 'adminpw' }, stdio: 'inherit' });
   for (let i = 0; i < 50; i++) { try { await fetch(base + '/api/me'); break; } catch { await new Promise((r) => setTimeout(r, 100)); } }
 });
 after(() => { server.kill(); fake.close(); fs.rmSync(dir, { recursive: true, force: true }); });
@@ -116,11 +124,19 @@ test('courses, rooms, live sessions and levels', async () => {
   const join = (who, nickname, pin, extra = {}) => call(who, 'POST', '/api/join', { invite: room.invite, nickname, pin, avatar: '🐼', ...extra });
   assert.equal((await join('s', 'Leyla', '1234')).data.error, 'room_closed');
   await call('t', 'PATCH', '/api/classes/' + id, { live: true });
-  assert.equal((await join('s', 'Leyla', '12')).data.error, 'bad_pin_format');
+  const byCode = (who, nickname, pin) => call(who, 'POST', '/api/join', { code: room.code, nickname, pin });
+  assert.equal((await byCode('s', 'Leyla', '12')).data.error, 'bad_pin_format', 'the class code needs a PIN');
   assert.equal((await join('s', 'Leyla', '1234')).status, 200);
-  assert.equal((await join('s2', 'Leyla', '9999')).data.error, 'bad_pin', 'nickname is protected by its PIN');
+  assert.equal((await byCode('s2', 'Leyla', '9999')).data.error, 'bad_pin', 'with the class code the nickname is protected by its PIN');
   assert.equal((await join('s3', 'Leyla', '1234')).status, 200, 'same account from another device');
-  assert.equal((await call('s', 'POST', '/api/join', { code: room.code, nickname: 'Leyla', pin: '1234' })).status, 200, 'class code still works');
+  assert.equal((await byCode('s', 'Leyla', '1234')).status, 200, 'class code still works');
+  // with the invite link a nickname is enough, for new and returning students
+  const byLink = (who, nickname) => call(who, 'POST', '/api/join', { invite: room.invite, nickname });
+  assert.equal((await byLink('z', 'Zaur')).status, 200, 'new student with only a nickname');
+  assert.equal((await call('z', 'GET', '/api/student/me')).data.nickname, 'Zaur');
+  assert.equal((await byLink('z2', 'Zaur')).status, 200, 'coming back with the same nickname on another device');
+  assert.equal((await byLink('z3', 'Leyla')).status, 200, 'link works for an account that has a PIN');
+  assert.equal((await byCode('z5', 'Zaur', '1234')).data.error, 'use_link', 'an account without a PIN is told to use the link');
 
   // level map: first level current, rest locked
   let me = (await call('s', 'GET', '/api/student/me')).data;
@@ -182,13 +198,16 @@ test('courses, rooms, live sessions and levels', async () => {
 
   // PIN reset by teacher
   const pin = (await call('t', 'PATCH', '/api/students/' + leyla, { reset_pin: true })).data.pin;
-  assert.equal((await join('s4', 'Leyla', '1234')).data.error, 'bad_pin');
-  assert.equal((await join('s4', 'Leyla', pin)).status, 200);
+  assert.equal((await byCode('s4', 'Leyla', '1234')).data.error, 'bad_pin');
+  assert.equal((await byCode('s4', 'Leyla', pin)).status, 200);
 
   // ending the session logs everyone out (open student streams are hung up), progress is kept
   const sctl = new AbortController(), sev = [];
   const ses = await fetch(`${base}/api/student/events`, { headers: { cookie: jar.s }, signal: sctl.signal });
   const sdone = (async () => { const dec = new TextDecoder(); try { for await (const c of ses.body) sev.push(dec.decode(c)); } catch {} })();
+  await sleep(100);
+  assert.equal((await byLink('z4', 'Leyla')).data.error, 'nick_online', 'nobody takes over a nickname that is in the lesson');
+  assert.equal((await byLink('s', 'Leyla')).status, 200, 'the same student can always join again');
   await call('t', 'PATCH', '/api/classes/' + id, { live: false });
   await call('t', 'PATCH', '/api/classes/' + id, { daily_limit: 20 }); // broadcasts to the room right after the hang-up
   await sdone; sctl.abort();
@@ -224,7 +243,9 @@ test('courses, rooms, live sessions and levels', async () => {
 // An open event stream that collects its "data:" events as objects.
 function stream(who, url) {
   const ctl = new AbortController(), evs = [];
+  let connected; const ready = new Promise((r) => (connected = r)); // the server subscribes the stream before it answers
   const done = fetch(base + url, { headers: { cookie: jar[who] }, signal: ctl.signal }).then(async (r) => {
+    connected();
     const dec = new TextDecoder(); let buf = '';
     try {
       for await (const c of r.body) {
@@ -237,7 +258,7 @@ function stream(who, url) {
     for (let i = 0; i < 75; i++) { const e = evs.find((x) => x.type === type && !x.seen && where(x)); if (e) { e.seen = true; return e; } await sleep(40); }
     throw new Error(`no "${type}" event on ${url}`);
   };
-  return { evs, done, next, close: () => ctl.abort() };
+  return { evs, done, ready, next, close: () => ctl.abort() };
 }
 
 test('video call: teacher opens it, up to 4 people, setup messages relayed, teacher controls', async () => {
@@ -259,11 +280,19 @@ test('video call: teacher opens it, up to 4 people, setup messages relayed, teac
   assert.equal((await call('va', 'GET', '/api/student/me')).data.call.open, false);
 
   const teacherFeed = stream('tv', `/api/classes/${id}/events`), roomFeed = stream('vb', '/api/student/events');
+  await Promise.all([teacherFeed.ready, roomFeed.ready]); // listening before the call starts, or the news is missed
   assert.equal((await call('tv', 'POST', `/api/classes/${id}/call`, { open: true })).data.open, true);
   assert.equal((await roomFeed.next('call')).call.open, true, 'students are told a call started');
   const T = stream('tv', `/api/classes/${id}/call/events`), tw = await T.next('welcome');
   assert.deepEqual(tw.peers, []);
   assert.ok(tw.iceServers.some((s) => String(s.urls).startsWith('stun:')), 'browsers get a STUN server');
+  // the relay: the server asks Cloudflare for credentials with its own token, and browsers only get the short-lived ones
+  assert.deepEqual(turnAuth, ['POST', '/v1/turn/keys/key1/credentials/generate-ice-servers', 'Bearer tok1']);
+  const turn = tw.iceServers.find((s) => s.username);
+  assert.deepEqual([turn.username, turn.credential], ['u1', 'c1']);
+  assert.deepEqual(turn.urls, ['turn:turn.cloudflare.com:3478?transport=udp', 'turns:turn.cloudflare.com:443?transport=tcp'], 'port 53 is left out');
+  assert.ok(!JSON.stringify(tw.iceServers).includes('tok1'), 'the API token never reaches a browser');
+  assert.equal(tw.relay, true, 'browsers know a relay is there');
 
   const A = stream('va', '/api/student/call/events'), aw = await A.next('welcome');
   assert.deepEqual(aw.peers.map((p) => [p.kind, p.name]), [['teacher', 'Vera']], 'the newcomer learns who is already in');

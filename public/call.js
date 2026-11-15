@@ -15,6 +15,10 @@ addStrings({
     call_https: 'Video calls need a secure (https) connection and a modern browser.', call_connecting: 'connecting…',
     call_min: 'Make smaller', call_max: 'Make bigger', call_confirmEnd: 'End the video call for everyone?', call_inCall: 'in the video call',
     call_private: 'Nothing is recorded. Your camera and microphone stay off until you turn them on.',
+    call_noconn: '⚠️ no connection', call_sound: '🔊 Tap to hear everyone',
+    call_failNoRelay: 'Video cannot get through to someone in the call. Their internet (often mobile data or a school network) blocks direct video calls. Whoever runs PromptPlay can fix this by turning on a TURN relay (README, "Video call").',
+    call_failRelay: 'Video cannot get through to someone in the call. Ask them to reload the page, or to try another network.',
+    call_failStudent: 'The video call cannot connect from this internet. Reload the page, or try another Wi-Fi.',
   },
   az: {
     call_title: '📹 Video zəng', call_start: '📹 Video zəngə başla', call_join: '📹 Zəngə qoşul', call_end: '■ Zəngi hamı üçün bitir',
@@ -26,6 +30,10 @@ addStrings({
     call_https: 'Video zəng üçün təhlükəsiz (https) bağlantı və müasir brauzer lazımdır.', call_connecting: 'qoşulur…',
     call_min: 'Kiçilt', call_max: 'Böyüt', call_confirmEnd: 'Video zəng hamı üçün bitirilsin?', call_inCall: 'video zəngdədir',
     call_private: 'Heç nə yazılmır. Kamera və mikrofon sən açana qədər sönülü qalır.',
+    call_noconn: '⚠️ bağlantı yoxdur', call_sound: '🔊 Səsi açmaq üçün toxun',
+    call_failNoRelay: 'Zəngdəki kiminləsə video bağlantısı qurulmur. Onun interneti (çox vaxt mobil internet və ya məktəb şəbəkəsi) birbaşa video zəngləri bloklayır. PromptPlay-i idarə edən şəxs serverdə TURN relay qoşaraq bunu düzəldə bilər (README, "Video call").',
+    call_failRelay: 'Zəngdəki kiminləsə video bağlantısı qurulmur. Ondan səhifəni yeniləməsini və ya başqa şəbəkə yoxlamasını xahiş et.',
+    call_failStudent: 'Video zəng bu internetdən qoşula bilmir. Səhifəni yenilə və ya başqa Wi-Fi yoxla.',
   },
 });
 
@@ -54,6 +62,7 @@ class Call {
     this.opts = opts; this.id = null; this.ice = []; this.peers = new Map(); this.infos = new Map();
     this.mic = null; this.cam = null; this.screen = null; this.local = new MediaStream();
     this.inbox = Promise.resolve(); this.left = false;
+    this.trying = new Map(); // peer id -> when we first tried to reach them; kept across retries until it works
     this.buildPanel();
   }
 
@@ -73,14 +82,14 @@ class Call {
     if (['ended', 'full', 'removed', 'replaced'].includes(ev.type)) return this.leave(ev.type);
     if (ev.type === 'welcome') { // also after a reconnect: start every connection again with the new id
       for (const p of this.peers.values()) this.closePeer(p);
-      this.id = ev.id; this.ice = ev.iceServers || []; this.max = ev.max; this.infos.clear();
+      this.id = ev.id; this.ice = ev.iceServers || []; this.max = ev.max; this.relay = !!ev.relay; this.infos.clear();
       ev.peers.forEach((info) => this.infos.set(info.id, info));
       this.sendState();
       ev.peers.forEach((info) => this.connect(info).catch((e) => console.warn('call:', e)));
     }
     if (ev.type === 'join') this.infos.set(ev.peer.id, ev.peer);
     if (ev.type === 'peer') { this.infos.set(ev.peer.id, ev.peer); const p = this.peers.get(ev.peer.id); if (p) { p.info = ev.peer; this.renderTile(p); } }
-    if (ev.type === 'leave') { this.infos.delete(ev.id); const p = this.peers.get(ev.id); if (p) this.closePeer(p); }
+    if (ev.type === 'leave') { this.infos.delete(ev.id); this.trying.delete(ev.id); const p = this.peers.get(ev.id); if (p) this.closePeer(p); }
     if (ev.type === 'mute') { if (this.mic?.enabled) { this.setMic(false); toast(t('call_muted')); } }
     if (ev.type === 'signal') this.inbox = this.inbox.then(() => this.onSignal(ev.from, ev.data)).catch((e) => console.warn('call:', e));
     this.render();
@@ -89,15 +98,21 @@ class Call {
   // ---------- connections ----------
   newPeer(info, offerer) {
     const pc = new RTCPeerConnection({ iceServers: this.ice });
-    const p = { info, offerer, pc, stream: new MediaStream(), pending: [], out: Promise.resolve(), senders: {} };
-    this.peers.set(info.id, p);
+    // Video plays muted, which every browser allows by itself; the sound has its own element, which some browsers
+    // (Safari on iPhone and iPad) only start after a tap, so it never holds the picture back.
+    const p = { info, offerer, pc, stream: new MediaStream(), audio: new Audio(), since: this.trying.get(info.id) ?? Date.now(), pending: [], out: Promise.resolve(), senders: {} };
+    this.peers.set(info.id, p); this.trying.set(info.id, p.since);
     pc.onicecandidate = (e) => e.candidate && this.signal(p, { candidate: e.candidate.toJSON() });
     pc.ontrack = (e) => {
       p.stream.addTrack(e.track);
-      if (p.video) { p.video.srcObject = p.stream; p.video.play().catch(() => this.playOnClick()); }
+      if (e.track.kind === 'audio') { p.audio.srcObject = new MediaStream([e.track]); this.playSound(p); }
+      else if (p.video) { p.video.srcObject = p.stream; p.video.play().catch(() => {}); }
     };
+    // Still not connected after a while: say so on the tile, and tell people why once, instead of "connecting…" for ever.
+    setTimeout(() => { if (this.peers.get(info.id) === p) this.render(); }, 20000);
     pc.onconnectionstatechange = () => {
-      this.renderTile(p);
+      if (pc.connectionState === 'connected') { this.trying.delete(info.id); p.since = Date.now(); }
+      this.render();
       // The one who started a connection starts it again when it fails (for example after a network change).
       if (pc.connectionState === 'failed' && p.offerer) setTimeout(() => {
         if (this.peers.get(info.id) !== p || this.left || !this.infos.has(info.id)) return;
@@ -147,14 +162,23 @@ class Call {
     prm.encodings[0].maxBitrate = this.screen ? SCREEN_BITRATE : VIDEO_BITRATE;
     s.setParameters(prm).catch(() => {});
   }
-  // Some browsers only play sound after a click on the page: the next click starts every video.
-  playOnClick() {
-    if (this.unlocking) return;
+  // Some browsers only play sound after a tap on the page: a button says so, and any tap starts every sound.
+  playSound(p) {
+    p.audio.play().then(() => this.soundBlocked(false)).catch(() => this.soundBlocked(true));
+  }
+  soundBlocked(on) {
+    this.panel.querySelector('[data-act="sound"]').hidden = !on;
+    if (!on || this.unlocking) return;
     this.unlocking = true;
-    document.addEventListener('click', () => { this.unlocking = false; for (const p of this.peers.values()) p.video?.play().catch(() => {}); }, { once: true, capture: true });
+    document.addEventListener('click', () => { this.unlocking = false; for (const p of this.peers.values()) if (p.audio.srcObject) this.playSound(p); }, { once: true, capture: true });
+  }
+  // No connection to someone: failed, or still trying after 20 seconds.
+  stuck(p) {
+    const st = p.pc.connectionState;
+    return st === 'failed' || ((st === 'new' || st === 'connecting') && Date.now() - p.since > 19000);
   }
   closePeer(p) {
-    p.pc.close(); p.tile?.remove();
+    p.pc.close(); p.tile?.remove(); p.audio.srcObject = null;
     if (this.peers.get(p.info.id) === p) this.peers.delete(p.info.id);
     this.render();
   }
@@ -202,7 +226,7 @@ class Call {
     if (this.left) return;
     this.left = true; active = null;
     this.es?.close();
-    for (const p of this.peers.values()) p.pc.close();
+    for (const p of this.peers.values()) { p.pc.close(); p.audio.srcObject = null; }
     for (const tr of [this.mic, this.cam, this.screen]) tr?.stop();
     this.panel.remove();
     if (reason !== 'left') toast(t('call_' + reason) || t('call_ended'));
@@ -217,6 +241,8 @@ class Call {
         <button class="ghost icon" data-act="size" title="${t('call_max')}" aria-label="${t('call_max')}">⤢</button>
         <button class="ghost icon" data-act="min" title="${t('call_min')}" aria-label="${t('call_min')}">▁</button></div>
       <div class="tiles"></div>
+      <button class="callsound" data-act="sound" hidden>${t('call_sound')}</button>
+      <p class="callwarn" role="status" hidden></p>
       <p class="muted callnote">${t('call_private')}</p>
       <div class="callbar">
         <button class="ghost" data-act="mic" aria-pressed="false"></button><button class="ghost" data-act="cam" aria-pressed="false"></button>
@@ -231,6 +257,7 @@ class Call {
       if (act === 'cam') this.setCam(!this.cam);
       if (act === 'screen') this.setScreen(!this.screen);
       if (act === 'leave') this.leave();
+      if (act === 'sound') for (const p of this.peers.values()) if (p.audio.srcObject) this.playSound(p);
       if (act === 'end' && confirm(t('call_confirmEnd'))) api(`/api/classes/${this.opts.classId}/call`, 'POST', { open: false }).catch(() => {});
       if (act === 'min') el.classList.toggle('min');
       if (act === 'size') el.classList.toggle('big');
@@ -244,7 +271,7 @@ class Call {
   makeTile(me) {
     const el = document.createElement('div'); el.className = 'tile' + (me ? ' me' : '');
     el.innerHTML = '<video autoplay playsinline></video><span class="tav"></span><span class="tname"></span><span class="tact"></span>';
-    const video = el.querySelector('video'); if (me) video.muted = true; // never hear yourself
+    const video = el.querySelector('video'); video.muted = true; // sound plays from its own element (and never hear yourself)
     return { el, video };
   }
   addTile(p) {
@@ -266,7 +293,7 @@ class Call {
     const ctl = this.opts.teacher && p.info.kind === 'student'
       ? `${p.info.mic ? `<button class="ghost icon" data-act="mute" data-peer="${esc(p.info.id)}" title="${t('call_mute')}" aria-label="${t('call_mute')}">🔇</button>` : ''}
          <button class="ghost icon" data-act="remove" data-peer="${esc(p.info.id)}" title="${t('call_remove')}" aria-label="${t('call_remove')}">✕</button>` : '';
-    this.fillTile(p.tile, p.info, waiting ? t('call_connecting') : this.opts.label?.(p.info) || '', ctl);
+    this.fillTile(p.tile, p.info, this.stuck(p) ? t('call_noconn') : waiting ? t('call_connecting') : this.opts.label?.(p.info) || '', ctl);
   }
   renderMine() {
     const me = this.opts.me || {};
@@ -286,5 +313,9 @@ class Call {
     set('screen', !!this.screen, `🖥️ ${t('call_stopScreen')}`, `🖥️ ${t('call_screen')}`);
     this.renderMine();
     for (const p of this.peers.values()) this.renderTile(p);
+    // The reason stays in the panel for as long as someone cannot be reached, so there is time to read it.
+    const warn = this.panel.querySelector('.callwarn');
+    warn.hidden = ![...this.peers.values()].some((p) => this.stuck(p));
+    if (!warn.hidden) warn.textContent = t(!this.opts.teacher ? 'call_failStudent' : this.relay ? 'call_failRelay' : 'call_failNoRelay');
   }
 }
