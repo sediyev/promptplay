@@ -4,8 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import QRCode from 'qrcode';
-import { db, now, getSetting, setSetting, hashPassword, checkPassword, newToken, newInvite, dayStart, dayRange, newClassCode, purgeOld, migrateLessons } from './db.js';
-import { moderate, chat, evaluate, systemPrompt, pickLang, costOf } from './ai.js';
+import { db, now, getSetting, setSetting, hashPassword, checkPassword, newToken, newInvite, dayStart, dayRange, newClassCode, purgeOld, migrateLessons, SESSION_MS } from './db.js';
+import { moderate, moderateName, moderateReply, chat, evaluate, systemPrompt, pickLang, costOf } from './ai.js';
 import { buildHistory, cutOpenBlock } from './history.js';
 import { LANGS, loadBuiltin, sortCourses, validateCourse, summary, matches, flatten, contentHash, languages } from './library.js';
 
@@ -19,6 +19,8 @@ const SUBMIT_COOLDOWN = +process.env.SUBMIT_COOLDOWN_MS || 15000; // between two
 const app = express();
 app.set('trust proxy', 'loopback'); // Caddy on the same host forwards the real protocol
 app.use(express.json({ limit: '300kb' }));
+// No guessing of file types, no address of ours sent to other sites, and no other site may show our pages in a frame.
+app.use((_req, res, next) => { res.set({ 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'same-origin', 'X-Frame-Options': 'SAMEORIGIN' }); next(); });
 app.use(express.static(PUBLIC));
 // "/" is the public home page (public/index.html, served by express.static); joining and logging in live at /join.
 app.get(['/join', '/join/:token'], (_req, res) => res.sendFile(path.join(PUBLIC, 'join.html')));
@@ -71,12 +73,14 @@ const COOKIE = { user: 'pp_user', student: 'pp_student' };
 function startSession(res, kind, ref) {
   const token = newToken();
   run('INSERT INTO sessions(token,kind,ref,created) VALUES(?,?,?,?)', token, kind, ref, now());
-  res.append('Set-Cookie', `${COOKIE[kind]}=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${30 * 86400}`);
+  // "Secure" (never sent over plain http) whenever the page itself came over https, which is every real deployment.
+  res.append('Set-Cookie', `${COOKIE[kind]}=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${SESSION_MS / 1000}${res.req.secure ? '; Secure' : ''}`);
 }
 function auth(req, _res, next) {
-  const u = one("SELECT * FROM sessions WHERE token=? AND kind='user'", cookie(req, COOKIE.user) || '');
+  const fresh = now() - SESSION_MS; // a login ends on the server too, not only when the browser drops the cookie
+  const u = one("SELECT * FROM sessions WHERE token=? AND kind='user' AND created>?", cookie(req, COOKIE.user) || '', fresh);
   if (u) req.user = one('SELECT id,email,name,role FROM users WHERE id=?', u.ref);
-  const s = one("SELECT * FROM sessions WHERE token=? AND kind='student'", cookie(req, COOKIE.student) || '');
+  const s = one("SELECT * FROM sessions WHERE token=? AND kind='student' AND created>?", cookie(req, COOKIE.student) || '', fresh);
   if (s) req.student = one('SELECT * FROM students WHERE id=?', s.ref);
   next();
 }
@@ -102,7 +106,25 @@ const spent = () => one('SELECT COALESCE(SUM(cost),0) c FROM usage').c;
 const overBudget = () => { const cap = +getSetting('spend_cap', 0); return cap > 0 && spent() >= cap; };
 const logUsage = (cls, stu, u) => u && run('INSERT INTO usage(class_id,student_id,tokens_in,tokens_out,cost,created) VALUES(?,?,?,?,?,?)',
   cls, stu, u.input_tokens, u.output_tokens, costOf(u), now());
-const usedToday = (sid) => one("SELECT COUNT(*) n FROM messages WHERE student_id=? AND role='user' AND created>=?", sid, dayStart()).n;
+// Messages the filter stopped count too: each one cost a check, and trying again and again must not be free.
+const usedToday = (sid) => one("SELECT COUNT(*) n FROM messages WHERE student_id=? AND role IN ('user','blocked') AND created>=?", sid, dayStart()).n;
+
+// Removing students takes everything they wrote and made with them. Cost records stay (they hold numbers, not content).
+function deleteStudents(ids) {
+  for (const id of ids) {
+    endStudentCall(id); attention.delete(id);
+    run("DELETE FROM sessions WHERE kind='student' AND ref=?", id);
+    for (const table of ['progress', 'messages', 'games']) run(`DELETE FROM ${table} WHERE student_id=?`, id);
+    run('DELETE FROM students WHERE id=?', id);
+    publish(`u:${id}`, { type: 'closed' }); hangUp(`u:${id}`);
+  }
+}
+function deleteRoom(room) {
+  if (room.live) closeRoom(room.id);
+  clearTimeout(graceTimers.get(room.id)); graceTimers.delete(room.id);
+  deleteStudents(all('SELECT id FROM students WHERE class_id=?', room.id).map((s) => s.id));
+  run('DELETE FROM classes WHERE id=?', room.id);
+}
 
 // Last complete ```html / ```creation block in an AI reply.
 function extractOutput(text, kind) {
@@ -111,6 +133,18 @@ function extractOutput(text, kind) {
   while ((m = re.exec(text))) last = m[1].trim();
   return last;
 }
+
+// The newest game or creation the tutor made for this student on this level, however long ago.
+function latestOutput(sid, level) {
+  if (level.output === 'chat') return null;
+  const tag = '```' + (level.output === 'game' ? 'html' : 'creation');
+  for (const m of all("SELECT content FROM messages WHERE student_id=? AND level_id=? AND role='assistant' AND instr(content, ?) ORDER BY id DESC LIMIT 5", sid, level.id, tag)) {
+    const out = extractOutput(m.content, level.output);
+    if (out) return out;
+  }
+  return null;
+}
+const outputTitle = (level, output) => ((level.output === 'game' ? output.match(/<title>([^<]*)<\/title>/i)?.[1].trim() : output.split('\n')[0].replace(/[#*]/g, '').trim()) || level.title).slice(0, 40);
 
 // ---------- courses ----------
 const OUTPUTS = ['game', 'creation', 'chat'];
@@ -246,9 +280,16 @@ function setProgress(sid, levelId, status, stars, feedback, outputId) {
 }
 
 // ---------- auth ----------
+// Guessing passwords: after 10 wrong tries from one address, or 20 for one email, logging in waits 15 minutes.
+const LOGIN_WINDOW = 15 * 60000, loginFails = new Map(); // key -> { n, first }
+const failsOf = (key) => { const f = loginFails.get(key); if (f && now() - f.first > LOGIN_WINDOW) loginFails.delete(key); return loginFails.get(key)?.n || 0; };
+const addFail = (key) => { failsOf(key) ? loginFails.get(key).n++ : loginFails.set(key, { n: 1, first: now() }); };
 app.post('/api/login', (req, res) => {
-  const u = one('SELECT * FROM users WHERE email=?', String(req.body.email || '').trim().toLowerCase());
-  if (!u || !checkPassword(String(req.body.password || ''), u.pass)) return fail(res, 401, 'bad_login');
+  const email = String(req.body.email || '').trim().toLowerCase().slice(0, 200), byIp = 'ip:' + req.ip, byEmail = 'e:' + email;
+  if (failsOf(byIp) >= 10 || failsOf(byEmail) >= 20) return fail(res, 429, 'login_locked');
+  const u = one('SELECT * FROM users WHERE email=?', email);
+  if (!u || !checkPassword(String(req.body.password || ''), u.pass)) { addFail(byIp); addFail(byEmail); return fail(res, 401, 'bad_login'); }
+  loginFails.delete(byEmail);
   startSession(res, 'user', u.id);
   res.json({ role: u.role });
 });
@@ -285,7 +326,7 @@ app.get('/api/classes', needTeacher, (req, res) =>
 app.get('/api/classes/:id', needTeacher, ownClass, (req, res) => {
   const levels = courseLevels(req.cls.course_id), course = one('SELECT id,title FROM courses WHERE id=?', req.cls.course_id);
   const students = all(`SELECT s.id,s.nickname,s.avatar,s.paused,s.last_seen,
-      (SELECT COUNT(*) FROM messages m WHERE m.student_id=s.id AND m.role='user' AND m.created>=?) used,
+      (SELECT COUNT(*) FROM messages m WHERE m.student_id=s.id AND m.role IN ('user','blocked') AND m.created>=?) used,
       (SELECT COUNT(*) FROM games g WHERE g.student_id=s.id) outputs
     FROM students s WHERE s.class_id=? ORDER BY s.nickname`, dayStart(), req.cls.id).map((s) => {
     const map = levelMap(s, req.cls.course_id), cur = map.find((l) => l.status !== 'done' && l.status !== 'locked');
@@ -308,6 +349,8 @@ app.patch('/api/classes/:id', needTeacher, ownClass, (req, res) => {
   publish(`s:${req.cls.id}`, { type: 'state' });
   res.json({ ok: true });
 });
+// Deleting a room removes its students with everything they wrote and made. The course stays.
+app.delete('/api/classes/:id', needTeacher, ownClass, (req, res) => { deleteRoom(req.cls); res.json({ ok: true }); });
 const joinUrl = (req, invite) => `${process.env.PUBLIC_URL || `${req.protocol}://${req.get('host')}`}/join/${invite}`;
 app.get('/api/classes/:id/qr.svg', needTeacher, ownClass, async (req, res) =>
   res.type('image/svg+xml').send(await QRCode.toString(joinUrl(req, req.cls.invite), { type: 'svg', margin: 1 })));
@@ -329,11 +372,8 @@ app.patch('/api/students/:id', needTeacher, ownStudent, (req, res) => {
   res.json({ ok: true, pin });
 });
 app.delete('/api/students/:id', needTeacher, ownStudent, (req, res) => {
-  run('DELETE FROM sessions WHERE kind=? AND ref=?', 'student', req.stu.id);
-  run('DELETE FROM progress WHERE student_id=?', req.stu.id);
-  run('DELETE FROM students WHERE id=?', req.stu.id);
-  endStudentCall(req.stu.id);
-  publish(`u:${req.stu.id}`, { type: 'closed' }); hangUp(`u:${req.stu.id}`);
+  deleteStudents([req.stu.id]);
+  publish(`t:${req.stu.class_id}`, { type: 'usage' }); // their work leaves the gallery
   res.json({ ok: true });
 });
 // Teacher overrides: approve or reject a pending level, pass (skip) any level, or reset one so it is played again.
@@ -374,6 +414,14 @@ app.get('/api/classes/:id/events', needTeacher, ownClass, (req, res) => {
 app.get('/api/classes/:id/games', needTeacher, ownClass, (req, res) =>
   res.json(all(`SELECT g.id,g.title,g.html,g.kind,g.shared,g.created,g.student_id,g.level_id,s.nickname,s.avatar,l.title level FROM games g
     JOIN students s ON s.id=g.student_id LEFT JOIN levels l ON l.id=g.level_id WHERE g.class_id=? ORDER BY g.id DESC LIMIT 300`, req.cls.id)));
+// The teacher can take any game or creation back out of the class gallery (the student keeps it).
+app.post('/api/games/:id/unshare', needTeacher, (req, res) => {
+  const g = one('SELECT g.id,g.class_id FROM games g JOIN classes c ON c.id=g.class_id WHERE g.id=? AND c.teacher_id=?', +req.params.id, req.user.id);
+  if (!g) return fail(res, 404, 'not_found');
+  run('UPDATE games SET shared=0 WHERE id=?', g.id);
+  publish(`s:${g.class_id}`, { type: 'gallery' });
+  res.json({ ok: true });
+});
 app.post('/api/games/:id/showcase', needTeacher, (req, res) => {
   const g = one('SELECT g.title,g.html,g.kind,s.nickname,g.class_id FROM games g JOIN students s ON s.id=g.student_id JOIN classes c ON c.id=g.class_id WHERE g.id=? AND c.teacher_id=?', +req.params.id, req.user.id);
   if (!g) return fail(res, 404, 'not_found');
@@ -390,7 +438,8 @@ app.get('/api/invite/:token', (req, res) => {
   c ? res.json({ name: c.name, course: c.course, kind: c.kind, live: !!c.live, avatars: AVATARS }) : fail(res, 404, 'bad_invite');
 });
 app.get('/api/avatars', (_req, res) => res.json(AVATARS));
-app.post('/api/join', (req, res) => {
+const nameOk = new Map(); // nickname -> verdict, so a class joining at once is not checked name by name twice
+app.post('/api/join', async (req, res) => {
   const cls = findRoom(req.body || {});
   const nick = String(req.body.nickname || '').trim().replace(/\s+/g, ' ').slice(0, 20), pin = String(req.body.pin || '');
   if (!cls) return fail(res, 404, req.body.invite ? 'bad_invite' : 'bad_code');
@@ -415,9 +464,20 @@ app.post('/api/join', (req, res) => {
     pinFails.delete(stu.id);
     if (legacy) run('UPDATE students SET pin=? WHERE id=?', hashPassword(pin), stu.id);
   } else {
+    // A new nickname is shown to the whole class, so it goes through the filter once (returning students are not asked again).
+    const key = nick.toLowerCase();
+    if (!nameOk.has(key)) {
+      const chk = await moderateName(nick);
+      logUsage(cls.id, null, chk.usage);
+      if (nameOk.size > 5000) nameOk.clear();
+      nameOk.set(key, chk.ok);
+    }
+    if (!nameOk.get(key)) return fail(res, 400, 'bad_nick_words');
     const avatar = AVATARS.includes(req.body.avatar) ? req.body.avatar : AVATARS[0];
-    const r = run('INSERT INTO students(class_id,nickname,pin,avatar,created,last_seen) VALUES(?,?,?,?,?,?)', cls.id, nick, PIN_RE.test(pin) ? hashPassword(pin) : null, avatar, now(), now());
-    stu = { id: +r.lastInsertRowid };
+    try {
+      const r = run('INSERT INTO students(class_id,nickname,pin,avatar,created,last_seen) VALUES(?,?,?,?,?,?)', cls.id, nick, PIN_RE.test(pin) ? hashPassword(pin) : null, avatar, now(), now());
+      stu = { id: +r.lastInsertRowid };
+    } catch { return fail(res, 409, 'nick_online'); } // two browsers took the same new nickname in the same moment
   }
   startSession(res, 'student', stu.id);
   publish(`t:${cls.id}`, { type: 'room' });
@@ -496,7 +556,15 @@ app.post('/api/student/typing', needStudent, (req, res) => {
   res.json({ ok: true });
 });
 
+// One message at a time for each student: a second one sent before the first is answered would slip past the daily limit.
+const chatting = new Set();
+const REPLY_CHECK = process.env.REPLY_CHECK !== 'off'; // the tutor's replies go through the safety filter too
 app.post('/api/chat', needStudent, async (req, res) => {
+  if (chatting.has(req.student.id)) return fail(res, 429, 'busy');
+  chatting.add(req.student.id);
+  try { await answer(req, res); } finally { chatting.delete(req.student.id); }
+});
+async function answer(req, res) {
   const stu = req.student, room = req.room;
   const text = String(req.body.text || '').trim().slice(0, 1500);
   if (!text) return fail(res, 400, 'empty');
@@ -525,12 +593,7 @@ app.post('/api/chat', needStudent, async (req, res) => {
   // Conversation context: the recent turns of this level, with every game or creation but the newest taken out (history.js).
   // When the newest one is older than those turns, it goes into the system prompt so the tutor can still change it.
   const { messages: msgs, hasOutput } = buildHistory(all("SELECT role,content FROM messages WHERE student_id=? AND level_id=? AND role IN ('user','assistant') AND flag IS NOT 'refused' ORDER BY id DESC LIMIT 16", stu.id, level.id).reverse());
-  let current = null;
-  if (!hasOutput && level.output !== 'chat') {
-    const tag = level.output === 'game' ? 'html' : 'creation';
-    for (const m of all("SELECT content FROM messages WHERE student_id=? AND level_id=? AND role='assistant' AND instr(content, ?) ORDER BY id DESC LIMIT 5", stu.id, level.id, '```' + tag))
-      if ((current = extractOutput(m.content, level.output))) break;
-  }
+  const current = hasOutput ? null : latestOutput(stu.id, level);
 
   // The teacher watches the reply arrive live: chunks are batched every 250ms to keep the feed light.
   let pending = '', flushT = null;
@@ -545,9 +608,17 @@ app.post('/api/chat', needStudent, async (req, res) => {
     // A reply that ran out of room stops in the middle of the game file: half a game is no use, so it is dropped and the
     // student is told to ask for something smaller. A reply the model's safeguards declined is not kept at all.
     // The page reads the reason after a NUL at the end of the stream (the same way as "error" below).
-    const kept = stop === 'refusal' ? '' : stop === 'max_tokens' ? cutOpenBlock(reply) : reply;
-    const mark = stop === 'refusal' ? 'refused' : kept !== reply || !reply.trim() ? 'cut' : '';
-    if (kept.trim()) { save('assistant', kept, mark); emit('assistant', kept, mark); } else publish(tch, { type: 'delta_end', student_id: stu.id });
+    let kept = stop === 'refusal' ? '' : stop === 'max_tokens' ? cutOpenBlock(reply) : reply;
+    let mark = stop === 'refusal' ? 'refused' : kept !== reply || !reply.trim() ? 'cut' : '';
+    // The finished reply goes through the safety filter as well. One that fails is taken back from the student's screen,
+    // kept out of the conversation, and shown to the teacher as an alert with what the tutor had written.
+    if (REPLY_CHECK && kept.trim()) {
+      const chk = await moderateReply(kept);
+      logUsage(room.id, stu.id, chk.usage);
+      if (!chk.ok) { save('withheld', kept, chk.category); emit('withheld', kept, chk.category); kept = ''; mark = 'withdrawn'; }
+    }
+    if (kept.trim()) { save('assistant', kept, mark); emit('assistant', kept, mark); }
+    else publish(tch, { type: 'delta_end', student_id: stu.id });
     // A declined question is left out of later requests, or it would be sent again with the next one and decline that too.
     if (mark === 'refused') run("UPDATE messages SET flag='refused' WHERE id=?", asked);
     if (mark) { console.warn(`chat reply ${mark} (student ${stu.id}, level ${level.id})`); res.write('\u0000' + mark); }
@@ -559,7 +630,7 @@ app.post('/api/chat', needStudent, async (req, res) => {
     res.write('\u0000error');
   }
   res.end();
-});
+}
 
 // "Check my work": saves the level's output to the gallery, then the evaluator (or the teacher) decides.
 const lastSubmit = new Map();
@@ -584,9 +655,8 @@ app.post('/api/levels/:id/submit', needStudent, async (req, res) => {
 
   let outputId = null;
   if (output) {
-    const title = level.output === 'game' ? (output.match(/<title>([^<]*)<\/title>/i)?.[1].trim() || level.title) : output.split('\n')[0].replace(/[#*]/g, '').trim();
     outputId = +run('INSERT INTO games(class_id,student_id,level_id,kind,title,html,created) VALUES(?,?,?,?,?,?,?)',
-      room.id, stu.id, level.id, level.output, title.slice(0, 40) || level.title, output.slice(0, 200000), now()).lastInsertRowid;
+      room.id, stu.id, level.id, level.output, outputTitle(level, output), output.slice(0, 200000), now()).lastInsertRowid;
   }
   const course = one('SELECT title,library_lang FROM courses WHERE id=?', room.course_id);
   const r = await evaluate(level, transcript, level.output === 'game' ? output?.slice(0, 20000) : output, pickLang(req.body?.lang, course, level));
@@ -610,23 +680,29 @@ const gameOwner = (req, res, next) => {
   req.game = one('SELECT * FROM games WHERE id=? AND student_id=?', +req.params.id, req.student.id);
   req.game ? next() : fail(res, 404, 'not_found');
 };
+// "Save": puts the level's newest game or creation in the gallery. The page only says which level; the content is what the
+// tutor made (already filtered), never something the browser sends, so nothing unchecked can be saved and shared with the class.
 app.post('/api/games', needStudent, (req, res) => {
-  const html = String(req.body.html || ''), title = String(req.body.title || '').trim().slice(0, 40) || 'Game';
-  const kind = req.body.kind === 'creation' ? 'creation' : 'game';
-  if (!html || html.length > 200000) return fail(res, 400, 'bad_game');
-  const level = req.body.level_id && openLevel(req.student, req.room.course_id, +req.body.level_id);
+  const level = openLevel(req.student, req.room.course_id, +req.body.level_id);
+  const output = level && latestOutput(req.student.id, level);
+  if (!output) return fail(res, 400, 'no_output');
+  const same = one('SELECT id FROM games WHERE student_id=? AND level_id=? AND html=?', req.student.id, level.id, output.slice(0, 200000));
+  if (same) return res.json({ id: same.id }); // pressed "Save" twice
   const r = run('INSERT INTO games(class_id,student_id,level_id,kind,title,html,created) VALUES(?,?,?,?,?,?,?)',
-    req.student.class_id, req.student.id, level?.id ?? null, kind, title, html, now());
+    req.student.class_id, req.student.id, level.id, level.output, outputTitle(level, output), output.slice(0, 200000), now());
   publish(`t:${req.student.class_id}`, { type: 'usage' }); // teacher gallery refresh
   res.json({ id: +r.lastInsertRowid });
 });
 app.get('/api/games', needStudent, (req, res) => res.json(studentGallery(req.student)));
 app.patch('/api/games/:id', needStudent, gameOwner, (req, res) => {
   run('UPDATE games SET shared=? WHERE id=?', req.body.shared ? 1 : 0, req.game.id);
+  publish(`s:${req.game.class_id}`, { type: 'gallery' }); publish(`t:${req.game.class_id}`, { type: 'usage' }); // classmates and the teacher see it at once
   res.json({ ok: true });
 });
 app.delete('/api/games/:id', needStudent, gameOwner, (req, res) => {
   run('DELETE FROM games WHERE id=?', req.game.id);
+  if (req.game.shared) publish(`s:${req.game.class_id}`, { type: 'gallery' });
+  publish(`t:${req.game.class_id}`, { type: 'usage' });
   res.json({ ok: true });
 });
 
@@ -785,7 +861,30 @@ app.post('/api/call/state', ownPeer, (req, res) => {
 });
 
 // ---------- admin ----------
-app.get('/api/admin/teachers', needAdmin, (_req, res) => res.json(all("SELECT id,email,name FROM users WHERE role='teacher' ORDER BY id")));
+app.get('/api/admin/teachers', needAdmin, (_req, res) => res.json(all(`SELECT u.id,u.email,u.name,
+    (SELECT COUNT(*) FROM classes c WHERE c.teacher_id=u.id) rooms, (SELECT COUNT(*) FROM courses c WHERE c.teacher_id=u.id) courses
+  FROM users u WHERE u.role='teacher' ORDER BY u.id`)));
+const teacherRow = (req, res, next) => {
+  req.teacher = one("SELECT id FROM users WHERE id=? AND role='teacher'", +req.params.id);
+  req.teacher ? next() : fail(res, 404, 'not_found');
+};
+// A new password for a teacher who forgot theirs. Every browser they were logged in on has to log in again.
+app.patch('/api/admin/teachers/:id', needAdmin, teacherRow, (req, res) => {
+  const pw = String(req.body.password || '');
+  if (pw.length < 6) return fail(res, 400, 'invalid');
+  run('UPDATE users SET pass=? WHERE id=?', hashPassword(pw), req.teacher.id);
+  run("DELETE FROM sessions WHERE kind='user' AND ref=?", req.teacher.id);
+  res.json({ ok: true });
+});
+// Removing a teacher removes their rooms (with the students' work) and their courses as well.
+app.delete('/api/admin/teachers/:id', needAdmin, teacherRow, (req, res) => {
+  for (const room of all('SELECT * FROM classes WHERE teacher_id=?', req.teacher.id)) deleteRoom(room);
+  run('DELETE FROM levels WHERE course_id IN (SELECT id FROM courses WHERE teacher_id=?)', req.teacher.id);
+  run('DELETE FROM courses WHERE teacher_id=?', req.teacher.id);
+  run("DELETE FROM sessions WHERE kind='user' AND ref=?", req.teacher.id);
+  run('DELETE FROM users WHERE id=?', req.teacher.id);
+  res.json({ ok: true });
+});
 app.post('/api/admin/teachers', needAdmin, (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase(), name = String(req.body.name || '').trim(), pw = String(req.body.password || '');
   if (!email.includes('@') || !name || pw.length < 6) return fail(res, 400, 'invalid');
@@ -843,6 +942,6 @@ if (!process.env.ANTHROPIC_API_KEY) console.warn('ANTHROPIC_API_KEY is not set; 
 migrateLessons();
 for (const c of all('SELECT id,kind FROM classes WHERE live=1')) { armGrace(c.id); if (isMeeting(c)) openCall(c.id); } // after a restart, give teachers time to reconnect
 purgeOld();
-setInterval(purgeOld, 3600000).unref();
+setInterval(() => { purgeOld(); for (const k of loginFails.keys()) failsOf(k); }, 3600000).unref();
 const port = +process.env.PORT || 3000;
 app.listen(port, () => console.log(`PromptPlay on http://localhost:${port}`));

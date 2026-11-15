@@ -183,12 +183,22 @@ Helps the teacher notice who may not be following along, without getting in the 
 - **Kept briefly**: the counts live in the server's memory for the current session only and start fresh when the session ends. Nothing is written to the database.
 
 ## Safety model
-1. Every student message goes through a Haiku classifier first. Unsafe messages are logged, shown to the teacher as an alert (self-harm is highlighted red), and never reach the main AI. Classifier errors fail closed.
-2. Lesson-scoped, child-safe system prompt (no personal info, refuse adult/off-topic).
-3. Games run in `<iframe sandbox="allow-scripts">` (opaque origin) with a CSP of `default-src 'none'`: no network, storage, cookies or access to the platform.
-4. Only a nickname, an avatar and, for students who join with the class code, a hashed PIN are stored. Wrong PINs lock that account for 5 minutes after 5 tries. Messages, games and idle students are deleted after the admin-set retention (default 30 days).
-5. Admin spend cap is checked before every chat; cost is logged per class/teacher.
-6. Video calls happen only inside a live room that the teacher opened, with the teacher always able to mute or remove anyone. Students start with camera and microphone off, and nothing is recorded or stored. Only browsers that hold a place in the call can send it setup messages.
+1. **What students write** goes through a Haiku classifier first. Unsafe messages are logged, shown to the teacher as an alert (self-harm is highlighted red), and never reach the main AI. Classifier errors fail closed.
+2. **What the AI writes** goes through the same kind of check once the reply is complete. A reply that fails is taken back from the student's screen with a kind note, is never kept in the conversation, and reaches the teacher as an alert together with what the AI had written. The student sees the words for a moment while they stream; `REPLY_CHECK=off` turns the check off. If the check itself fails, the reply stays (points 1 and 3 still apply).
+3. Lesson-scoped, child-safe system prompt (no personal info, refuse adult/off-topic).
+4. **Nicknames** are checked when a student joins for the first time: rude words, phone numbers and first name plus surname are turned away. A plain first name is allowed.
+5. **Games** run in `<iframe sandbox="allow-scripts">` (opaque origin) with a CSP of `default-src 'none'`: no network, storage, cookies or access to the platform. The policy is the first thing in the frame's document, so nothing in a game can come before it and switch it off.
+6. **The gallery** only holds what the AI made. "Save" tells the server which level; the server stores that level's newest game or creation itself and takes nothing from the browser. A student can share a saved game with the class, and the teacher can take any game back out of the class gallery ("Stop sharing" under "Student work").
+7. Only a nickname, an avatar and, for students who join with the class code, a hashed PIN are stored. Wrong PINs lock that account for 5 minutes after 5 tries.
+8. **Retention**: chat messages are deleted after the admin-set number of days (default 30). A student's games, creations and progress stay for as long as the student keeps coming, because a course runs for weeks, and are deleted with the student that many days after their last lesson. "Remove student" and "Delete this room" (in the room's ⚙️ menu) delete the students' chats, games and progress at once.
+9. **Limits**: the admin spend cap is checked before every chat, and cost is logged per class and teacher. A student sends one message at a time and has a daily limit; messages the filter stopped count against it.
+10. **Accounts**: after 10 wrong passwords from one address (or 20 for one email) logging in waits 15 minutes. A login lasts 30 days, on the server as well as in the browser, and its cookie is only sent over https. The admin can give a teacher a new password or remove a teacher (with their rooms and courses) on `/admin.html`.
+11. Video calls happen only inside a live room that the teacher opened, with the teacher always able to mute or remove anyone. Students start with camera and microphone off, and nothing is recorded or stored. Only browsers that hold a place in the call can send it setup messages.
+
+## Running it for real
+- **Backups**: all data is one SQLite file (`promptplay.db`, or `DB_PATH`). `npm run backup` writes a complete copy to `backups/` while the app keeps running, checks that the copy opens, and keeps the newest 14 (`BACKUP_DIR`, `BACKUP_KEEP`). Run it every night, for example with cron: `0 3 * * * cd /srv/promptplay && npm run backup`, and copy the folder to another machine now and then. To restore, stop the app, put a copy in place of `promptplay.db` and start it again.
+- **Checks**: `.github/workflows/test.yml` runs `npm test` on every pull request and on `main`.
+- **Dependencies** are pinned in `package-lock.json`; `npm audit` should report nothing.
 
 ## Home page
 `public/index.html` is the public landing page. Plain HTML, CSS and ES modules: no framework, no build step, no CDN, fonts or trackers (zero third-party requests); the only images are the mascot files in `public/mascot/`. Page weight: about 155 KB of code in total (about 50 KB gzipped) plus about 15 KB of mascot art; `npm test` enforces both budgets.
@@ -227,6 +237,7 @@ Helps the teacher notice who may not be following along, without getting in the 
   There is also a hidden social proof section (`#proof`) with a TODO: only add real, permitted quotes or numbers, never invented ones.
 
 ## Known pilot limits
-- Replies stream to the student as they are generated; they are not re-checked after generation (input filter + system prompt only). If the pilot needs "zero unsafe replies" strictly, buffer and classify replies before display.
+- The AI's reply is checked after it has streamed, so a student can read an unsuitable reply for a moment before it is taken back. If the pilot needs "never shown at all", buffer the reply and check it before display (slower: the student waits for the whole answer).
 - The level evaluator is an AI judgement: a student could try to talk it into a pass. The teacher sees every submission and can reset a level, or switch the room to "teacher approves".
-- No password reset (admin adds teachers; reset by editing the DB or re-adding), no rate limiting on login.
+- Everything runs in one process with its state in memory (who is online, calls, login tries), so it cannot be spread over several servers as it is.
+- A teacher cannot change their own password; the admin sets a new one.

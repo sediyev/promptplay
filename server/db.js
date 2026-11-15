@@ -79,14 +79,16 @@ export function newClassCode() {
   }
 }
 
+export const SESSION_MS = 30 * DAY; // a login lasts this long, for teachers and students alike
+// Retention: chat messages go after the admin-set number of days. A student's games, creations and progress stay for as
+// long as the student keeps coming (a course runs for weeks), and go with the student that many days after their last lesson.
 export function purgeOld() {
   const days = +getSetting('retention_days', 30);
   const cutoff = now() - days * DAY;
   db.prepare('DELETE FROM messages WHERE created<?').run(cutoff);
-  db.prepare('DELETE FROM games WHERE created<?').run(cutoff);
   db.prepare('DELETE FROM students WHERE last_seen<?').run(cutoff);
-  db.prepare("DELETE FROM sessions WHERE kind='student' AND ref NOT IN (SELECT id FROM students)").run();
-  db.prepare('DELETE FROM progress WHERE student_id NOT IN (SELECT id FROM students)').run();
+  for (const table of ['messages', 'games', 'progress']) db.prepare(`DELETE FROM ${table} WHERE student_id NOT IN (SELECT id FROM students)`).run();
+  db.prepare("DELETE FROM sessions WHERE created<? OR (kind='student' AND ref NOT IN (SELECT id FROM students))").run(now() - SESSION_MS);
 }
 
 // Pilot classes had a flat list of lessons; turn each class's lessons into a course of levels so nothing is lost.

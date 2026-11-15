@@ -36,6 +36,7 @@
 import { md } from '/md.js';
 import { api, t, getLang, applyI18n, toggleLang, esc, $, onEvents, extractGame, gameFrame, creationCard, stars, toast, langHtml } from '/common.js';
 import { joinCall, inCall } from '/call.js';
+import '/app-i18n.js';
 applyI18n(); $('#lang').innerHTML = langHtml(); $('#lang').onclick = toggleLang;
 let me, level = null, current = null, busy = false;
 // "Student view": the teacher opens this page with ?student=<id> to see what the student sees, read-only.
@@ -183,10 +184,9 @@ function openModal(g, label) {
   if (!$('#modal').open) $('#modal').showModal();
 }
 $('#modal').onclose = () => $('#mb').replaceChildren(); // stops the game that was playing
+// The page only says which level: the server saves the newest game or creation the tutor made there.
 $('#save').onclick = async () => {
-  const m = current.kind === 'game' && current.content.match(/<title>([^<]*)<\/title>/i);
-  const title = current.kind === 'creation' ? current.content.split('\n')[0].replace(/[#*]/g, '').trim() : (m && m[1].trim()) || level.title;
-  await api('/api/games', 'POST', { html: current.content, kind: current.kind, title, level_id: level.id });
+  try { await api('/api/games', 'POST', { level_id: level.id }); } catch (x) { return toast(t(x.code), 'bad'); }
   $('#save').textContent = t('saved'); setTimeout(() => ($('#save').textContent = t('save')), 1500); loadGames();
 };
 
@@ -229,13 +229,13 @@ $('#form').onsubmit = async (e) => {
         setMsg(bubble, display(full.split('\u0000')[0]) || t('thinking')); $('#log').scrollTop = 1e9;
       }
       // After a NUL the server says how the reply ended badly: an error, cut off for being too long, or declined.
-      const [body, mark] = full.split('\u0000'), note = { error: 'try_again', cut: 'cutOffMsg', refused: 'refusedMsg' }[mark];
+      const [body, mark] = full.split('\u0000'), note = { error: 'try_again', cut: 'cutOffMsg', refused: 'refusedMsg', withdrawn: 'withdrawnMsg' }[mark];
       if (note) {
         const kept = mark === 'cut' ? display(body, true) : '';
         if (kept) setMsg(bubble, kept); else bubble.remove();
         addMsg('note', t(note));
       }
-      const out = level.output !== 'chat' && extractGame(body, tag(level.output)); if (out) { showOutput(out); freshOutput(); }
+      const out = mark !== 'withdrawn' && level.output !== 'chat' && extractGame(body, tag(level.output)); if (out) { showOutput(out); freshOutput(); }
     }
   } catch { bubble.className = 'msg note'; bubble.textContent = t('try_again'); }
   busy = false; await refresh().catch(() => {});
@@ -281,6 +281,7 @@ if (viewId) {
     if (ev.type === 'closed') { es.close(); return ended(); }
     if (ev.type === 'state') refresh().catch(() => {});
     if (ev.type === 'call') { me.call = ev.call; renderCall(); }
+    if (ev.type === 'gallery' && !meeting()) loadGames(); // the teacher took something out of the class gallery
     if (ev.type === 'progress') {
       toast(t('teacher_' + ev.action) + (ev.feedback ? ' ' + ev.feedback : ''), ev.action === 'pass' ? 'ok' : '');
       await refresh().catch(() => {});

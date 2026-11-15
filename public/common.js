@@ -145,19 +145,6 @@ Object.assign(DICT.az, {
   openView: '👁 Ekranına bax', studentView: 'ekranı (yalnız baxış)', watching: '👁 Şagirdin ekranına baxırsınız (yalnız baxış):', toDashboard: '← Panelə qayıt',
   resetPinL: '🔑 Yeni PIN', removeStudent: '✕ Şagirdi çıxar', rejectNote: 'Nə üzərində işləməlidir? (istəyə bağlı, şagird bunu görür)', roomSettings: 'Otaq ayarları',
 });
-// Video meeting rooms, and replies that ended badly
-Object.assign(DICT.en, {
-  mt_label: '📹 Video meeting', mt_wait: 'Your teacher has not opened the meeting yet. Stay on this page: the button to join appears here.',
-  mt_ready: 'Your teacher is in the meeting. Come in!', seenMeet: '👀 Your teacher can see whether this page is open in front of you. Nothing is recorded.',
-  cutOffMsg: '✂️ That answer got too long and was cut off before it finished. Ask for something smaller or simpler, or ask for one change at a time.',
-  refusedMsg: "I can't help with that one. Let's get back to our task. 😊",
-});
-Object.assign(DICT.az, {
-  mt_label: '📹 Video görüş', mt_wait: 'Müəllim hələ görüşü açmayıb. Bu səhifədə qal: qoşulma düyməsi burada görünəcək.',
-  mt_ready: 'Müəllim görüşdədir. Gəl, qoşul!', seenMeet: '👀 Müəllim bu səhifənin qarşında açıq olub-olmadığını görə bilir. Heç nə yazılmır.',
-  cutOffMsg: '✂️ Cavab çox uzun oldu və yarımçıq qaldı. Daha kiçik və ya sadə bir şey istə, ya da dəyişiklikləri bir-bir istə.',
-  refusedMsg: 'Bu barədə kömək edə bilmirəm. Gəl tapşırığımıza qayıdaq. 😊',
-});
 let lang = 'az';
 try { const saved = localStorage.getItem('lang'); if (DICT[saved]) lang = saved; } catch {}
 document.documentElement.lang = lang;
@@ -211,11 +198,12 @@ export function extractGame(text, tag = 'html') {
 }
 
 // Sandboxed iframe: scripts only, opaque origin, no network (CSP). Games can't touch the platform or each other.
+// The policy is the very first thing in the document, ahead of anything the game brings: placed after the game's own
+// <head> it could be switched off by a game that hides a "<head>" in a comment in front of it.
 const CSP = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; media-src data:; font-src data:; form-action 'none'">`;
 export function gameDoc(html) {
-  const head = html.match(/<head[^>]*>/i);
-  if (head) return html.replace(head[0], head[0] + CSP);
-  return `<!doctype html><html><head><meta charset="utf-8">${CSP}</head><body>${html}</body></html>`;
+  // The browser folds the game's own doctype, <html> and <head> into the ones started here.
+  return `<!doctype html><meta charset="utf-8">${CSP}${html}`;
 }
 export function gameFrame(html) {
   const f = document.createElement('iframe');

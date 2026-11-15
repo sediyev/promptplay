@@ -37,6 +37,7 @@ const fake = http.createServer((req, res) => {
     // "hugegame": the reply runs out of room in the middle of the game file; "refuseme": the model declines; "justtalk": no game
     const stop = said.includes('hugegame') ? 'max_tokens' : said.includes('refuseme') ? 'refusal' : 'end_turn';
     const reply = stop === 'max_tokens' ? 'Here it comes!\n```html\n<!doctype html><html><body><p>half a ga' : stop === 'refusal' ? '' : said.includes('justtalk') ? 'Sure, tell me more.'
+      : said.includes('unsafereply') ? 'Here is something with a badword in it.' // the tutor itself says something the filter stops
       : String(body.system).includes('Making creations') ? 'Nice!\n```creation\nCaptain Cloud\nPowers: rain\n```' : 'Here you go!\n```html\n' + GAME + '\n```';
     res.writeHead(200, { 'content-type': 'text/event-stream' });
     const ev = (type, data) => res.write(`event: ${type}\ndata: ${JSON.stringify({ type, ...data })}\n\n`);
@@ -446,6 +447,137 @@ test('tutor replies: old games are not sent again, cut-off and declined replies 
   assert.ok(lastChat.system.includes(GAME), 'so the tutor can still change it');
   assert.equal(lastChat.messages[0].role, 'user');
   await call('th', 'PATCH', '/api/classes/' + id, { live: false });
+});
+
+test('safety: only the tutor\'s work can be saved and shared, replies and nicknames are filtered, limits cannot be raced', async () => {
+  await call('ts', 'POST', '/api/login', { email: 'z@x.com', password: 'secret4' });
+  const course = (await call('ts', 'POST', '/api/courses', { title: 'Safe', levels: [{ title: 'Tap', task: 'Make a tap game', output: 'game' }, { title: 'Talk', task: 'Talk', output: 'chat' }] })).data.id;
+  const lv = (await call('ts', 'GET', '/api/courses/' + course)).data.levels[0].id;
+  const id = (await call('ts', 'POST', '/api/classes', { name: 'S', consent: true, daily_limit: 8, course_id: course })).data.id;
+  const { invite } = (await call('ts', 'GET', '/api/classes/' + id)).data;
+  await call('ts', 'PATCH', '/api/classes/' + id, { live: true });
+
+  // a nickname the whole class will see goes through the filter; a harmless one gets in
+  assert.equal((await call('s1', 'POST', '/api/join', { invite, nickname: 'badword kid' })).data.error, 'bad_nick_words');
+  assert.equal((await call('s1', 'POST', '/api/join', { invite, nickname: 'Samir' })).status, 200);
+  assert.equal((await call('s2', 'POST', '/api/join', { invite, nickname: 'Nigar' })).status, 200);
+  const say = (text) => call('s1', 'POST', '/api/chat', { text, level_id: lv });
+
+  // "Save" takes the tutor's newest game, never what the browser sends
+  assert.equal((await call('s1', 'POST', '/api/games', { level_id: lv, html: '<h1>anything</h1>', title: 'mine' })).data.error, 'no_output', 'nothing to save yet');
+  await say('make a tap game');
+  const saved = (await call('s1', 'POST', '/api/games', { level_id: lv, html: '<h1>anything</h1>', title: 'mine', kind: 'game' })).data.id;
+  let mine = (await call('s1', 'GET', '/api/games')).data;
+  assert.deepEqual(mine.map((g) => [g.id, g.title, g.html]), [[saved, 'Tap', GAME]], 'the tutor\'s game, with its own title');
+  assert.equal((await call('s1', 'POST', '/api/games', { level_id: lv })).data.id, saved, 'saving twice keeps one copy');
+
+  // sharing shows it to the class; the teacher can take it back out
+  await call('s1', 'PATCH', '/api/games/' + saved, { shared: true });
+  assert.equal((await call('s2', 'GET', '/api/games')).data.length, 1);
+  assert.equal((await call('s2', 'POST', `/api/games/${saved}/unshare`)).status, 401, 'students cannot');
+  assert.equal((await call('ts', 'POST', `/api/games/${saved}/unshare`)).status, 200);
+  assert.equal((await call('s2', 'GET', '/api/games')).data.length, 0);
+  assert.equal((await call('s1', 'GET', '/api/games')).data.length, 1, 'the student keeps their own');
+
+  // an answer of the tutor's that the filter stops is taken back, kept out of the chat and shown to the teacher
+  assert.equal((await say('unsafereply')).data, 'Here is something with a badword in it.\u0000withdrawn');
+  const chat = (await call('s1', 'GET', '/api/student/levels/' + lv)).data.messages;
+  assert.ok(!chat.some((m) => m.content.includes('badword')), 'the student never gets it back');
+  const feed = (await call('ts', 'GET', `/api/classes/${id}/messages`)).data.at(-1);
+  assert.deepEqual([feed.role, feed.flag, feed.content], ['withheld', 'sexual', 'Here is something with a badword in it.']);
+
+  // one message at a time: a burst cannot slip past the daily limit, and blocked messages count against it
+  assert.equal((await call('s1', 'GET', '/api/student/me')).data.used, 2);
+  const burst = await Promise.all(Array.from({ length: 12 }, () => say('quick')));
+  assert.ok(burst.filter((r) => r.status === 200).length <= 6 && burst.some((r) => r.data.error === 'busy'), 'the rest are told to wait');
+  for (let i = 0; i < 8; i++) await say(i % 2 ? 'badword' : 'more');
+  assert.equal((await call('s1', 'GET', '/api/student/me')).data.used, 8, 'never more than the limit of 8');
+  assert.equal((await say('one more')).data.error, 'limit');
+  assert.ok((await call('ts', 'GET', `/api/classes/${id}/messages`)).data.some((m) => m.role === 'blocked'), 'blocked ones were among them');
+
+  // removing a student removes what they wrote and made; deleting the room removes the rest
+  const sid = (await call('ts', 'GET', '/api/classes/' + id)).data.students.find((x) => x.nickname === 'Samir').id;
+  await call('ts', 'DELETE', '/api/students/' + sid);
+  assert.equal((await call('ts', 'GET', `/api/classes/${id}/messages`)).data.length, 0);
+  assert.equal((await call('ts', 'GET', `/api/classes/${id}/games`)).data.length, 0);
+  assert.equal((await call('tv', 'DELETE', '/api/classes/' + id)).status, 404, 'another teacher cannot delete the room');
+  assert.equal((await call('ts', 'DELETE', '/api/classes/' + id)).status, 200);
+  assert.equal((await call('ts', 'GET', '/api/classes/' + id)).status, 404);
+  assert.equal((await call('s2', 'GET', '/api/student/me')).status, 401, 'its students are logged out');
+  assert.ok((await call('ts', 'GET', '/api/courses/' + course)).data.title, 'the course stays');
+});
+
+test('accounts: password guessing is slowed down, logins end, the admin can reset or remove a teacher', async () => {
+  const login = (ip, email, password, extra = {}) => fetch(base + '/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': ip, ...extra }, body: JSON.stringify({ email, password }) });
+  await call('adm', 'POST', '/api/admin/teachers', { name: 'Gone', email: 'gone@x.com', password: 'secret5' });
+
+  // ten wrong passwords from one address: it has to wait, even with the right one; other people are not affected
+  for (let i = 0; i < 10; i++) assert.equal((await login('203.0.113.9', 'gone@x.com', 'wrong' + i)).status, 401);
+  const locked = await login('203.0.113.9', 'gone@x.com', 'secret5');
+  assert.deepEqual([locked.status, (await locked.json()).error], [429, 'login_locked']);
+  const ok = await login('203.0.113.10', 'gone@x.com', 'secret5', { 'X-Forwarded-Proto': 'https' });
+  assert.equal(ok.status, 200);
+  assert.match(ok.headers.get('set-cookie'), /HttpOnly; SameSite=Lax;.*; Secure/, 'over https the cookie is never sent in the clear');
+  assert.equal(ok.headers.get('x-content-type-options'), 'nosniff');
+  assert.equal(ok.headers.get('x-frame-options'), 'SAMEORIGIN');
+  jar.g = ok.headers.get('set-cookie').split(';')[0];
+  assert.doesNotMatch((await fetch(base + '/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'gone@x.com', password: 'secret5' }) })).headers.get('set-cookie'), /Secure/, 'plain http on a developer\'s machine still works');
+
+  // a login ends on the server after 30 days, whatever the browser still holds
+  assert.equal((await call('g', 'GET', '/api/me')).data.email, 'gone@x.com');
+  const { DatabaseSync } = await import('node:sqlite');
+  const direct = new DatabaseSync(path.join(dir, 't.db'));
+  direct.prepare('UPDATE sessions SET created=? WHERE token=?').run(Date.now() - 31 * 86400000, jar.g.split('=')[1]);
+  direct.close();
+  assert.equal((await call('g', 'GET', '/api/me')).status, 401);
+
+  // the admin gives a teacher a new password: the old one and every old login stop working
+  await call('g', 'POST', '/api/login', { email: 'gone@x.com', password: 'secret5' });
+  const room = (await call('g', 'POST', '/api/classes', { kind: 'meeting', name: 'Bye', consent: true })).data.id;
+  await call('g', 'POST', '/api/courses/starter');
+  const t = (await call('adm', 'GET', '/api/admin/teachers')).data.find((x) => x.email === 'gone@x.com');
+  assert.deepEqual([t.rooms, t.courses], [1, 1]);
+  assert.equal((await call('g', 'PATCH', '/api/admin/teachers/' + t.id, { password: 'hacked1' })).status, 401, 'only the admin');
+  assert.equal((await call('adm', 'PATCH', '/api/admin/teachers/' + t.id, { password: 'short' })).data.error, 'invalid');
+  assert.equal((await call('adm', 'PATCH', '/api/admin/teachers/' + t.id, { password: 'newsecret' })).status, 200);
+  assert.equal((await call('g', 'GET', '/api/me')).status, 401, 'logged out everywhere');
+  assert.equal((await call('g', 'POST', '/api/login', { email: 'gone@x.com', password: 'secret5' })).status, 401);
+  assert.equal((await call('g', 'POST', '/api/login', { email: 'gone@x.com', password: 'newsecret' })).status, 200);
+
+  // removing a teacher removes their rooms and courses with them; the admin cannot be removed this way
+  const admin = (await call('adm', 'GET', '/api/me')).data.id;
+  assert.equal((await call('adm', 'DELETE', '/api/admin/teachers/' + admin)).status, 404);
+  assert.equal((await call('adm', 'DELETE', '/api/admin/teachers/' + t.id)).status, 200);
+  assert.equal((await call('g', 'GET', '/api/me')).status, 401);
+  assert.equal((await call('g', 'POST', '/api/login', { email: 'gone@x.com', password: 'newsecret' })).status, 401);
+  assert.ok(!(await call('adm', 'GET', '/api/admin/usage')).data.classes.some((c) => c.id === room));
+});
+
+test('retention: chats go after the set days, a student\'s work stays while they keep coming', async () => {
+  const out = await new Promise((resolve, reject) => {
+    const p = spawn('node', ['-e', `import('./server/db.js').then(({ db, purgeOld, now }) => {
+      const old = now() - 40 * 86400000, add = (sql, ...a) => db.prepare(sql).run(...a);
+      add('INSERT INTO students(id,class_id,nickname,last_seen) VALUES(1,1,?,?),(2,1,?,?)', 'Active', now(), 'Idle', old);
+      for (const sid of [1, 2]) {
+        add('INSERT INTO games(class_id,student_id,title,html,created) VALUES(1,?,?,?,?)', sid, 'Old game', '<p>', old);
+        add('INSERT INTO messages(class_id,student_id,role,content,created) VALUES(1,?,?,?,?)', sid, 'user', 'old words', old);
+        add('INSERT INTO progress(student_id,level_id,status,created) VALUES(?,1,?,?)', sid, 'done', old);
+        add('INSERT INTO sessions(token,kind,ref,created) VALUES(?,?,?,?)', 'tok' + sid, 'student', sid, now());
+      }
+      add('INSERT INTO messages(class_id,student_id,role,content,created) VALUES(1,1,?,?,?)', 'user', 'new words', now());
+      add('INSERT INTO sessions(token,kind,ref,created) VALUES(?,?,?,?)', 'stale', 'user', 9, old);
+      purgeOld();
+      const n = (t) => db.prepare('SELECT student_id s FROM ' + t + ' ORDER BY rowid').all().map((r) => r.s);
+      console.log(JSON.stringify({ students: db.prepare('SELECT nickname n FROM students').all().map((r) => r.n), games: n('games'), progress: n('progress'),
+        messages: db.prepare('SELECT content c FROM messages').all().map((r) => r.c), sessions: db.prepare('SELECT token t FROM sessions').all().map((r) => r.t) })); })`],
+      { env: { ...process.env, DB_PATH: path.join(dir, 'keep.db') } });
+    let s = ''; p.stdout.on('data', (d) => (s += d)); p.on('close', (code) => (code ? reject(new Error('exit ' + code)) : resolve(JSON.parse(s))));
+  });
+  assert.deepEqual(out.students, ['Active'], 'a student who stopped coming is removed');
+  assert.deepEqual(out.games, [1], 'the active student keeps a game made 40 days ago; the idle student\'s work is gone');
+  assert.deepEqual(out.progress, [1]);
+  assert.deepEqual(out.messages, ['new words'], 'old chat messages go, whoever wrote them');
+  assert.deepEqual(out.sessions, ['tok1'], 'logins older than 30 days and logins of removed students are gone');
 });
 
 test('attention: the teacher sees when a student is away from the page, as a status for this session', async () => {

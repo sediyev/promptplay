@@ -213,3 +213,11 @@ test('the inline module script of every page parses (page scripts are not otherw
     }
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 });
+
+test('games: the sandbox policy comes before anything a game brings', () => {
+  const src = read('common.js');
+  // gameDoc() used to add the policy after the game's own <head>, which a "<head>" hidden in a comment could move out of the way
+  assert.match(src, /return `<!doctype html><meta charset="utf-8">\$\{CSP\}\$\{html\}`;/);
+  assert.match(src, /default-src 'none'/);
+  assert.doesNotMatch(src, /html\.match\(\/<head/);
+});

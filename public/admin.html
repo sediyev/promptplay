@@ -17,8 +17,9 @@
     <label class="ghost btnlike" style="margin:0"><span data-t="adm_upload"></span><input type="file" id="limp" accept=".json,application/json" hidden></label><p class="err" id="lerr"></p></div>
 </div>
 <script type="module">
-import { api, t, getLang, applyI18n, toggleLang, esc, $, langHtml } from '/common.js';
+import { api, t, getLang, applyI18n, toggleLang, esc, $, langHtml, toast } from '/common.js';
 import '/library-i18n.js';
+import '/app-i18n.js';
 applyI18n(); $('#lang').innerHTML = langHtml(); $('#lang').onclick = toggleLang;
 $('#out').onclick = async () => { await api('/api/logout', 'POST'); location = '/join#teacher'; };
 const $$ = (n) => '$' + n.toFixed(3);
@@ -29,7 +30,18 @@ async function load() {
   $('#cap').value = u.cap; $('#ret').value = u.retention_days;
   $('#tt').innerHTML = `<tr><th>${t('teacher')}</th><th>${t('cls')}</th><th>${t('tokens')}</th><th>${t('cost')}</th></tr>` + u.teachers.map((x) => `<tr><td>${esc(x.teacher)}</td><td>${x.classes}</td><td>${x.tokens}</td><td>${$$(x.cost)}</td></tr>`).join('');
   $('#ct').innerHTML = `<tr><th>${t('cls')}</th><th>${t('teacher')}</th><th>${t('students')}</th><th>${t('tokens')}</th><th>${t('cost')}</th></tr>` + u.classes.map((x) => `<tr><td>${esc(x.name)}</td><td>${esc(x.teacher)}</td><td>${x.students}</td><td>${x.tokens}</td><td>${$$(x.cost)}</td></tr>`).join('');
-  $('#tl').innerHTML = ts.map((x) => `<div>${esc(x.name)} <span class="muted">${esc(x.email)}</span></div>`).join('') || `<p class="muted">${t('empty')}</p>`;
+  $('#tl').innerHTML = ts.map((x) => `<div class="row wrapx" style="margin:.35rem 0"><span class="grow">${esc(x.name)} <span class="muted">${esc(x.email)} · ${x.rooms} ${t('roomsN')}</span></span>
+    <button class="ghost" data-pw="${x.id}">${t('adm_newPw')}</button><button class="ghost" data-rm="${x.id}">${t('adm_removeTeacher')}</button></div>`).join('') || `<p class="muted">${t('empty')}</p>`;
+  const who = (id) => ts.find((x) => x.id === +id), fill = (text, x) => text.replace('{name}', x.name).replace('{rooms}', x.rooms).replace('{courses}', x.courses);
+  // A teacher who forgot their password gets a new one from the admin; a teacher who left is removed with their rooms.
+  $('#tl').querySelectorAll('[data-pw]').forEach((b) => (b.onclick = async () => {
+    const pw = prompt(fill(t('adm_pwPrompt'), who(b.dataset.pw))); if (pw === null) return;
+    try { await api('/api/admin/teachers/' + b.dataset.pw, 'PATCH', { password: pw }); toast(t('adm_pwDone'), 'ok'); } catch (x) { toast(t(x.code), 'bad'); }
+  }));
+  $('#tl').querySelectorAll('[data-rm]').forEach((b) => (b.onclick = async () => {
+    if (!confirm(fill(t('adm_confirmTeacher'), who(b.dataset.rm)))) return;
+    await api('/api/admin/teachers/' + b.dataset.rm, 'DELETE'); load();
+  }));
 }
 $('#ss').onclick = async () => { await api('/api/admin/settings', 'PUT', { spend_cap: +$('#cap').value, retention_days: +$('#ret').value }); load(); };
 $('#ta').onclick = async () => {
