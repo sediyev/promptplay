@@ -60,21 +60,27 @@ if (invite) {
     avatars(r.avatars);
     live = r.live;
     if (!live) { if (!params.get('closed')) { $('#wait').hidden = false; $('#wait').textContent = t('waitStart'); } watchLive(); }
-  } catch (x) { $('#notice').hidden = false; $('#notice').textContent = t(x.code); }
+  } catch (x) { badLink(x); }
 } else avatars(await api('/api/avatars'));
+// A link the teacher replaced: say so, and forget it so this device stops coming back to it.
+function badLink(x) {
+  $('#wait').hidden = true; $('#notice').hidden = false; $('#notice').textContent = t(x.code);
+  if (x.code === 'bad_invite') try { if (localStorage.getItem('invite') === invite) localStorage.removeItem('invite'); } catch {}
+}
 
 // Before the teacher starts the lesson the link page waits, and a student who already pressed Go gets in by themselves.
 async function watchLive() {
   while (!live) {
     await new Promise((r) => setTimeout(r, 4000));
-    try { live = (await api('/api/invite/' + invite)).live; } catch {}
+    try { live = (await api('/api/invite/' + invite)).live; }
+    catch (x) { if (x.code === 'bad_invite') { wait(false); return badLink(x); } } // anything else: the network blinked, keep waiting
   }
   $('#wait').hidden = true; $('#notice').hidden = true;
   if (waiting) join();
 }
 function wait(on) {
   waiting = on; $('#go').disabled = on; $('#go').textContent = t(on ? 'waiting' : 'go');
-  if (on) { $('#wait').hidden = false; $('#wait').textContent = t('waitStart'); }
+  if (on) { $('#notice').hidden = true; $('#wait').hidden = false; $('#wait').textContent = t('waitStart'); }
 }
 async function join() {
   $('#jerr').textContent = '';
@@ -85,7 +91,7 @@ async function join() {
     location = '/student.html';
   } catch (x) {
     if (invite && x.code === 'room_closed') { wait(true); if (live) { live = false; watchLive(); } return; }
-    wait(false); $('#jerr').textContent = t(x.code);
+    wait(false); x.code === 'bad_invite' ? badLink(x) : ($('#jerr').textContent = t(x.code));
   }
 }
 $('#join').onsubmit = (e) => { e.preventDefault(); if (!waiting) join(); };

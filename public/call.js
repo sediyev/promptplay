@@ -62,6 +62,7 @@ class Call {
     this.opts = opts; this.id = null; this.ice = []; this.peers = new Map(); this.infos = new Map();
     this.mic = null; this.cam = null; this.screen = null; this.local = new MediaStream();
     this.inbox = Promise.resolve(); this.left = false;
+    this.trying = new Map(); // peer id -> when we first tried to reach them; kept across retries until it works
     this.buildPanel();
   }
 
@@ -88,7 +89,7 @@ class Call {
     }
     if (ev.type === 'join') this.infos.set(ev.peer.id, ev.peer);
     if (ev.type === 'peer') { this.infos.set(ev.peer.id, ev.peer); const p = this.peers.get(ev.peer.id); if (p) { p.info = ev.peer; this.renderTile(p); } }
-    if (ev.type === 'leave') { this.infos.delete(ev.id); const p = this.peers.get(ev.id); if (p) this.closePeer(p); }
+    if (ev.type === 'leave') { this.infos.delete(ev.id); this.trying.delete(ev.id); const p = this.peers.get(ev.id); if (p) this.closePeer(p); }
     if (ev.type === 'mute') { if (this.mic?.enabled) { this.setMic(false); toast(t('call_muted')); } }
     if (ev.type === 'signal') this.inbox = this.inbox.then(() => this.onSignal(ev.from, ev.data)).catch((e) => console.warn('call:', e));
     this.render();
@@ -99,8 +100,8 @@ class Call {
     const pc = new RTCPeerConnection({ iceServers: this.ice });
     // Video plays muted, which every browser allows by itself; the sound has its own element, which some browsers
     // (Safari on iPhone and iPad) only start after a tap, so it never holds the picture back.
-    const p = { info, offerer, pc, stream: new MediaStream(), audio: new Audio(), since: Date.now(), pending: [], out: Promise.resolve(), senders: {} };
-    this.peers.set(info.id, p);
+    const p = { info, offerer, pc, stream: new MediaStream(), audio: new Audio(), since: this.trying.get(info.id) ?? Date.now(), pending: [], out: Promise.resolve(), senders: {} };
+    this.peers.set(info.id, p); this.trying.set(info.id, p.since);
     pc.onicecandidate = (e) => e.candidate && this.signal(p, { candidate: e.candidate.toJSON() });
     pc.ontrack = (e) => {
       p.stream.addTrack(e.track);
@@ -108,10 +109,10 @@ class Call {
       else if (p.video) { p.video.srcObject = p.stream; p.video.play().catch(() => {}); }
     };
     // Still not connected after a while: say so on the tile, and tell people why once, instead of "connecting…" for ever.
-    setTimeout(() => { if (this.peers.get(info.id) === p && pc.connectionState !== 'connected') { this.renderTile(p); this.warnBlocked(); } }, 20000);
+    setTimeout(() => { if (this.peers.get(info.id) === p) this.render(); }, 20000);
     pc.onconnectionstatechange = () => {
-      this.renderTile(p);
-      if (pc.connectionState === 'failed') this.warnBlocked();
+      if (pc.connectionState === 'connected') { this.trying.delete(info.id); p.since = Date.now(); }
+      this.render();
       // The one who started a connection starts it again when it fails (for example after a network change).
       if (pc.connectionState === 'failed' && p.offerer) setTimeout(() => {
         if (this.peers.get(info.id) !== p || this.left || !this.infos.has(info.id)) return;
@@ -171,10 +172,10 @@ class Call {
     this.unlocking = true;
     document.addEventListener('click', () => { this.unlocking = false; for (const p of this.peers.values()) if (p.audio.srcObject) this.playSound(p); }, { once: true, capture: true });
   }
-  warnBlocked() {
-    if (this.warned || this.left) return;
-    this.warned = true;
-    toast(t(!this.opts.teacher ? 'call_failStudent' : this.relay ? 'call_failRelay' : 'call_failNoRelay'), 'bad');
+  // No connection to someone: failed, or still trying after 20 seconds.
+  stuck(p) {
+    const st = p.pc.connectionState;
+    return st === 'failed' || ((st === 'new' || st === 'connecting') && Date.now() - p.since > 19000);
   }
   closePeer(p) {
     p.pc.close(); p.tile?.remove(); p.audio.srcObject = null;
@@ -241,6 +242,7 @@ class Call {
         <button class="ghost icon" data-act="min" title="${t('call_min')}" aria-label="${t('call_min')}">▁</button></div>
       <div class="tiles"></div>
       <button class="callsound" data-act="sound" hidden>${t('call_sound')}</button>
+      <p class="callwarn" role="status" hidden></p>
       <p class="muted callnote">${t('call_private')}</p>
       <div class="callbar">
         <button class="ghost" data-act="mic" aria-pressed="false"></button><button class="ghost" data-act="cam" aria-pressed="false"></button>
@@ -288,11 +290,10 @@ class Call {
   renderTile(p) {
     if (!p.tile) return;
     const st = p.pc.connectionState, waiting = st === 'new' || st === 'connecting' || st === 'failed';
-    const stuck = st === 'failed' || (waiting && Date.now() - p.since > 19000);
     const ctl = this.opts.teacher && p.info.kind === 'student'
       ? `${p.info.mic ? `<button class="ghost icon" data-act="mute" data-peer="${esc(p.info.id)}" title="${t('call_mute')}" aria-label="${t('call_mute')}">🔇</button>` : ''}
          <button class="ghost icon" data-act="remove" data-peer="${esc(p.info.id)}" title="${t('call_remove')}" aria-label="${t('call_remove')}">✕</button>` : '';
-    this.fillTile(p.tile, p.info, stuck ? t('call_noconn') : waiting ? t('call_connecting') : this.opts.label?.(p.info) || '', ctl);
+    this.fillTile(p.tile, p.info, this.stuck(p) ? t('call_noconn') : waiting ? t('call_connecting') : this.opts.label?.(p.info) || '', ctl);
   }
   renderMine() {
     const me = this.opts.me || {};
@@ -312,5 +313,9 @@ class Call {
     set('screen', !!this.screen, `🖥️ ${t('call_stopScreen')}`, `🖥️ ${t('call_screen')}`);
     this.renderMine();
     for (const p of this.peers.values()) this.renderTile(p);
+    // The reason stays in the panel for as long as someone cannot be reached, so there is time to read it.
+    const warn = this.panel.querySelector('.callwarn');
+    warn.hidden = ![...this.peers.values()].some((p) => this.stuck(p));
+    if (!warn.hidden) warn.textContent = t(!this.opts.teacher ? 'call_failStudent' : this.relay ? 'call_failRelay' : 'call_failNoRelay');
   }
 }

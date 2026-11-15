@@ -234,6 +234,7 @@ iframe.studentview { flex:1; width:100%; min-height:0; border:1px solid var(--li
 .tile .tact button { background:rgba(10,8,30,.65); color:#fff; border-color:transparent; }
 .callnote { margin:0; font-size:.78rem; }
 .callsound { width:100%; padding:.5em; } .callsound[hidden] { display:none; }
+.callwarn { margin:0; padding:.5em .7em; border-radius:10px; background:var(--warn); color:var(--warn-ink); font-size:.82rem; }
 .callbar { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
 .callbar button { padding:.35em .7em; font-size:.85rem; box-shadow:none; }
 .callbar button.ghost.on { background:var(--brand-soft); border-color:var(--brand); }
