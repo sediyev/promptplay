@@ -116,11 +116,19 @@ test('courses, rooms, live sessions and levels', async () => {
   const join = (who, nickname, pin, extra = {}) => call(who, 'POST', '/api/join', { invite: room.invite, nickname, pin, avatar: '🐼', ...extra });
   assert.equal((await join('s', 'Leyla', '1234')).data.error, 'room_closed');
   await call('t', 'PATCH', '/api/classes/' + id, { live: true });
-  assert.equal((await join('s', 'Leyla', '12')).data.error, 'bad_pin_format');
+  const byCode = (who, nickname, pin) => call(who, 'POST', '/api/join', { code: room.code, nickname, pin });
+  assert.equal((await byCode('s', 'Leyla', '12')).data.error, 'bad_pin_format', 'the class code needs a PIN');
   assert.equal((await join('s', 'Leyla', '1234')).status, 200);
-  assert.equal((await join('s2', 'Leyla', '9999')).data.error, 'bad_pin', 'nickname is protected by its PIN');
+  assert.equal((await byCode('s2', 'Leyla', '9999')).data.error, 'bad_pin', 'with the class code the nickname is protected by its PIN');
   assert.equal((await join('s3', 'Leyla', '1234')).status, 200, 'same account from another device');
-  assert.equal((await call('s', 'POST', '/api/join', { code: room.code, nickname: 'Leyla', pin: '1234' })).status, 200, 'class code still works');
+  assert.equal((await byCode('s', 'Leyla', '1234')).status, 200, 'class code still works');
+  // with the invite link a nickname is enough, for new and returning students
+  const byLink = (who, nickname) => call(who, 'POST', '/api/join', { invite: room.invite, nickname });
+  assert.equal((await byLink('z', 'Zaur')).status, 200, 'new student with only a nickname');
+  assert.equal((await call('z', 'GET', '/api/student/me')).data.nickname, 'Zaur');
+  assert.equal((await byLink('z2', 'Zaur')).status, 200, 'coming back with the same nickname on another device');
+  assert.equal((await byLink('z3', 'Leyla')).status, 200, 'link works for an account that has a PIN');
+  assert.equal((await byCode('z5', 'Zaur', '1234')).data.error, 'use_link', 'an account without a PIN is told to use the link');
 
   // level map: first level current, rest locked
   let me = (await call('s', 'GET', '/api/student/me')).data;
@@ -182,13 +190,16 @@ test('courses, rooms, live sessions and levels', async () => {
 
   // PIN reset by teacher
   const pin = (await call('t', 'PATCH', '/api/students/' + leyla, { reset_pin: true })).data.pin;
-  assert.equal((await join('s4', 'Leyla', '1234')).data.error, 'bad_pin');
-  assert.equal((await join('s4', 'Leyla', pin)).status, 200);
+  assert.equal((await byCode('s4', 'Leyla', '1234')).data.error, 'bad_pin');
+  assert.equal((await byCode('s4', 'Leyla', pin)).status, 200);
 
   // ending the session logs everyone out (open student streams are hung up), progress is kept
   const sctl = new AbortController(), sev = [];
   const ses = await fetch(`${base}/api/student/events`, { headers: { cookie: jar.s }, signal: sctl.signal });
   const sdone = (async () => { const dec = new TextDecoder(); try { for await (const c of ses.body) sev.push(dec.decode(c)); } catch {} })();
+  await sleep(100);
+  assert.equal((await byLink('z4', 'Leyla')).data.error, 'nick_online', 'nobody takes over a nickname that is in the lesson');
+  assert.equal((await byLink('s', 'Leyla')).status, 200, 'the same student can always join again');
   await call('t', 'PATCH', '/api/classes/' + id, { live: false });
   await call('t', 'PATCH', '/api/classes/' + id, { daily_limit: 20 }); // broadcasts to the room right after the hang-up
   await sdone; sctl.abort();
@@ -224,7 +235,9 @@ test('courses, rooms, live sessions and levels', async () => {
 // An open event stream that collects its "data:" events as objects.
 function stream(who, url) {
   const ctl = new AbortController(), evs = [];
+  let connected; const ready = new Promise((r) => (connected = r)); // the server subscribes the stream before it answers
   const done = fetch(base + url, { headers: { cookie: jar[who] }, signal: ctl.signal }).then(async (r) => {
+    connected();
     const dec = new TextDecoder(); let buf = '';
     try {
       for await (const c of r.body) {
@@ -237,7 +250,7 @@ function stream(who, url) {
     for (let i = 0; i < 75; i++) { const e = evs.find((x) => x.type === type && !x.seen && where(x)); if (e) { e.seen = true; return e; } await sleep(40); }
     throw new Error(`no "${type}" event on ${url}`);
   };
-  return { evs, done, next, close: () => ctl.abort() };
+  return { evs, done, ready, next, close: () => ctl.abort() };
 }
 
 test('video call: teacher opens it, up to 4 people, setup messages relayed, teacher controls', async () => {
@@ -259,6 +272,7 @@ test('video call: teacher opens it, up to 4 people, setup messages relayed, teac
   assert.equal((await call('va', 'GET', '/api/student/me')).data.call.open, false);
 
   const teacherFeed = stream('tv', `/api/classes/${id}/events`), roomFeed = stream('vb', '/api/student/events');
+  await Promise.all([teacherFeed.ready, roomFeed.ready]); // listening before the call starts, or the news is missed
   assert.equal((await call('tv', 'POST', `/api/classes/${id}/call`, { open: true })).data.open, true);
   assert.equal((await roomFeed.next('call')).call.open, true, 'students are told a call started');
   const T = stream('tv', `/api/classes/${id}/call/events`), tw = await T.next('welcome');

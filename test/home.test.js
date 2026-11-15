@@ -147,8 +147,10 @@ test('every redirect that used to go to "/" now goes to the join and login page'
   assert.match(read('teacher.html'), /await api\('\/api\/logout', 'POST'\); location = '\/join#teacher'/);
   const student = read('student.html');
   assert.ok(!/location = '\/'|: '\/'\)/.test(student), 'student.html still redirects to /');
-  assert.match(student, /'\/join\/' \+ encodeURIComponent\(inv\) : '\/join'\) \+ '\?closed=1'/);
-  assert.match(student, /location = '\/join'/);
+  // a student who is logged out goes back to the room's invite link (just a nickname), not the class code form
+  assert.match(student, /location = \(inv \? '\/join\/' \+ encodeURIComponent\(inv\) : '\/join'\) \+ \(closed \? '\?closed=1' : ''\)/);
+  assert.match(student, /catch \(x\) \{ ended\(x\.code === 'room_closed'\);/);
+  assert.ok(!/location = '\/join'/.test(student), 'student.html never drops the remembered invite link');
   assert.match(join, /<a href="\/join" data-t="haveCode">/);
   assert.match(join, /location\.hash === '#teacher'/);
   assert.match(join, /localStorage\.getItem\('avatar'\)/);

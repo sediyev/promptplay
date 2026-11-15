@@ -41,10 +41,11 @@ const params = new URLSearchParams(location.search), viewId = +params.get('stude
 const urls = viewId ? { me: `/api/students/${viewId}/view`, level: `/api/students/${viewId}/view/levels/`, games: `/api/students/${viewId}/view/games` }
   : { me: '/api/student/me', level: '/api/student/levels/', games: '/api/games' };
 let stream = null; // the AI reply the teacher watches arrive in student view
-const ended = () => { // back to the room's invite page, so logging in again next session is one step
+// Back to the room's invite page (not the class code form), so logging in again is one step: just the nickname.
+const ended = (closed = true) => {
   if (viewId) return (window.top.location = '/join#teacher');
   let inv = null; try { inv = localStorage.getItem('invite'); } catch {}
-  location = (inv ? '/join/' + encodeURIComponent(inv) : '/join') + '?closed=1';
+  location = (inv ? '/join/' + encodeURIComponent(inv) : '/join') + (closed ? '?closed=1' : '');
 };
 
 // Replace complete output blocks with a chip; hide an unfinished one while it streams.
@@ -216,7 +217,7 @@ $('#form').onsubmit = async (e) => {
 $('#text').onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#form').requestSubmit(); } };
 $('#mc').onclick = () => $('#modal').close();
 
-try { me = await api(urls.me); } catch (x) { x.code === 'room_closed' || viewId ? ended() : (location = '/join'); await new Promise(() => {}); } // leaving: do not run the rest of the page
+try { me = await api(urls.me); } catch (x) { ended(x.code === 'room_closed'); await new Promise(() => {}); } // leaving: do not run the rest of the page
 if (viewId) {
   // Read-only: nothing here acts as the student. The teacher lands on the level the student is working on.
   document.title = `${me.avatar} ${me.nickname} · PromptPlay`;

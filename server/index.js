@@ -392,22 +392,27 @@ app.post('/api/join', (req, res) => {
   if (!cls) return fail(res, 404, req.body.invite ? 'bad_invite' : 'bad_code');
   if (!cls.live) return fail(res, 403, 'room_closed');
   if (nick.length < 2) return fail(res, 400, 'bad_nick');
-  if (!PIN_RE.test(pin)) return fail(res, 400, 'bad_pin_format');
+  // The invite link is the room's key (the teacher shares it privately and "New link" replaces it), so with the link a nickname is
+  // enough. The short class code is easy to guess, so joining by code still needs the PIN.
+  const byLink = !!req.body.invite;
+  if (!byLink && !PIN_RE.test(pin)) return fail(res, 400, 'bad_pin_format');
   let stu = one('SELECT * FROM students WHERE class_id=? AND nickname=?', cls.id, nick);
-  if (stu) { // logging back in to an existing account
+  if (stu && byLink) { // nobody can take over a nickname that is in the lesson right now
+    if (studentConns.get(stu.id) && req.student?.id !== stu.id) return fail(res, 409, 'nick_online');
+  } else if (stu) { // logging back in to an existing account with the class code
     const f = pinFails.get(stu.id);
     if (f?.until > now()) return fail(res, 429, 'pin_locked');
     const legacy = !stu.pin && req.student?.id === stu.id; // pilot accounts had no PIN: the original browser sets one
     if (!legacy && !(stu.pin && checkPassword(pin, stu.pin))) {
       const n = (f?.n || 0) + 1;
       pinFails.set(stu.id, n >= 5 ? { n: 0, until: now() + 5 * 60000 } : { n, until: 0 });
-      return fail(res, stu.pin ? 401 : 409, stu.pin ? 'bad_pin' : 'nick_taken');
+      return fail(res, stu.pin ? 401 : 409, stu.pin ? 'bad_pin' : 'use_link');
     }
     pinFails.delete(stu.id);
     if (legacy) run('UPDATE students SET pin=? WHERE id=?', hashPassword(pin), stu.id);
   } else {
     const avatar = AVATARS.includes(req.body.avatar) ? req.body.avatar : AVATARS[0];
-    const r = run('INSERT INTO students(class_id,nickname,pin,avatar,created,last_seen) VALUES(?,?,?,?,?,?)', cls.id, nick, hashPassword(pin), avatar, now(), now());
+    const r = run('INSERT INTO students(class_id,nickname,pin,avatar,created,last_seen) VALUES(?,?,?,?,?,?)', cls.id, nick, PIN_RE.test(pin) ? hashPassword(pin) : null, avatar, now(), now());
     stu = { id: +r.lastInsertRowid };
   }
   startSession(res, 'student', stu.id);

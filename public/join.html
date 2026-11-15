@@ -6,16 +6,17 @@
   <h1><a class="logo" href="/">🎮 PromptPlay</a></h1>
   <p class="sub" data-t="tagline"></p>
   <div class="banner stop" id="notice" hidden style="border-radius:12px;margin-bottom:12px"></div>
+  <div class="banner" id="wait" role="status" hidden style="border-radius:12px;margin-bottom:12px"></div>
   <div class="card">
     <div class="seg"><button id="tabS" class="on" data-t="student" type="button"></button><button id="tabT" data-t="teacher" type="button"></button></div>
     <form id="join">
       <div id="invited" hidden><p class="muted" style="margin:0"><span data-t="invitedTo"></span></p><h2 id="roomName" style="margin:.1em 0 0"></h2><p class="muted" id="courseName" style="margin:0 0 .4rem"></p></div>
       <div id="codeBox"><label data-t="code"></label><input id="code" maxlength="8" autocomplete="off"></div>
-      <p class="muted" data-t="newHere" style="margin:.6rem 0 0"></p>
+      <p class="muted" id="newHere" data-t="newHere" style="margin:.6rem 0 0"></p>
       <label data-t="nickname"></label><input id="nick" maxlength="20" autocomplete="off" required>
-      <label data-t="pin"></label><input id="pin" inputmode="numeric" pattern="\d{4}" maxlength="4" autocomplete="off" required class="pin">
+      <div id="pinBox"><label data-t="pin"></label><input id="pin" inputmode="numeric" pattern="\d{4}" maxlength="4" autocomplete="off" required class="pin"></div>
       <label data-t="pickAvatar"></label><div class="avatars" id="avatars"></div>
-      <p class="err" id="jerr"></p><button class="big" data-t="go"></button>
+      <p class="err" id="jerr"></p><button class="big" id="go" data-t="go"></button>
       <p style="text-align:center;margin:.6rem 0 0" id="useCode" hidden><a href="/join" data-t="haveCode"></a></p>
     </form>
     <form id="login" hidden>
@@ -46,26 +47,48 @@ function avatars(list) {
     b.onclick = () => { avatar = a; try { localStorage.setItem('avatar', a); } catch {} avatars(list); }; return b;
   }));
 }
+try { $('#nick').value = localStorage.getItem('nick') || ''; } catch {} // coming back on the same device: the nickname is already there
+// With the invite link a nickname is enough (the link is the room's key); the PIN is only for joining with the class code.
+let live = true, waiting = false;
 if (invite) {
   $('#codeBox').hidden = true; $('#useCode').hidden = false;
+  $('#pinBox').hidden = true; $('#pin').required = false;
+  $('#newHere').textContent = t('newHereLink');
   try {
     const r = await api('/api/invite/' + invite);
     $('#invited').hidden = false; $('#roomName').textContent = r.name; $('#courseName').textContent = r.course || '';
-    if (!r.live) { $('#notice').hidden = false; $('#notice').textContent = t('room_closed'); }
     avatars(r.avatars);
+    live = r.live;
+    if (!live) { if (!params.get('closed')) { $('#wait').hidden = false; $('#wait').textContent = t('waitStart'); } watchLive(); }
   } catch (x) { $('#notice').hidden = false; $('#notice').textContent = t(x.code); }
 } else avatars(await api('/api/avatars'));
 
-$('#join').onsubmit = async (e) => {
-  e.preventDefault();
+// Before the teacher starts the lesson the link page waits, and a student who already pressed Go gets in by themselves.
+async function watchLive() {
+  while (!live) {
+    await new Promise((r) => setTimeout(r, 4000));
+    try { live = (await api('/api/invite/' + invite)).live; } catch {}
+  }
+  $('#wait').hidden = true; $('#notice').hidden = true;
+  if (waiting) join();
+}
+function wait(on) {
+  waiting = on; $('#go').disabled = on; $('#go').textContent = t(on ? 'waiting' : 'go');
+  if (on) { $('#wait').hidden = false; $('#wait').textContent = t('waitStart'); }
+}
+async function join() {
+  $('#jerr').textContent = '';
   const body = { nickname: $('#nick').value, pin: $('#pin').value, avatar, ...(invite ? { invite } : { code: $('#code').value }) };
   try {
     await api('/api/join', 'POST', body);
-    try { invite ? localStorage.setItem('invite', invite) : localStorage.removeItem('invite'); } catch {}
+    try { invite ? localStorage.setItem('invite', invite) : localStorage.removeItem('invite'); localStorage.setItem('nick', body.nickname.trim()); } catch {}
     location = '/student.html';
+  } catch (x) {
+    if (invite && x.code === 'room_closed') { wait(true); if (live) { live = false; watchLive(); } return; }
+    wait(false); $('#jerr').textContent = t(x.code);
   }
-  catch (x) { $('#jerr').textContent = t(x.code); }
-};
+}
+$('#join').onsubmit = (e) => { e.preventDefault(); if (!waiting) join(); };
 $('#login').onsubmit = async (e) => {
   e.preventDefault();
   try { const r = await api('/api/login', 'POST', { email: $('#email').value, password: $('#pw').value }); location = r.role === 'admin' ? '/admin.html' : '/teacher.html'; }

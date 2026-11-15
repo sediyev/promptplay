@@ -22,6 +22,9 @@ $$('[data-lang]').forEach((b) => (b.onclick = () => { setLang(getLang() === 'az'
 if (getLang() !== 'az') applyLang(); // the HTML is already Azerbaijani
 root.classList.remove('pend');
 
+// ---------- "Join class": a student who joined before on this device goes straight to their room's link ----------
+try { const inv = localStorage.getItem('invite'); if (inv) $$('a[href="/join"]').forEach((a) => (a.href = '/join/' + encodeURIComponent(inv))); } catch {}
+
 // ---------- links whose destination is not decided yet ([CTA LINK], [PRIVACY POLICY LINK]) ----------
 // They keep their bracket text in data-todo and point somewhere sensible until the real address is filled in.
 $$('a[href^="["]').forEach((a) => { a.dataset.todo = a.getAttribute('href'); a.setAttribute('href', a.matches('[data-cta]') ? '#contact' : '#faq'); });
