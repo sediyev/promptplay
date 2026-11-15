@@ -10,6 +10,8 @@
 <div id="mapView" class="mapwrap"><h2 id="mapTitle" style="text-align:center"></h2><div class="map" id="map"></div>
   <div class="card" id="nextUp" style="text-align:center;margin-top:24px" hidden></div></div>
 
+<div id="meetView" class="mapwrap" hidden><div class="card meetstage" id="meet"></div></div>
+
 <div id="levelView" hidden>
   <div class="levelbar"><button class="ghost" id="toMap" data-t="backToMap"></button><span class="lvemoji" id="lvEmoji"></span>
     <b class="grow" id="lvTitle"></b><span class="stars" id="lvStars"></span><button class="ok" id="check" data-t="checkWork"></button></div>
@@ -48,11 +50,12 @@ const ended = (closed = true) => {
   location = (inv ? '/join/' + encodeURIComponent(inv) : '/join') + (closed ? '?closed=1' : '');
 };
 
-// Replace complete output blocks with a chip; hide an unfinished one while it streams.
-function display(text) {
+// Replace complete output blocks with a chip; hide an unfinished one while it streams ("building…").
+// Once the reply is over (done), an unfinished block is one that was cut off: it is dropped, never left "building" for ever.
+function display(text, done = false) {
   let s = text.replace(/\s*```html[\s\S]*?```\s*/g, '\n\n' + t('gameReady') + '\n\n').replace(/\s*```creation[\s\S]*?```\s*/g, '\n\n' + t('creationReady') + '\n\n');
   const open = s.search(/```(html|creation)/);
-  if (open >= 0) s = s.slice(0, open) + '\n' + t('building');
+  if (open >= 0) s = s.slice(0, open) + (done ? '' : '\n' + t('building'));
   return s.replace(/\n{3,}/g, '\n\n').trim();
 }
 // Tutor replies are rendered as markdown; the student's own text and notices stay plain.
@@ -69,7 +72,8 @@ function showOutput(content, kind = level?.output) {
 const tag = (kind) => (kind === 'creation' ? 'creation' : 'html');
 
 function renderState() {
-  $('#me').textContent = `${me.avatar} ${me.nickname}`; $('#course').textContent = `${me.room} · ${me.course || ''}`;
+  $('#me').textContent = `${me.avatar} ${me.nickname}`; $('#course').textContent = `${me.room} · ${meeting() ? t('mt_label') : me.course || ''}`;
+  $('#left').hidden = meeting(); if (meeting() && !viewId) $('#seen').textContent = t('seenMeet');
   const left = Math.max(0, me.limit - me.used); // phones show "💬 28", the full sentence stays in the tooltip
   $('#left').innerHTML = `<span aria-hidden="true">💬</span> ${left} <span class="wide-t">${esc(t('left'))}</span>`; $('#left').title = `${left} ${t('left')}`;
   const msg = me.classPaused ? 'paused' : me.paused ? 'pausedYou' : left <= 0 ? 'limit' : me.budget ? 'budget' : null;
@@ -82,13 +86,28 @@ function renderState() {
   renderCall();
 }
 // The teacher's video call: a banner to join while it is open; the call itself is a panel over the page (call.js).
+const meeting = () => me?.kind === 'meeting'; // a video meeting room: no course, the call is the page
 function renderCall() {
+  if (meeting()) return renderMeet();
   const c = me?.call, show = !viewId && c?.open && !inCall();
   $('#callBanner').hidden = !show; if (!show) return;
   $('#callBanner').innerHTML = `📹 ${t('call_banner')} ` + (c.full ? `<b>${t('call_full')}</b>` : `<button id="joinCall">${t('call_join')}</button> <span>${c.count}/${c.max}</span>`);
   if ($('#joinCall')) $('#joinCall').onclick = async () => {
     $('#joinCall').disabled = true;
     await joinCall({ events: '/api/student/call/events', me: { name: me.nickname, avatar: me.avatar }, mic: false, cam: false, onLeave: renderCall });
+    renderCall();
+  };
+}
+// Meeting room: wait for the teacher, then one button into the call, which then fills the page.
+function renderMeet() {
+  $('#callBanner').hidden = true;
+  if (inCall() || viewId) return;
+  const c = me.call, can = c?.open && !c.full;
+  $('#meet').innerHTML = `<div class="meetwait"><div class="bigicon" aria-hidden="true">📹</div><h2>${esc(me.room)}</h2>
+    <p>${t(can ? 'mt_ready' : c?.open ? 'call_full' : 'mt_wait')}</p>${can ? `<button id="meetGo">${t('call_join')} (${c.count}/${c.max})</button><p class="muted">${t('call_private')}</p>` : ''}</div>`;
+  if ($('#meetGo')) $('#meetGo').onclick = async () => {
+    $('#meet').replaceChildren();
+    await joinCall({ events: '/api/student/call/events', me: { name: me.nickname, avatar: me.avatar }, mic: false, cam: false, mount: $('#meet'), onLeave: renderCall });
     renderCall();
   };
 }
@@ -125,7 +144,7 @@ async function openLevel(id) {
   $('#outTitle').textContent = level.output === 'creation' ? t('yourCreation') : level.output === 'game' ? t('yourGame') : t('task');
   $('#tabOut').textContent = level.output === 'chat' ? t('myWork') : $('#outTitle').textContent; $('#tabOut').classList.remove('new');
   $('#log').replaceChildren(); stream = null;
-  for (const m of r.messages) addMsg(m.role, m.role === 'assistant' ? display(m.content) : m.content);
+  for (const m of r.messages) addMsg(m.role, m.role === 'assistant' ? display(m.content, true) : m.content);
   const last = [...r.messages].reverse().map((m) => m.role === 'assistant' && extractGame(m.content, tag(level.output))).find(Boolean);
   showOutput(level.output === 'chat' ? null : last); renderState(); $('#text').focus();
 }
@@ -138,7 +157,8 @@ function pane(p) {
 }
 const freshOutput = () => { if ($('#levelView').dataset.pane !== 'out') $('#tabOut').classList.add('new'); };
 $('#tabChat').textContent = '💬 ' + t('chat'); $('#tabChat').onclick = () => pane('chat'); $('#tabOut').onclick = () => pane('out');
-const route = () => { const id = +(location.hash.match(/level=(\d+)/)?.[1] || 0); id ? openLevel(id) : showMap(); };
+const showMeet = () => { level = null; $('#levelView').hidden = true; $('#mapView').hidden = true; $('#meetView').hidden = false; renderState(); };
+const route = () => { if (meeting()) return showMeet(); const id = +(location.hash.match(/level=(\d+)/)?.[1] || 0); id ? openLevel(id) : showMap(); };
 window.onhashchange = route;
 $('#toMap').onclick = () => (location.hash = '');
 
@@ -206,10 +226,16 @@ $('#form').onsubmit = async (e) => {
       for (;;) {
         const { done, value } = await reader.read(); if (done) break;
         full += dec.decode(value, { stream: true });
-        setMsg(bubble, display(full.replace('\u0000error', '')) || t('thinking')); $('#log').scrollTop = 1e9;
+        setMsg(bubble, display(full.split('\u0000')[0]) || t('thinking')); $('#log').scrollTop = 1e9;
       }
-      if (full.includes('\u0000error')) { bubble.className = 'msg note'; bubble.textContent = t('try_again'); }
-      const out = level.output !== 'chat' && extractGame(full, tag(level.output)); if (out) { showOutput(out); freshOutput(); }
+      // After a NUL the server says how the reply ended badly: an error, cut off for being too long, or declined.
+      const [body, mark] = full.split('\u0000'), note = { error: 'try_again', cut: 'cutOffMsg', refused: 'refusedMsg' }[mark];
+      if (note) {
+        const kept = mark === 'cut' ? display(body, true) : '';
+        if (kept) setMsg(bubble, kept); else bubble.remove();
+        addMsg('note', t(note));
+      }
+      const out = level.output !== 'chat' && extractGame(body, tag(level.output)); if (out) { showOutput(out); freshOutput(); }
     }
   } catch { bubble.className = 'msg note'; bubble.textContent = t('try_again'); }
   busy = false; await refresh().catch(() => {});
@@ -227,7 +253,7 @@ if (viewId) {
   const cur = !location.hash && me.levels.find((l) => l.status === 'current' || l.status === 'pending');
   if (cur) history.replaceState(null, '', '#level=' + cur.id);
 }
-route(); loadGames();
+route(); if (!meeting()) loadGames();
 if (viewId) {
   let rt, tt;
   const soon = () => { clearTimeout(rt); rt = setTimeout(() => refresh().catch(() => {}), 300); };

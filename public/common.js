@@ -145,6 +145,19 @@ Object.assign(DICT.az, {
   openView: '👁 Ekranına bax', studentView: 'ekranı (yalnız baxış)', watching: '👁 Şagirdin ekranına baxırsınız (yalnız baxış):', toDashboard: '← Panelə qayıt',
   resetPinL: '🔑 Yeni PIN', removeStudent: '✕ Şagirdi çıxar', rejectNote: 'Nə üzərində işləməlidir? (istəyə bağlı, şagird bunu görür)', roomSettings: 'Otaq ayarları',
 });
+// Video meeting rooms, and replies that ended badly
+Object.assign(DICT.en, {
+  mt_label: '📹 Video meeting', mt_wait: 'Your teacher has not opened the meeting yet. Stay on this page: the button to join appears here.',
+  mt_ready: 'Your teacher is in the meeting. Come in!', seenMeet: '👀 Your teacher can see whether this page is open in front of you. Nothing is recorded.',
+  cutOffMsg: '✂️ That answer got too long and was cut off before it finished. Ask for something smaller or simpler, or ask for one change at a time.',
+  refusedMsg: "I can't help with that one. Let's get back to our task. 😊",
+});
+Object.assign(DICT.az, {
+  mt_label: '📹 Video görüş', mt_wait: 'Müəllim hələ görüşü açmayıb. Bu səhifədə qal: qoşulma düyməsi burada görünəcək.',
+  mt_ready: 'Müəllim görüşdədir. Gəl, qoşul!', seenMeet: '👀 Müəllim bu səhifənin qarşında açıq olub-olmadığını görə bilir. Heç nə yazılmır.',
+  cutOffMsg: '✂️ Cavab çox uzun oldu və yarımçıq qaldı. Daha kiçik və ya sadə bir şey istə, ya da dəyişiklikləri bir-bir istə.',
+  refusedMsg: 'Bu barədə kömək edə bilmirəm. Gəl tapşırığımıza qayıdaq. 😊',
+});
 let lang = 'az';
 try { const saved = localStorage.getItem('lang'); if (DICT[saved]) lang = saved; } catch {}
 document.documentElement.lang = lang;

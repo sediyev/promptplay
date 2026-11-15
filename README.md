@@ -1,6 +1,6 @@
 # PromptPlay (pilot)
 
-Classroom web app where kids learn prompting with Claude (Haiku 4.5 by default) by playing through a map of levels: inventing superheroes, building worlds, making games. The teacher writes the course, opens rooms from it, and sees and controls everything live. One Node process, SQLite file, no build step.
+Classroom web app where kids learn prompting with Claude (Haiku 5.5 by default) by playing through a map of levels: inventing superheroes, building worlds, making games. The teacher writes the course, opens rooms from it, and sees and controls everything live. One Node process, SQLite file, no build step.
 
 ## Run
 ```
@@ -16,6 +16,7 @@ Needs Node >= 22.5 (built-in `node:sqlite`). Put it behind HTTPS (e.g. Caddy) fo
 - **Courses** (`/course.html`): the teacher builds a course of levels in the browser, or uploads one as JSON. A starter course of 10 levels ships with the app (`server/starter-course.json`), and the **course library** (below) adds six ready-made, bilingual courses. Each level has a story intro, a task, hidden guidance for the AI, completion criteria and an output type: `game` (HTML game), `creation` (a text card such as a superhero profile) or `chat` (conversation only).
 - **Course library** (`/library.html`): teachers browse ready-made courses, preview every level and open a room in a minute (see "Course library").
 - **Rooms** (`/teacher.html`): one course can be opened as many rooms as needed. Each room has its own invite link (`/join/<token>`, also as a QR code), a short class code, consent checkbox, daily limit and approval mode. "New link" revokes the old one.
+- **Video meeting rooms**: a teacher who only wants to meet students face to face, like in a video call app, makes a "Video meeting" room on `/teacher.html`: a name and the consent checkbox, with no course to write or pick. It has the same invite link, QR code and class code as any room. "Start meeting" opens the call and takes the teacher straight into it; students open the link, write a nickname and press "Join call". The call fills the page instead of floating over it, and takes up to 8 people (see "Video call").
 - **Sessions**: students can only join while the teacher has started the session. "End session" logs every student out at once; accounts and progress stay for next time. If the teacher's dashboard is closed for 15 minutes (`SESSION_GRACE_MS`), the room closes by itself.
 - **Students** open the invite link, write a nickname and pick an avatar: no code and no PIN. The link is the room's key (share it only with the class; "New link" replaces it), and the same nickname logs back in from any device. Nobody can take a nickname that is in the lesson right now. A student who opens the link before the session starts can press Go and gets in by themselves as soon as the teacher starts; a logged-out student is sent back to the room's link with their nickname filled in.
 - **Class code**: joining with the short code (easy to guess) still needs a nickname and a 4-digit PIN, and the same nickname and PIN log back in from any device. The teacher can set a new PIN for a student ("New PIN").
@@ -137,22 +138,40 @@ Learning goals, in plain words (the same text teachers see and can copy for pare
 **The Azerbaijani text of every library course needs a read-through by a native speaker before launch** (same as the home page). Until `az_reviewed` is `true`, the admin list and library show a warning on the course.
 
 ## Video call
-A small group call that lives inside a room, for the teacher and up to 3 students (4 people). It needs no Zoom link, accounts or paid service.
+A small group call that lives inside a room: the teacher and up to 3 students (4 people) in a course room, or up to 8 people in a video meeting room, which is nothing but its call. It needs no Zoom link, accounts or paid service.
 
 - **Starting**: while the session is live, the teacher presses **📹 Start video call** in the room header. Their camera and microphone turn on, and the call panel opens in the bottom corner of the dashboard.
 - **Joining**: students in that room see a banner, "Your teacher started a video call", with a **Join call** button and how full the call is. They join with their camera and microphone **off** and turn them on themselves. The room's invite link and class code are all they need.
 - **The panel** floats over the page, so students keep working on their level while they talk. It can be made bigger or smaller, and everyone can turn their microphone and camera on and off, share their screen (on a computer) and leave. Turning the camera off really switches it off.
 - **Teacher controls**: on each student's tile, 🔇 asks them to mute and ✕ takes them out of the call (they cannot rejoin until the next call). The student list shows 📹 next to everyone in the call. **End call for everyone** closes it; ending the session or the room closing by itself also ends the call.
-- **Limits**: one place is always kept for the teacher, so at most 3 students can join. A fourth student sees "The call is full". Opening the call in a second tab moves that person to the new tab instead of taking another place. Nothing is ever recorded.
+- **Limits**: in a course room the call takes 4 people. One place is always kept for the teacher, so at most 3 students can join, and a fourth student sees "The call is full". A video meeting room takes 8 people (the teacher and 7 students). Opening the call in a second tab moves that person to the new tab instead of taking another place. Nothing is ever recorded.
+- **Meeting rooms**: in a "Video meeting" room the call is the page. Pictures sit in a grid that grows with the number of people, a click on a picture makes it the big one, and a shared screen is always shown big. "End meeting for everyone" ends the session too, because a meeting is its call.
+- **Picture quality** follows the number of people, because every browser sends its video to each of the others:
 
-**How it works**: the video goes straight from browser to browser (WebRTC, everyone connected to everyone), so it never passes through the server and costs nothing to run. The server only passes the short setup messages between the browsers over event streams, like the rest of the live dashboard (`/api/classes/:id/call…`, `/api/student/call/events`, `/api/call/signal`, `/api/call/state` in `server/index.js`; the browser side is `public/call.js`). Video is kept small (360p, about 0.5 Mbit/s per person) so four people run smoothly on ordinary home internet. Browsers only allow the camera on `https` (or `localhost`), which the pilot setup already uses.
+  | People in the call | Picture | For each viewer |
+  | --- | --- | --- |
+  | 2 | 720p HD, 30 frames a second | up to 2.5 Mbit/s |
+  | 3 or 4 | 540p, 24 frames a second | up to 0.9 Mbit/s |
+  | 5 or 6 | 360p, 20 frames a second | up to 0.5 Mbit/s |
+  | 7 or more | 270p, 15 frames a second | up to 0.28 Mbit/s |
+
+  So one person uploads about 2 to 3 Mbit/s at most, whatever the size of the call. These are ceilings: on a slow connection or a slow computer the browser lowers the picture by itself, and raises it again when it can. The picture is sharp within a few seconds of joining (Chrome is told where to start instead of creeping up from 0.3 Mbit/s). A shared screen is sent in full HD at up to 15 frames a second and kept sharp before smooth, so text stays readable.
+
+**How it works**: the video goes straight from browser to browser (WebRTC, everyone connected to everyone), so it never passes through the server and costs nothing to run. The server only passes the short setup messages between the browsers over event streams, like the rest of the live dashboard (`/api/classes/:id/call…`, `/api/student/call/events`, `/api/call/signal`, `/api/call/state` in `server/index.js`; the browser side is `public/call.js`). Browsers only allow the camera on `https` (or `localhost`), which the pilot setup already uses.
 
 **Network settings** (optional, in `.env`):
 - `STUN_URLS`: helps browsers find a direct path to each other. Defaults to Google's free public STUN server; set it to an empty value to turn it off.
 - **A relay (TURN) is strongly recommended.** Without one, people whose internet blocks direct connections (mobile data, many school and office networks, some home routers) join the call and appear in it, but nobody can see or hear them, and they see nobody. Their tile then says "⚠️ no connection", and the teacher is told that a relay is missing.
 - `CLOUDFLARE_TURN_KEY_ID` and `CLOUDFLARE_TURN_API_TOKEN` (the easiest relay): in the Cloudflare dashboard open **Realtime → TURN Server**, create a TURN key, and copy its ID and API token into `.env`. It is free up to 1000 GB a month, far more than a few classes use. The server asks Cloudflare for credentials that last a day and gives only those to the browsers; the API token never leaves the server. If Cloudflare cannot be reached, the call still starts without the relay, and the server tries again a minute later.
 - `TURN_URLS` and `TURN_SECRET`: your own relay instead. The free, open source [coturn](https://github.com/coturn/coturn) can run on the same machine as the app: start it with `use-auth-secret` and `static-auth-secret=<the same TURN_SECRET>`, and set `TURN_URLS=turn:your.domain:3478`. The app then gives each browser a password that is valid for 12 hours. A TURN service with a fixed login works too, with `TURN_USERNAME` and `TURN_CREDENTIAL` instead of `TURN_SECRET`.
-- `CALL_MAX`: the number of people in a call, 4 by default. Each browser sends its video to every other person, so more than 4 or 5 gets choppy on home internet.
+- `CALL_MAX`: the number of people in a course room's call, 4 by default (8 at most).
+- `MEETING_MAX`: the number of people in a video meeting room, 8 by default (12 at most). Each browser sends its video to every other person, so a bigger meeting needs a media server (an SFU), which this app does not have: beyond about 8 people the pictures get small and weaker computers struggle.
+
+## The AI model
+- **Model**: `claude-haiku-5-5` by default (`MODEL` in `.env`), for the tutor, the safety filter and the level evaluator. It costs a tenth of Haiku 4.5 per token ($0.10 in, $0.50 out per million), and the admin page counts cost with those prices; `PRICE_IN` and `PRICE_OUT` override them for another model. `MODEL=claude-haiku-4-5` still works.
+- **Thinking**: Haiku 5.5 thinks before it answers, and that thinking counts towards the length limit of a reply, so every request leaves room for it. Game levels think a little more (effort "medium") because a game is code; conversations, creations, the safety filter and the evaluator use "low" to stay quick.
+- **Old games are not sent again**: on a game level every reply carries the whole game file. Only the newest game or creation goes back to the tutor; older versions are replaced by a one-line note, so a long session does not cost more with every message. If the student keeps talking until the newest game is older than the 16 messages that are sent, it travels in the system prompt instead, so the tutor can always change it (`server/history.js`).
+- **Replies that end badly**: a reply that runs out of room in the middle of a game file is not left as "Building your game…" for ever. The half file is dropped, the student keeps their last working game and is told to ask for something smaller or one change at a time, and the teacher's feed marks the reply "cut off". A reply or a safety check that the model's own safeguards decline is handled too: the student gets a kind note, the question is blocked or left out of later requests, and nothing broken is stored.
 
 ## Away status
 Helps the teacher notice who may not be following along, without getting in the way of a student who has a good reason to look elsewhere.

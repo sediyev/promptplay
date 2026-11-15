@@ -1,4 +1,4 @@
-// Small group video call (the teacher and up to 3 students) shown in a panel over the page.
+// Small group video call (the teacher and a few students), shown in a panel over the page or, in a meeting room, as the page itself.
 // Every browser connects straight to every other one (WebRTC); the server only relays the setup messages.
 // Each connection always has one audio and one video slot, so turning the camera, microphone or screen on and off
 // only swaps what goes into the slot and never needs a new handshake.
@@ -19,6 +19,8 @@ addStrings({
     call_failNoRelay: 'Video cannot get through to someone in the call. Their internet (often mobile data or a school network) blocks direct video calls. Whoever runs PromptPlay can fix this by turning on a TURN relay (README, "Video call").',
     call_failRelay: 'Video cannot get through to someone in the call. Ask them to reload the page, or to try another network.',
     call_failStudent: 'The video call cannot connect from this internet. Reload the page, or try another Wi-Fi.',
+    call_endMeet: '■ End meeting for everyone', call_confirmEndMeet: 'End the meeting? Everyone will be logged out until you start it again.',
+    call_pin: 'Click a picture to make it bigger',
   },
   az: {
     call_title: '📹 Video zəng', call_start: '📹 Video zəngə başla', call_join: '📹 Zəngə qoşul', call_end: '■ Zəngi hamı üçün bitir',
@@ -34,18 +36,58 @@ addStrings({
     call_failNoRelay: 'Zəngdəki kiminləsə video bağlantısı qurulmur. Onun interneti (çox vaxt mobil internet və ya məktəb şəbəkəsi) birbaşa video zəngləri bloklayır. PromptPlay-i idarə edən şəxs serverdə TURN relay qoşaraq bunu düzəldə bilər (README, "Video call").',
     call_failRelay: 'Zəngdəki kiminləsə video bağlantısı qurulmur. Ondan səhifəni yeniləməsini və ya başqa şəbəkə yoxlamasını xahiş et.',
     call_failStudent: 'Video zəng bu internetdən qoşula bilmir. Səhifəni yenilə və ya başqa Wi-Fi yoxla.',
+    call_endMeet: '■ Görüşü hamı üçün bitir', call_confirmEndMeet: 'Görüş bitirilsin? Yenidən başladana qədər hamı çıxarılacaq.',
+    call_pin: 'Böyütmək üçün şəklin üstünə bas',
   },
 });
 
 export const callSupported = () => !!(window.RTCPeerConnection && navigator.mediaDevices?.getUserMedia && window.isSecureContext);
-// Small video keeps four people smooth on ordinary home internet.
-const CAMERA = { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 20, max: 24 } };
-const VIDEO_BITRATE = 500000, SCREEN_BITRATE = 900000;
+// Picture quality follows the number of people in the call. Every browser sends its video to each of the others, so two
+// people can have HD while a full meeting keeps each picture small; either way one person uploads about 2 to 3 Mbit/s at most.
+// These are ceilings: on a slow connection or a slow computer the browser lowers the picture by itself.
+const TIERS = [ // up to this many people: picture height, frames per second, bits per second to each of the others
+  { n: 2, h: 720, fps: 30, rate: 2500000 },
+  { n: 4, h: 540, fps: 24, rate: 900000 },
+  { n: 6, h: 360, fps: 20, rate: 500000 },
+  { n: Infinity, h: 270, fps: 15, rate: 280000 },
+];
+export const tierFor = (n) => TIERS.find((x) => n <= x.n);
+const cameraWants = (q) => ({ width: { ideal: Math.round(q.h * 16 / 9) }, height: { ideal: q.h }, frameRate: { ideal: q.fps, max: q.fps } });
+// A shared screen is mostly text: full HD and sharp before smooth, with the bitrate shared between the viewers.
+const SCREEN = { width: { max: 1920 }, height: { max: 1080 }, frameRate: { ideal: 15, max: 15 } };
+const screenRate = (n) => Math.round(Math.min(2500000, Math.max(600000, 4000000 / Math.max(1, n - 1))));
+// Chrome starts every video stream at about 0.3 Mbit/s and needs half a minute to find out that it may send more, so the
+// picture begins blurry. A Chrome-only hint in the description it applies says where to start instead; other browsers
+// ignore the hint, and nothing changes in what is sent to the other person. Small tiers start low anyway and are left alone.
+const startRate = (n) => Math.min(1000, Math.round(tierFor(n).rate / 2000)); // kbit/s
+export function quickStart(desc, n) {
+  const kbps = startRate(n);
+  if (!desc?.sdp || kbps <= 300 || desc.sdp.includes('x-google-start-bitrate')) return desc;
+  const lines = desc.sdp.split('\r\n'), hint = `x-google-start-bitrate=${kbps}`;
+  // the video codecs on offer, and which of them already have a settings (fmtp) line to add the hint to
+  const codecs = new Set(), has = new Set(), out = [];
+  let video = false;
+  for (const l of lines) {
+    if (l.startsWith('m=')) video = l.startsWith('m=video');
+    if (!video) continue;
+    const map = l.match(/^a=rtpmap:(\d+) (VP8|VP9|H264|H265|AV1)\//i), fmtp = l.match(/^a=fmtp:(\d+) /);
+    if (map) codecs.add(map[1]); if (fmtp) has.add(fmtp[1]);
+  }
+  for (const l of lines) {
+    const pt = l.match(/^a=(?:rtpmap|fmtp):(\d+) /)?.[1];
+    if (!codecs.has(pt)) out.push(l);
+    else if (l.startsWith('a=fmtp:')) out.push(`${l};${hint}`);
+    else if (has.has(pt)) out.push(l);
+    else out.push(l, `a=fmtp:${pt} ${hint}`); // a codec with no settings line of its own (VP8) gets one
+  }
+  return { type: desc.type, sdp: out.join('\r\n') };
+}
 let active = null; // one call per page
 
 /**
  * Joins the call and shows the panel. Resolves to the call, or null when it could not start.
- * opts: { events: stream url, teacher: bool, classId, me: {name, avatar}, mic: bool, cam: bool, label(info): extra tile text, onLeave(reason) }
+ * opts: { events: stream url, teacher: bool, classId, me: {name, avatar}, mic: bool, cam: bool, label(info): extra tile text, onLeave(reason),
+ *         mount: element to show the call in as a full "stage" (a meeting room) instead of the floating panel, meeting: bool }
  */
 export async function joinCall(opts) {
   if (active) return active;
@@ -111,7 +153,7 @@ class Call {
     // Still not connected after a while: say so on the tile, and tell people why once, instead of "connecting…" for ever.
     setTimeout(() => { if (this.peers.get(info.id) === p) this.render(); }, 20000);
     pc.onconnectionstatechange = () => {
-      if (pc.connectionState === 'connected') { this.trying.delete(info.id); p.since = Date.now(); }
+      if (pc.connectionState === 'connected') { this.trying.delete(info.id); p.since = Date.now(); this.limitBitrate(p); }
       this.render();
       // The one who started a connection starts it again when it fails (for example after a network change).
       if (pc.connectionState === 'failed' && p.offerer) setTimeout(() => {
@@ -135,7 +177,7 @@ class Call {
     if (data.sdp?.type === 'offer') {
       if (p) this.closePeer(p); // they started over: so do we
       p = this.newPeer(this.infos.get(from) || { id: from, name: '', avatar: '🙂' }, false);
-      await p.pc.setRemoteDescription(data.sdp);
+      await this.setRemote(p, data.sdp);
       for (const tr of p.pc.getTransceivers()) {
         const kind = tr.receiver.track.kind;
         tr.direction = 'sendrecv'; p.senders[kind] = tr.sender;
@@ -145,22 +187,48 @@ class Call {
       this.signal(p, { sdp: p.pc.localDescription.toJSON() });
       this.limitBitrate(p);
     } else if (data.sdp?.type === 'answer' && p) {
-      await p.pc.setRemoteDescription(data.sdp);
+      await this.setRemote(p, data.sdp);
     } else if (data.candidate && p) {
       if (!p.pc.remoteDescription) return p.pending.push(data.candidate);
       await p.pc.addIceCandidate(data.candidate).catch(() => {});
     }
     if (p?.pc.remoteDescription) for (const c of p.pending.splice(0)) await p.pc.addIceCandidate(c).catch(() => {});
   }
+  // The other person's description, with the quick-start hint; if a browser will not take the hint, without it.
+  async setRemote(p, desc) {
+    const hinted = quickStart(desc, this.people());
+    try { await p.pc.setRemoteDescription(hinted); }
+    catch (e) { if (hinted === desc) throw e; await p.pc.setRemoteDescription(desc); }
+  }
   // Messages to one person go out one after another, so the answer never overtakes the offer.
   signal(p, data) {
     p.out = p.out.then(() => this.id && api('/api/call/signal', 'POST', { peer: this.id, to: p.info.id, data })).catch(() => {});
   }
+  // ---------- picture quality ----------
+  people() { return Math.max(this.peers.size, this.infos.size) + 1; }
+  // The ceiling for what this browser sends to one person: bitrate, frame rate and (if the camera could not be set to it) size.
   limitBitrate(p) {
-    const s = p.senders.video, prm = s?.getParameters();
+    const s = p.senders.video; let prm;
+    try { prm = s?.getParameters(); } catch { return; }
     if (!prm?.encodings?.length) return;
-    prm.encodings[0].maxBitrate = this.screen ? SCREEN_BITRATE : VIDEO_BITRATE;
+    const q = tierFor(this.people()), e = prm.encodings[0];
+    if (this.screen) {
+      e.maxBitrate = screenRate(this.people()); e.maxFramerate = SCREEN.frameRate.max; e.scaleResolutionDownBy = 1;
+      prm.degradationPreference = 'maintain-resolution'; // text must stay readable: drop frames first
+    } else {
+      const h = this.cam?.getSettings?.().height || q.h;
+      e.maxBitrate = q.rate; e.maxFramerate = q.fps; e.scaleResolutionDownBy = Math.max(1, h / q.h);
+      prm.degradationPreference = 'balanced';
+    }
     s.setParameters(prm).catch(() => {});
+  }
+  // Called whenever someone joins or leaves, or the camera or screen goes on or off: move to the tier for that many people.
+  async applyQuality() {
+    const n = this.people(), key = `${n}|${!!this.screen}|${this.cam?.id || ''}`;
+    if (key === this.quality) return;
+    this.quality = key;
+    if (this.cam) await this.cam.applyConstraints(cameraWants(tierFor(n))).catch(() => {});
+    for (const p of this.peers.values()) this.limitBitrate(p);
   }
   // Some browsers only play sound after a tap on the page: a button says so, and any tap starts every sound.
   playSound(p) {
@@ -189,12 +257,13 @@ class Call {
     const tr = this.track(kind);
     this.local.getTracks().filter((x) => x.kind === kind).forEach((x) => this.local.removeTrack(x));
     if (tr && kind === 'video') this.local.addTrack(tr);
-    for (const p of this.peers.values()) { await p.senders[kind]?.replaceTrack(tr).catch(() => {}); if (kind === 'video') this.limitBitrate(p); }
+    for (const p of this.peers.values()) await p.senders[kind]?.replaceTrack(tr).catch(() => {});
+    if (kind === 'video') { this.quality = null; await this.applyQuality(); }
     this.renderMine(); this.render();
   }
   async setMic(on, send = true) {
     if (on && !this.mic) {
-      try { [this.mic] = (await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })).getAudioTracks(); }
+      try { [this.mic] = (await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } })).getAudioTracks(); }
       catch { toast(t('call_noDevice'), 'bad'); return; }
     }
     if (this.mic) this.mic.enabled = on; // muting keeps the device so unmuting is instant
@@ -202,16 +271,18 @@ class Call {
   }
   async setCam(on, send = true) {
     if (on && !this.cam) {
-      try { [this.cam] = (await navigator.mediaDevices.getUserMedia({ video: CAMERA })).getVideoTracks(); }
+      try { [this.cam] = (await navigator.mediaDevices.getUserMedia({ video: cameraWants(tierFor(this.people())) })).getVideoTracks(); }
       catch { toast(t('call_noDevice'), 'bad'); return; }
+      try { this.cam.contentHint = 'motion'; } catch {}
     }
     if (!on && this.cam) { this.cam.stop(); this.cam = null; } // the camera light goes off too
     await this.useTrack('video'); if (send) this.sendState();
   }
   async setScreen(on) {
     if (on && !this.screen) {
-      try { [this.screen] = (await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: { max: 10 } }, audio: false })).getVideoTracks(); }
+      try { [this.screen] = (await navigator.mediaDevices.getDisplayMedia({ video: SCREEN, audio: false })).getVideoTracks(); }
       catch { return; }
+      try { this.screen.contentHint = 'detail'; } catch {} // tells the encoder to keep text sharp
       this.screen.onended = () => this.setScreen(false); // the browser's own "stop sharing" button
     }
     if (!on && this.screen) { this.screen.onended = null; this.screen.stop(); this.screen = null; }
@@ -236,10 +307,11 @@ class Call {
   // ---------- panel ----------
   buildPanel() {
     const el = this.panel = document.createElement('section');
-    el.className = 'callbox'; el.setAttribute('aria-label', t('call_title'));
+    const stage = !!this.opts.mount; // a meeting room shows the call as the page itself
+    el.className = 'callbox' + (stage ? ' stage' : ''); el.setAttribute('aria-label', t('call_title'));
     el.innerHTML = `<div class="callhead"><b>${t('call_title')}</b><span class="muted" data-count></span><span class="grow"></span>
-        <button class="ghost icon" data-act="size" title="${t('call_max')}" aria-label="${t('call_max')}">⤢</button>
-        <button class="ghost icon" data-act="min" title="${t('call_min')}" aria-label="${t('call_min')}">▁</button></div>
+        ${stage ? `<span class="muted callhint">${t('call_pin')}</span>` : `<button class="ghost icon" data-act="size" title="${t('call_max')}" aria-label="${t('call_max')}">⤢</button>
+        <button class="ghost icon" data-act="min" title="${t('call_min')}" aria-label="${t('call_min')}">▁</button>`}</div>
       <div class="tiles"></div>
       <button class="callsound" data-act="sound" hidden>${t('call_sound')}</button>
       <p class="callwarn" role="status" hidden></p>
@@ -248,17 +320,19 @@ class Call {
         <button class="ghost" data-act="mic" aria-pressed="false"></button><button class="ghost" data-act="cam" aria-pressed="false"></button>
         ${navigator.mediaDevices?.getDisplayMedia ? '<button class="ghost" data-act="screen" aria-pressed="false"></button>' : ''}
         <span class="grow"></span><button class="ghost" data-act="leave">${t('call_leave')}</button>
-        ${this.opts.teacher ? `<button class="bad" data-act="end">${t('call_end')}</button>` : ''}</div>`;
+        ${this.opts.teacher ? `<button class="bad" data-act="end">${t(this.opts.meeting ? 'call_endMeet' : 'call_end')}</button>` : ''}</div>`;
     el.querySelector('.callnote').hidden = !!this.opts.teacher;
     el.onclick = (e) => {
-      const b = e.target.closest('[data-act]'); if (!b) return;
+      const b = e.target.closest('[data-act]');
+      // On the stage a click on a picture makes it the big one (and a second click puts it back).
+      if (!b) { const tile = stage && e.target.closest('.tile'); if (tile) for (const x of el.querySelectorAll('.tile')) x.classList.toggle('zoomed', x === tile && !x.classList.contains('zoomed')); return; }
       const act = b.dataset.act;
       if (act === 'mic') this.setMic(!this.mic?.enabled);
       if (act === 'cam') this.setCam(!this.cam);
       if (act === 'screen') this.setScreen(!this.screen);
       if (act === 'leave') this.leave();
       if (act === 'sound') for (const p of this.peers.values()) if (p.audio.srcObject) this.playSound(p);
-      if (act === 'end' && confirm(t('call_confirmEnd'))) api(`/api/classes/${this.opts.classId}/call`, 'POST', { open: false }).catch(() => {});
+      if (act === 'end' && confirm(t(this.opts.meeting ? 'call_confirmEndMeet' : 'call_confirmEnd'))) api(`/api/classes/${this.opts.classId}/call`, 'POST', { open: false }).catch(() => {});
       if (act === 'min') el.classList.toggle('min');
       if (act === 'size') el.classList.toggle('big');
       if (act === 'mute' || act === 'remove') api(`/api/classes/${this.opts.classId}/call/peers/${b.dataset.peer}`, 'POST', { action: act }).catch(() => {});
@@ -266,7 +340,7 @@ class Call {
     this.mine = this.makeTile(true);
     this.mine.video.srcObject = this.local;
     el.querySelector('.tiles').append(this.mine.el);
-    document.body.append(el);
+    (this.opts.mount || document.body).append(el);
   }
   makeTile(me) {
     const el = document.createElement('div'); el.className = 'tile' + (me ? ' me' : '');
@@ -308,6 +382,8 @@ class Call {
     };
     this.panel.querySelector('[data-count]').textContent = `${n}/${this.max || 4}`;
     this.panel.dataset.n = n;
+    this.panel.style.setProperty('--cols', n <= 1 ? 1 : n <= 4 ? 2 : n <= 9 ? 3 : 4);
+    this.applyQuality();
     set('mic', !!this.mic?.enabled, `🎤 ${t('call_mic')}`, `🔇 ${t('call_mic')}`);
     set('cam', !!this.cam, `📷 ${t('call_cam')}`, `🚫 ${t('call_cam')}`);
     set('screen', !!this.screen, `🖥️ ${t('call_stopScreen')}`, `🖥️ ${t('call_screen')}`);

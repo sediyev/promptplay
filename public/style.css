@@ -219,9 +219,8 @@ iframe.studentview { flex:1; width:100%; min-height:0; border:1px solid var(--li
 .callbox.big { width:min(860px,calc(100vw - 32px)); }
 .callhead { display:flex; align-items:center; gap:.5rem; }
 .callbox button.icon { padding:.15em .55em; font-size:.85rem; line-height:1.4; }
-.tiles { display:grid; grid-template-columns:1fr; gap:6px; }
-.callbox[data-n="2"] .tiles, .callbox[data-n="3"] .tiles, .callbox[data-n="4"] .tiles { grid-template-columns:1fr 1fr; }
-.callbox[data-n="3"] .tile.me { grid-column:1 / -1; }
+.tiles { display:grid; grid-template-columns:repeat(var(--cols,1),1fr); gap:6px; }
+.callbox:not(.stage)[data-n="3"] .tile.me { grid-column:1 / -1; }
 .tile { position:relative; aspect-ratio:16/9; background:#16132e; border-radius:12px; overflow:hidden; }
 .tile video { width:100%; height:100%; object-fit:cover; display:block; }
 .tile.screen video { object-fit:contain; } .tile.mirror video { transform:scaleX(-1); }
@@ -239,6 +238,22 @@ iframe.studentview { flex:1; width:100%; min-height:0; border:1px solid var(--li
 .callbar button { padding:.35em .7em; font-size:.85rem; box-shadow:none; }
 .callbar button.ghost.on { background:var(--brand-soft); border-color:var(--brand); }
 .callbox.min .tiles, .callbox.min .callbar, .callbox.min .callnote { display:none; }
+/* a meeting room: the call is the page itself, not a floating panel (call.js "mount") */
+.meetstage { margin-top:12px; }
+.meetstage .meetwait { text-align:center; padding:2.2rem 1rem; }
+.meetstage .meetwait .bigicon { font-size:3rem; }
+.meetstage .meetwait button { font-size:1.1rem; padding:.7em 1.6em; }
+.callbox.stage { position:static; width:auto; box-shadow:none; border:0; padding:0; z-index:auto; gap:10px; }
+.callbox.stage .tiles { gap:10px; }
+.callbox.stage .tile { border-radius:16px; cursor:zoom-in; }
+.callbox.stage .tile.zoomed, .callbox.stage .tile.screen { grid-column:1 / -1; max-height:72vh; width:100%; justify-self:center; }
+.callbox.stage .tile.zoomed { cursor:zoom-out; order:-1; } .callbox.stage .tile.screen { order:-2; }
+.callbox.stage .tile .tav { font-size:clamp(2.4rem,7vw,4.5rem); }
+.callbox.stage .tile .tname { font-size:.9rem; left:10px; bottom:10px; }
+.callbox.stage .callbar button { padding:.55em 1em; font-size:1rem; }
+.callhint { font-size:.8rem; }
+.meeting .courseonly { display:none !important; }
+@media (max-width:700px) { .callbox.stage .tiles { grid-template-columns:1fr 1fr; } .callbox.stage[data-n="1"] .tiles, .callbox.stage[data-n="2"] .tiles { grid-template-columns:1fr; } .callhint { display:none; } }
 @media (max-width:600px) { .callbox, .callbox.big { right:8px; left:8px; bottom:8px; width:auto; } .tile .tav { font-size:1.8rem; } }
 
 /* "away" status for the teacher: informative, deliberately not alarming */

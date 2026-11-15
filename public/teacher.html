@@ -12,10 +12,20 @@ import { joinCall, inCall } from '/call.js';
 addStrings({
   en: { aw_tab: 'on another tab', aw_window: 'in another window', aw_left: 'left the PromptPlay page', aw_away: 'away', aw_min: 'min', aw_lt1: '<1 min',
     aw_notify: '🔔 Tell me when a student leaves the page', aw_hint: 'Not on the PromptPlay page right now (they may have a good reason). This is only a status.',
-    aw_summary: 'Left the page {n} times this session, {m} in total.', aw_once: 'Left the page once this session, {m} in total.', aw_none: 'Stayed on the page this session.' },
+    aw_summary: 'Left the page {n} times this session, {m} in total.', aw_once: 'Left the page once this session, {m} in total.', aw_none: 'Stayed on the page this session.',
+    mt_new: '📹 Video meeting', mt_sub: 'Meet your students face to face, like a video call app. No course to prepare: share the link and start.',
+    mt_name: 'Meeting name', mt_create: '📹 Create meeting room', mt_label: '📹 Video meeting', mt_start: '▶ Start meeting', mt_end: '■ End meeting',
+    mt_join: '📹 Join the meeting', mt_closed: 'The meeting has not started. Press "Start meeting": your camera and microphone turn on and students can come in with the link.',
+    mt_running: 'The meeting is running. Join it to see and hear everyone.', mt_people: 'People', mt_room: 'up to {n} people',
+    mt_confirmEnd: 'End the meeting? Everyone will be logged out until you start it again.', cutOff: 'cut off (too long)' },
   az: { aw_tab: 'başqa vərəqdədir', aw_window: 'başqa pəncərədədir', aw_left: 'PromptPlay səhifəsindən çıxdı', aw_away: 'kənarda', aw_min: 'dəq', aw_lt1: '<1 dəq',
     aw_notify: '🔔 Şagird səhifədən çıxanda mənə xəbər ver', aw_hint: 'Hazırda PromptPlay səhifəsində deyil (səbəbi ola bilər). Bu, sadəcə vəziyyət məlumatıdır.',
-    aw_summary: 'Bu dərsdə səhifədən {n} dəfə çıxıb, cəmi {m}.', aw_once: 'Bu dərsdə səhifədən 1 dəfə çıxıb, cəmi {m}.', aw_none: 'Bu dərsdə səhifədə qalıb.' },
+    aw_summary: 'Bu dərsdə səhifədən {n} dəfə çıxıb, cəmi {m}.', aw_once: 'Bu dərsdə səhifədən 1 dəfə çıxıb, cəmi {m}.', aw_none: 'Bu dərsdə səhifədə qalıb.',
+    mt_new: '📹 Video görüş', mt_sub: 'Şagirdlərlə video zəng proqramındakı kimi üz-üzə görüşün. Kurs hazırlamaq lazım deyil: linki paylaşın və başlayın.',
+    mt_name: 'Görüşün adı', mt_create: '📹 Görüş otağı aç', mt_label: '📹 Video görüş', mt_start: '▶ Görüşü başlat', mt_end: '■ Görüşü bitir',
+    mt_join: '📹 Görüşə qoşul', mt_closed: 'Görüş hələ başlamayıb. «Görüşü başlat» düyməsini basın: kamera və mikrofonunuz açılacaq, şagirdlər isə linklə daxil ola biləcək.',
+    mt_running: 'Görüş davam edir. Hamını görmək və eşitmək üçün qoşulun.', mt_people: 'İştirakçılar', mt_room: '{n} nəfərədək',
+    mt_confirmEnd: 'Görüş bitirilsin? Yenidən başladana qədər hamı çıxarılacaq.', cutOff: 'yarımçıq qaldı (çox uzun idi)' },
 });
 // "Away" is a status, never a warning: how long a student has not had the PromptPlay page in front of them.
 const mins = (ms) => (ms < 60000 ? t('aw_lt1') : `${Math.floor(ms / 60000)} ${t('aw_min')}`);
@@ -47,6 +57,10 @@ async function listPage() {
   const [rooms, courses] = await Promise.all([api('/api/classes'), api('/api/courses')]);
   root.innerHTML = `<div class="layout">
     <div><a class="card libcta" href="/library.html"><span class="lc-emoji" aria-hidden="true">📚</span><span><b>${t('lib_quick')}</b><br><span class="muted">${t('lib_quickSub')}</span></span></a>
+    <div class="card" style="margin-top:12px"><h2>${t('mt_new')}</h2><p class="muted" style="margin-top:0">${t('mt_sub')}</p>
+      <label for="mn">${t('mt_name')}</label><input id="mn" maxlength="60">
+      <label style="display:flex;gap:.5rem;align-items:flex-start;color:inherit"><input type="checkbox" id="mc2" style="width:auto;margin-top:.3rem">${t('consent')}</label>
+      <p class="err" id="merr"></p><button id="mm">${t('mt_create')}</button></div>
     <div class="card" style="margin-top:12px"><h2>${t('newRoom')}</h2>
       ${courses.length ? `<label>${t('roomName')}</label><input id="cn" maxlength="60">
       <label>${t('course')}</label><select id="co">${courses.map((c) => `<option value="${c.id}">${esc(c.title)} (${c.levels} ${t('levelsN')})</option>`).join('')}</select>
@@ -60,8 +74,13 @@ async function listPage() {
       <p class="err" id="ierr"></p>
       ${courses.map((c) => `<a class="classlink" href="/course.html?id=${c.id}"><span><b>${esc(c.title)}</b><br><span class="muted">${c.levels} ${t('levelsN')} · ${c.rooms} ${t('roomsN')}</span></span><span class="row">${c.library_slug ? `<span class="pill soft">📚 ${t('lib_made')}</span>` : ''}<span class="pill">${t('edit')}</span></span></a>`).join('') || `<p class="muted">${t('empty')}</p>`}
     </div></div>
-    <div class="card"><h2>${t('rooms')}</h2>${rooms.map((c) => `<a class="classlink" href="?class=${c.id}"><span><b>${esc(c.name)}</b><br><span class="muted">${esc(c.course || '')} · ${c.students} ${t('studentsN')}</span></span>
+    <div class="card"><h2>${t('rooms')}</h2>${rooms.map((c) => `<a class="classlink" href="?class=${c.id}"><span><b>${esc(c.name)}</b><br><span class="muted">${c.kind === 'meeting' ? t('mt_label') : esc(c.course || '')} · ${c.students} ${t('studentsN')}</span></span>
       <span class="pill ${c.live ? 'live' : ''}">${c.live ? '● ' + t('liveNow') : t('closedRoom')}</span></a>`).join('') || `<p class="muted">${t('empty')}</p>`}</div></div>`;
+  $('#mm').onclick = async () => {
+    if (!$('#mc2').checked) return ($('#merr').textContent = t('consentNeeded'));
+    try { const r = await api('/api/classes', 'POST', { kind: 'meeting', name: $('#mn').value || t('mt_new').replace('📹 ', ''), consent: true }); location = '?class=' + r.id; }
+    catch (x) { $('#merr').textContent = x.code; }
+  };
   if ($('#mk')) $('#mk').onclick = async () => {
     if (!$('#cc').checked) return ($('#err').textContent = t('consentNeeded'));
     try { const r = await api('/api/classes', 'POST', { name: $('#cn').value, consent: true, daily_limit: +$('#dl').value, course_id: +$('#co').value, approval: $('#ap').value }); location = '?class=' + r.id; }
@@ -88,29 +107,31 @@ async function roomPage(id) {
       <div class="card"><div id="students"></div></div>
       <div class="card" style="margin-top:12px" id="progressCard" hidden></div>
     </div><div>
-      <div id="alerts"></div>
+      <div class="card meetstage" id="meet" hidden style="margin-top:0"></div>
+      <div id="alerts" class="courseonly"></div>
       <div class="card approvals" id="pending" hidden></div>
-      <div class="card"><h3>${t('classMap')}</h3><div class="classmap" id="cmap"></div></div>
-      <div class="card" style="margin-top:12px"><div class="row wrapx"><h3 class="grow">${t('live')}</h3>
+      <div class="card courseonly"><h3>${t('classMap')}</h3><div class="classmap" id="cmap"></div></div>
+      <div class="card courseonly" style="margin-top:12px"><div class="row wrapx"><h3 class="grow">${t('live')}</h3>
         <select id="lf" style="width:auto"></select><input type="date" id="dt" style="width:10rem"></div>
         <div class="feed" id="feed"></div></div>
-      <div class="card" style="margin-top:12px"><h3>${t('outputs')}</h3><div class="grid" id="games"></div></div>
+      <div class="card courseonly" style="margin-top:12px"><h3>${t('outputs')}</h3><div class="grid" id="games"></div></div>
     </div></div>`;
+  let meeting = false; // a video meeting room: no course, so the call takes the place of the map, the chats and the gallery
   const stu = (sid) => cls?.students.find((s) => s.id == sid);
   const levelOf = (lid) => cls?.levels.find((l) => l.id === lid);
 
   function renderHead() {
     const open = $('.settings')?.open, dl = open && $('#dl').value; // live refreshes must not close the menu mid-edit
     const link = `${location.origin}/join/${cls.invite}`;
-    $('#head').innerHTML = `<div class="row wrapx"><a href="/teacher.html">${t('back')}</a><div class="grow"><h2 style="margin:0">${esc(cls.name)}</h2><span class="muted">${esc(cls.course?.title || '')}</span>${cls.next?.length ? `<br><span class="muted">${t('nextAdv')}: ${cls.next.map((n) => `<a href="/library.html#${esc(n.id)}">${esc(n.emoji)} ${esc(n.title[getLang()] || n.title.en || n.title.az)}</a>`).join(', ')}</span>` : ''}</div>
+    $('#head').innerHTML = `<div class="row wrapx"><a href="/teacher.html">${t('back')}</a><div class="grow"><h2 style="margin:0">${esc(cls.name)}</h2><span class="muted">${meeting ? `${t('mt_label')} · ${t('mt_room').replace('{n}', cls.call?.max || '')}` : esc(cls.course?.title || '')}</span>${cls.next?.length ? `<br><span class="muted">${t('nextAdv')}: ${cls.next.map((n) => `<a href="/library.html#${esc(n.id)}">${esc(n.emoji)} ${esc(n.title[getLang()] || n.title.en || n.title.az)}</a>`).join(', ')}</span>` : ''}</div>
       ${cls.live ? `<span class="pill live">● ${t('liveNow')}</span>` : ''}
-      <button id="lv" class="${cls.live ? 'bad' : 'ok'}">${cls.live ? t('endSession') : t('startSession')}</button>
+      <button id="lv" class="${cls.live ? 'bad' : 'ok'}">${t(cls.live ? (meeting ? 'mt_end' : 'endSession') : meeting ? 'mt_start' : 'startSession')}</button>
       ${callHead()}
       <details class="settings"><summary aria-label="${t('roomSettings')}" title="${t('roomSettings')}">⚙️</summary><div>
-        <label>${t('approvalMode')}</label><select id="ap"><option value="ai">${t('approval_ai')}</option><option value="teacher">${t('approval_teacher')}</option></select>
-        <label>${t('dailyLimit')}</label><div class="row"><input id="dl" type="number" min="1" value="${cls.daily_limit}"><button class="ghost" id="dls">${t('save2')}</button></div>
+        <div class="courseonly"><label>${t('approvalMode')}</label><select id="ap"><option value="ai">${t('approval_ai')}</option><option value="teacher">${t('approval_teacher')}</option></select>
+        <label>${t('dailyLimit')}</label><div class="row"><input id="dl" type="number" min="1" value="${cls.daily_limit}"><button class="ghost" id="dls">${t('save2')}</button></div></div>
         <label style="display:flex;gap:.5rem;align-items:center;color:inherit"><input type="checkbox" id="an" ${awayNotify ? 'checked' : ''}>${t('aw_notify')}</label>
-        <p></p><button id="pa" class="${cls.paused ? 'ok' : 'bad'}">${cls.paused ? t('resumeAll') : t('pauseAll')}</button>
+        <p></p><button id="pa" class="courseonly ${cls.paused ? 'ok' : 'bad'}">${cls.paused ? t('resumeAll') : t('pauseAll')}</button>
         <p class="muted">${t('autoClose')}</p></div></details></div>
       <div class="row wrapx"><span class="muted">${t('code2')}:</span><span class="code">${esc(cls.code)}</span>
         <span class="muted">${t('inviteLink')}:</span><input readonly value="${esc(link)}" id="link" class="linkbox" aria-label="${t('inviteLink')}">
@@ -119,7 +140,12 @@ async function roomPage(id) {
     if (open) { $('.settings').open = true; $('#dl').value = dl; }
     if ($('#callGo')) $('#callGo').onclick = startCall;
     if ($('#callEnd')) $('#callEnd').onclick = async () => { if (confirm(t('call_confirmEnd'))) await api(`/api/classes/${id}/call`, 'POST', { open: false }); };
-    $('#lv').onclick = async () => { if (cls.live && !confirm(t('confirmEnd'))) return; await api('/api/classes/' + id, 'PATCH', { live: !cls.live }); refresh(); };
+    $('#lv').onclick = async () => {
+      if (cls.live && !confirm(t(meeting ? 'mt_confirmEnd' : 'confirmEnd'))) return;
+      const start = !cls.live;
+      await api('/api/classes/' + id, 'PATCH', { live: start }); await refresh();
+      if (start && meeting) startCall(); // starting a meeting takes the teacher straight into it
+    };
     $('#cp').onclick = async () => { $('#link').select(); try { await navigator.clipboard.writeText(link); } catch { document.execCommand('copy'); } toast(t('copied'), 'ok'); };
     $('#qr').onclick = () => {
       const box = document.createElement('div'); box.className = 'qrbox';
@@ -135,18 +161,29 @@ async function roomPage(id) {
   // Video call: the teacher opens it for the room and joins with camera and microphone on; students join from their page.
   function callHead() {
     const c = cls.call;
-    if (!cls.live) return '';
+    if (!cls.live || meeting) return ''; // a meeting shows its call on the page (renderMeet)
     if (!c?.open) return `<button class="ghost" id="callGo">${t('call_start')}</button>`;
     if (inCall()) return `<span class="pill">📹 ${c.peers.length}/${c.max}</span>`;
     return `<button id="callGo">${t('call_join')} (${c.peers.length}/${c.max})</button><button class="ghost" id="callEnd" title="${t('call_end')}">■</button>`;
   }
   async function startCall() {
-    $('#callGo').disabled = true;
-    try { cls.call = await api(`/api/classes/${id}/call`, 'POST', { open: true }); } catch (x) { toast(t(x.code), 'bad'); return renderHead(); }
+    if (inCall()) return;
+    for (const b of [$('#callGo'), $('#meetGo')]) if (b) b.disabled = true;
+    try { cls.call = await api(`/api/classes/${id}/call`, 'POST', { open: true }); } catch (x) { toast(t(x.code), 'bad'); renderMeet(); return renderHead(); }
+    if (meeting) $('#meet').replaceChildren(); // the call fills the stage
     callUi = await joinCall({ events: `/api/classes/${id}/call/events`, teacher: true, classId: id, me: { name: t('teacher'), avatar: '🧑‍🏫' }, mic: true, cam: true,
+      mount: meeting ? $('#meet') : null, meeting,
       label: (info) => { const s = info.student_id && stu(info.student_id); return s && awayNow(s) ? `↗ ${t('aw_' + s.away)}` : ''; },
-      onLeave: () => { callUi = null; renderHead(); } });
+      onLeave: () => { callUi = null; renderHead(); renderMeet(); } });
     renderHead();
+  }
+  // Meeting room: the stage shows the call, or how to get into it.
+  function renderMeet() {
+    $('#meet').hidden = !meeting;
+    if (!meeting || inCall()) return;
+    $('#meet').innerHTML = `<div class="meetwait"><div class="bigicon" aria-hidden="true">📹</div><p>${t(cls.live ? 'mt_running' : 'mt_closed')}</p>
+      ${cls.live ? `<button id="meetGo">${t('mt_join')} (${cls.call?.peers.length || 0}/${cls.call?.max || ''})</button>` : ''}</div>`;
+    if ($('#meetGo')) $('#meetGo').onclick = startCall;
   }
   let callUi = null;
   const inCallIds = () => new Set((cls.call?.peers || []).map((p) => p.student_id).filter(Boolean));
@@ -156,13 +193,13 @@ async function roomPage(id) {
     const nAway = cls.students.filter(awayNow).length;
     // Each row: a button that selects the student, then the two live controls. New PIN and Remove sit on the selected student's card.
     const pick = (sid, inner) => `<button class="stu-pick" data-s="${sid}" aria-pressed="${sel == sid}">${inner}</button>`;
-    $('#students').innerHTML = `<h3>${t('students')} (${cls.students.length})${nAway ? ` <span class="awaypill">↗ ${nAway} ${t('aw_away')}</span>` : ''}</h3><div class="stu ${sel ? '' : 'sel'}">${pick('', `<span>${t('everyone')}</span>`)}</div>` +
+    $('#students').innerHTML = `<h3>${meeting ? '👥 ' + t('mt_people') : t('students')} (${cls.students.length})${nAway ? ` <span class="awaypill">↗ ${nAway} ${t('aw_away')}</span>` : ''}</h3><div class="stu ${sel ? '' : 'sel'}">${pick('', `<span>${t('everyone')}</span>`)}</div>` +
       cls.students.map((s) => `<div class="stu ${sel == s.id ? 'sel' : ''}">
         <span class="dot ${s.online ? 'on' : ''}"></span>${pick(s.id, `<span>${s.paused ? '⏸️ ' : ''}${calling.has(s.id) ? `<span title="${t('call_inCall')}">📹</span> ` : ''}${esc(s.avatar)} ${esc(s.nickname)}</span>
-        <span class="muted">${lvl(s)} · ★${s.stars}${s.pending ? ' · ⏳' : ''} · ${s.used}/${cls.daily_limit}</span>
+        ${meeting ? '' : `<span class="muted">${lvl(s)} · ★${s.stars}${s.pending ? ' · ⏳' : ''} · ${s.used}/${cls.daily_limit}</span>`}
         ${awayPill(s)}<span class="typing" id="ty${s.id}" ${typing.has(s.id) ? '' : 'hidden'}>${t('typing')}</span>`)}
-        <button class="ghost" data-view="${s.id}" title="${t('openView')}" aria-label="${t('openView')}: ${esc(s.nickname)}">👁</button>
-        <button class="ghost" data-p="${s.id}" data-v="${s.paused ? 0 : 1}" title="${s.paused ? t('resume') : t('pause')}" aria-label="${s.paused ? t('resume') : t('pause')}: ${esc(s.nickname)}">${s.paused ? '▶' : '⏸'}</button></div>`).join('');
+        ${meeting ? '' : `<button class="ghost" data-view="${s.id}" title="${t('openView')}" aria-label="${t('openView')}: ${esc(s.nickname)}">👁</button>
+        <button class="ghost" data-p="${s.id}" data-v="${s.paused ? 0 : 1}" title="${s.paused ? t('resume') : t('pause')}" aria-label="${s.paused ? t('resume') : t('pause')}: ${esc(s.nickname)}">${s.paused ? '▶' : '⏸'}</button>`}</div>`).join('');
     $('#students').querySelectorAll('[data-s]').forEach((e) => (e.onclick = () => select(e.dataset.s)));
     $('#students').querySelectorAll('[data-view]').forEach((e) => (e.onclick = () => openView(e.dataset.view)));
     $('#students').querySelectorAll('[data-p]').forEach((e) => (e.onclick = async () => { await api('/api/students/' + e.dataset.p, 'PATCH', { paused: +e.dataset.v === 1 }); refresh(); }));
@@ -203,7 +240,7 @@ async function roomPage(id) {
   function renderProgress() {
     const s = stu(sel); $('#progressCard').hidden = !s; if (!s) return;
     $('#progressCard').innerHTML = `<h3>${esc(s.avatar)} ${esc(s.nickname)} · ${t('progressOf')}</h3>
-      <div class="row wrapx" style="margin-bottom:.4rem"><button class="ghost" id="pv">${t('openView')}</button><button class="ghost" id="pin">${t('resetPinL')}</button><button class="ghost" id="kick">${t('removeStudent')}</button></div>
+      <div class="row wrapx" style="margin-bottom:.4rem"><button class="ghost courseonly" id="pv">${t('openView')}</button><button class="ghost" id="pin">${t('resetPinL')}</button><button class="ghost" id="kick">${t('removeStudent')}</button></div>
       <p class="muted" style="margin:.2rem 0 .6rem">${awayPill(s)} ${s.away_count ? t(s.away_count === 1 ? 'aw_once' : 'aw_summary').replace('{n}', s.away_count).replace('{m}', mins(awayTotal(s))) : t('aw_none')}</p>` + cls.levels.map((l) => {
       const p = s.progress.find((x) => x.id === l.id) || { status: 'locked', stars: 0 };
       const icon = { done: '✅', pending: '⏳', current: '▶️', locked: '🔒' }[p.status];
@@ -230,13 +267,14 @@ async function roomPage(id) {
   }
   async function refresh() {
     cls = await api('/api/classes/' + id);
+    meeting = cls.kind === 'meeting'; root.classList.toggle('meeting', meeting);
     for (const s of cls.students) s.at = Date.now();
-    renderHead(); renderStudents(); renderMap(); renderPending(); renderProgress(); renderFilters(); renderGames();
+    renderHead(); renderStudents(); renderMap(); renderPending(); renderProgress(); renderFilters(); renderGames(); renderMeet();
   }
   function select(s) { sel = s; renderStudents(); renderMap(); renderProgress(); renderGames(); loadFeed(); }
 
   // ---- live feed ----
-  const label = (m) => `<b>${esc(m.avatar || '')} ${esc(m.nickname)}${m.role === 'blocked' ? ` · ${t('blockedMsg')}: ${t('sc_' + m.flag)}` : ''} · ${new Date(m.created).toLocaleTimeString()}${m.level ? ' · ' + esc(m.level) : ''}</b>`;
+  const label = (m) => `<b>${esc(m.avatar || '')} ${esc(m.nickname)}${m.role === 'blocked' ? ` · ${t('blockedMsg')}: ${t('sc_' + m.flag)}` : m.flag === 'cut' ? ` · ✂️ ${t('cutOff')}` : ''} · ${new Date(m.created).toLocaleTimeString()}${m.level ? ' · ' + esc(m.level) : ''}</b>`;
   const body = (c) => { // fold code blocks so the feed stays readable
     const parts = String(c).split(/```(?:html|creation)?\n?([\s\S]*?)```/);
     return parts.map((p, i) => (i % 2 ? `<details><summary>code</summary><pre>${esc(p)}</pre></details>` : p.trim() ? `<div class="md">${md(p.trim())}</div>` : '')).join('');
@@ -284,7 +322,7 @@ async function roomPage(id) {
       renderStudents(); renderMap(); if (sel == s.id) renderProgress(); callUi?.render();
       if (left && awayNotify && s.online) toast(`${s.avatar} ${s.nickname} ${t('aw_left')} (${t('aw_' + ev.away)})`);
     }
-    if (ev.type === 'call' && cls) { cls.call = ev.call; renderHead(); renderStudents(); }
+    if (ev.type === 'call' && cls) { cls.call = ev.call; renderHead(); renderStudents(); renderMeet(); }
     if (ev.type === 'presence') { const s = stu(ev.student_id); if (s) { s.online = ev.online; renderStudents(); renderMap(); } else soon(); }
     if (ev.type === 'typing') {
       clearTimeout(typing.get(ev.student_id)); $('#ty' + ev.student_id)?.removeAttribute('hidden');
