@@ -651,17 +651,45 @@ function endCall(classId) {
 }
 // Relay servers: STUN finds each browser's public address. TURN relays the video for the few home or school networks that
 // block direct connections; with TURN_SECRET the credentials are short-lived (the coturn "use-auth-secret" scheme).
+// The easiest relay is Cloudflare's TURN service (free up to 1000 GB a month): with CLOUDFLARE_TURN_KEY_ID and
+// CLOUDFLARE_TURN_API_TOKEN the server asks it for short-lived credentials, so the API token never reaches a browser.
 const urlList = (v) => String(v || '').split(',').map((s) => s.trim()).filter(Boolean);
-function iceServers(peerId) {
+const CF_TURN = process.env.CLOUDFLARE_TURN_KEY_ID && process.env.CLOUDFLARE_TURN_API_TOKEN;
+let cfIce = null; // { list, until }: one set of credentials is shared by everyone and renewed every 12 hours
+async function cloudflareIce() {
+  if (!CF_TURN) return null;
+  if (cfIce?.until > now()) return cfIce.list;
+  try {
+    const api = process.env.CLOUDFLARE_TURN_API || 'https://rtc.live.cloudflare.com';
+    const r = await fetch(`${api}/v1/turn/keys/${encodeURIComponent(process.env.CLOUDFLARE_TURN_KEY_ID)}/credentials/generate-ice-servers`, {
+      method: 'POST', headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_TURN_API_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ttl: 86400 }), signal: AbortSignal.timeout(5000) });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    // iceServers is a list (or a single entry in older answers). Browsers refuse port 53, and trying it only slows the call down.
+    const list = [].concat((await r.json()).iceServers || [])
+      .map((s) => ({ ...s, urls: [].concat(s.urls || []).filter((u) => !/:53(\?|$)/.test(u)) })).filter((s) => s.urls.length);
+    if (!list.length) throw new Error('no ICE servers in the answer');
+    cfIce = { list, until: now() + 12 * 3600e3 };
+  } catch (e) {
+    console.warn('Cloudflare TURN:', e.message);
+    cfIce = { list: null, until: now() + 60e3 }; // the call still works without the relay; try again in a minute
+  }
+  return cfIce.list;
+}
+function iceServers(peerId, relay) {
   const list = [], stun = urlList(process.env.STUN_URLS ?? 'stun:stun.l.google.com:19302'), turn = urlList(process.env.TURN_URLS);
   if (stun.length) list.push({ urls: stun });
+  if (relay) list.push(...relay);
   if (turn.length && process.env.TURN_SECRET) {
     const username = `${Math.floor(now() / 1000) + 12 * 3600}:${peerId}`;
     list.push({ urls: turn, username, credential: crypto.createHmac('sha1', process.env.TURN_SECRET).update(username).digest('base64') });
   } else if (turn.length && process.env.TURN_USERNAME) list.push({ urls: turn, username: process.env.TURN_USERNAME, credential: process.env.TURN_CREDENTIAL || '' });
   return list;
 }
-function joinCall(req, res, classId, who) {
+const hasRelay = (list) => list.some((s) => [].concat(s.urls).some((u) => /^turns?:/.test(u)));
+async function joinCall(req, res, classId, who) {
+  const relay = await cloudflareIce();
+  if (req.socket.destroyed) return; // they left while the relay answered: never add a place nobody holds
   res.set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' }).flushHeaders();
   const c = calls.get(classId), end = (type) => res.end(`data: ${JSON.stringify({ type })}\n\n`);
   if (!c) return end('ended');
@@ -673,7 +701,8 @@ function joinCall(req, res, classId, who) {
   if (others.length >= CALL_MAX || (who.kind === 'student' && students >= CALL_MAX - 1)) return end('full');
   const p = { ...who, id: crypto.randomBytes(9).toString('base64url'), classId, mic: false, cam: false, screen: false, res };
   c.peers.set(p.id, p); callPeers.set(p.id, p);
-  toPeer(p, { type: 'welcome', id: p.id, max: CALL_MAX, peers: others.map(peerInfo), iceServers: iceServers(p.id) });
+  const ice = iceServers(p.id, relay);
+  toPeer(p, { type: 'welcome', id: p.id, max: CALL_MAX, peers: others.map(peerInfo), iceServers: ice, relay: hasRelay(ice) });
   for (const o of others) toPeer(o, { type: 'join', peer: peerInfo(p) });
   callChanged(classId);
   const ping = setInterval(() => !res.writableEnded && res.write(': ping\n\n'), 25000);

@@ -8,7 +8,14 @@ import path from 'node:path';
 
 // Fake Anthropic API so the whole pipeline runs offline.
 const GAME = '<!doctype html><html><head><title>Tap</title></head><body><button onclick="1">tap</button></body></html>';
+let turnAuth = null; // what the fake Cloudflare TURN API was sent
 const fake = http.createServer((req, res) => {
+  if (req.url.startsWith('/v1/turn/keys/')) { // fake Cloudflare TURN: short-lived credentials, including a port 53 address browsers refuse
+    turnAuth = [req.method, req.url, req.headers.authorization];
+    res.setHeader('content-type', 'application/json');
+    return res.end(JSON.stringify({ iceServers: [{ urls: ['stun:stun.cloudflare.com:3478', 'stun:stun.cloudflare.com:53'] },
+      { urls: ['turn:turn.cloudflare.com:3478?transport=udp', 'turn:turn.cloudflare.com:53?transport=udp', 'turns:turn.cloudflare.com:443?transport=tcp'], username: 'u1', credential: 'c1' }] }));
+  }
   let b = ''; req.on('data', (c) => (b += c)); req.on('end', () => {
     const body = JSON.parse(b || '{}'), usage = { input_tokens: 100, output_tokens: 50 };
     const isMod = String(body.system).includes('safety filter'), isEval = String(body.system).includes('level evaluator');
@@ -50,7 +57,8 @@ before(async () => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-'));
   const port = 3100 + Math.floor(Math.random() * 500); base = `http://localhost:${port}`;
   server = spawn('node', ['server/index.js'], { env: { ...process.env, PORT: port, SESSION_GRACE_MS: '600', SUBMIT_COOLDOWN_MS: '1000', DB_PATH: path.join(dir, 't.db'), ANTHROPIC_API_KEY: 'x',
-    ANTHROPIC_BASE_URL: `http://localhost:${fake.address().port}`, ADMIN_EMAIL: 'a@x.com', ADMIN_PASSWORD: 'adminpw' }, stdio: 'inherit' });
+    ANTHROPIC_BASE_URL: `http://localhost:${fake.address().port}`, CLOUDFLARE_TURN_API: `http://localhost:${fake.address().port}`,
+    CLOUDFLARE_TURN_KEY_ID: 'key1', CLOUDFLARE_TURN_API_TOKEN: 'tok1', ADMIN_EMAIL: 'a@x.com', ADMIN_PASSWORD: 'adminpw' }, stdio: 'inherit' });
   for (let i = 0; i < 50; i++) { try { await fetch(base + '/api/me'); break; } catch { await new Promise((r) => setTimeout(r, 100)); } }
 });
 after(() => { server.kill(); fake.close(); fs.rmSync(dir, { recursive: true, force: true }); });
@@ -278,6 +286,13 @@ test('video call: teacher opens it, up to 4 people, setup messages relayed, teac
   const T = stream('tv', `/api/classes/${id}/call/events`), tw = await T.next('welcome');
   assert.deepEqual(tw.peers, []);
   assert.ok(tw.iceServers.some((s) => String(s.urls).startsWith('stun:')), 'browsers get a STUN server');
+  // the relay: the server asks Cloudflare for credentials with its own token, and browsers only get the short-lived ones
+  assert.deepEqual(turnAuth, ['POST', '/v1/turn/keys/key1/credentials/generate-ice-servers', 'Bearer tok1']);
+  const turn = tw.iceServers.find((s) => s.username);
+  assert.deepEqual([turn.username, turn.credential], ['u1', 'c1']);
+  assert.deepEqual(turn.urls, ['turn:turn.cloudflare.com:3478?transport=udp', 'turns:turn.cloudflare.com:443?transport=tcp'], 'port 53 is left out');
+  assert.ok(!JSON.stringify(tw.iceServers).includes('tok1'), 'the API token never reaches a browser');
+  assert.equal(tw.relay, true, 'browsers know a relay is there');
 
   const A = stream('va', '/api/student/call/events'), aw = await A.next('welcome');
   assert.deepEqual(aw.peers.map((p) => [p.kind, p.name]), [['teacher', 'Vera']], 'the newcomer learns who is already in');
